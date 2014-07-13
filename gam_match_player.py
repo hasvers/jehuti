@@ -467,7 +467,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
         if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():
             if event.key==pg.K_p:
                 return user.screenshot()
-            if event.key==pg.K_v and database['edit_mode']:
+            if  pg.key.get_pressed()[pg.K_LALT] and event.key==pg.K_v and database['edit_mode']:
                 return user.trigger_video()
         if event.key == pg.K_TAB :
             if len(self.canvas.layers) > 1 :

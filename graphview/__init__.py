@@ -24,6 +24,8 @@ def mainlaunch():
         user.music=MusicMaster()
         pg.display.set_caption('Graphview')
         pg.init()
+        pg.scrap.init()
+        pg.scrap.set_mode (SCRAP_CLIPBOARD)
         size = width, height = 640, 480
         background=image_load(database['image_path']+database['default_bg']).convert()
         canvas=canvasinit(bg=background)

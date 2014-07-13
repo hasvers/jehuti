@@ -100,6 +100,7 @@ def main():
         user.screen= screen.copy()
         pg.display.set_caption(database['title'])
         pg.init()
+        pg.scrap.init()
         user.set_ui(StartMenuUI(None))
         scale_vec=user.scale_vec
 

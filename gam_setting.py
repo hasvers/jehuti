@@ -144,6 +144,7 @@ class PlaceHandler(BaseCanvasHandler):
             c.make_dependencies()
             deplist+= (self,c),
             deplist+= (self,c.data),
+            deplist+= (c,c.data),
         #deplist+=(self,self.data),
         [self.depend.add_dep(*d) for d in deplist]
 
@@ -483,7 +484,6 @@ class OldSettingView(View):
 
     def paint(self,surface=None):
         if not surface:
-            print self.surface
             surface=self.surface
         if self.bg:
             surface.blit(self.bg,-array(self.offset))
@@ -499,7 +499,6 @@ class SettingView(PlaceView):
 class SettingHandler(PlaceHandler):
     View=SettingView
     def event(self,*args,**kwargs):
-        print args
         return False
     def menu(self,*args,**kwargs):
         return ()
@@ -507,8 +506,7 @@ class SettingHandler(PlaceHandler):
         return ()
     def spritemenu(self,*args,**kwargs):
         return ()
-    def react(self,evt):
-        return False
+
 class SettingEditor(SettingHandler):
     pass
 

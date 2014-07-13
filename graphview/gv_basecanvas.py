@@ -226,7 +226,8 @@ class BaseCanvasView(View):
                     surface.blit(s.image,self.pos[s.item]-array(s.rect.size)/2)
                 self.mask=pg.mask.from_surface(surface)
             else:
-                self.mask=self.surface
+                self.mask=pg.mask.from_surface(surface)
+                self.mask.clear()
             self.dirty=0
 
 
@@ -645,8 +646,7 @@ class BaseCanvasHandler(Handler):
                 self.set_background(self.data.bg)
             if 'size' in evt.infos:
                 self.view.rect = pg.rect.Rect((0,0),self.data.size)
-        if 'change_infos' in evt.type and hasattr(evt.item,'type') and True in [j
-             in evt.item.type for j in self.data.infotypes] :
+        if 'change_infos' in evt.type  and evt.item in self.data.infos  :
             item=evt.item
             if array( [i in evt.infos for i in ('val','genre','set') ]).any():
                 self.view.icon_update(item)
@@ -662,7 +662,7 @@ class BaseCanvasHandler(Handler):
                         [self.view.icon[s].set_state('ghost') for s in evt.item.items ]
                 else:
                         [self.view.icon[s].rm_state('ghost')  for s in evt.item.items ]
-        if 'add' in evt.type or 'rem' in evt.type:
+        if ('add' in evt.type or 'rem' in evt.type)  and evt.item in self.data.infos :
             item=None
             if 'layer' in evt.item.type:
                 self.set_layer(evt.item,len(self.layers))

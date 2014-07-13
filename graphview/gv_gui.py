@@ -530,7 +530,7 @@ class BasicUI(UI_Widget):
                 return user.evt.redo()
             if event.key==pg.K_p:
                 return user.screenshot()
-            if event.key==pg.K_v and database['edit_mode']:
+            if pg.key.get_pressed()[pg.K_LALT] and event.key==pg.K_v and database['edit_mode']:
                 return user.trigger_video()
             if event.key==pg.K_d and database['edit_mode'] :
                 user.debug_mode=1-user.debug_mode

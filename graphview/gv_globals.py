@@ -11,7 +11,6 @@ from clotools import sparse, sparsemat, listdict
 import debug
 from operator import itemgetter,attrgetter
 import networkx as nx
-import pyperclip as clipboard
 import cProfile,pstats,sys,time,itertools,re
 import os
 
@@ -21,6 +20,14 @@ pgmixer.init(44100)
 colorconverter=matcolors.ColorConverter()
 profiler=cProfile.Profile()
 
+
+class Clipboard(object):
+    def copy(self,txt):
+        pg.scrap.put('TEXT',txt)
+    def paste(self):
+        return pg.scrap.get('TEXT')
+
+clipboard=Clipboard()
 
 clock = pg.time.Clock()
 

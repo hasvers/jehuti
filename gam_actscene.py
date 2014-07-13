@@ -82,6 +82,7 @@ class ActscenePlayer(ActsceneHandler,CutscenePlayer):
     View=ActscenePlayView
     Cast=CastSceneHandler
     Setting=SettingHandler
+    clickable=1
 
     def clear_scene(self):
         self.clear_phase()
@@ -135,9 +136,45 @@ class ActscenePlayer(ActsceneHandler,CutscenePlayer):
         return False
 
     def bgdrag(self,rel):
-        print self.data.panrange
-        return self.pan(rel)
+        self.limpan(rel)
+        return 1
 
+    def keymap(self,event):
+        if event.key in (pg.K_UP,pg.K_DOWN,pg.K_LEFT,pg.K_RIGHT):
+            if event.key==pg.K_UP:
+                dif=(0,-2)
+            elif event.key==pg.K_DOWN:
+                dif=(0,2)
+            elif event.key==pg.K_RIGHT:
+                dif=(2,0)
+            elif event.key==pg.K_LEFT:
+                dif=(-2,0)
+            self.limpan(dif)
+            return True
+
+    def limpan(self,rel):
+        x,y=rel
+        panrange=array((0,0,0,0) )
+        if x<0:
+            i=1
+        else:
+            i=0
+        panrange[i]+=abs(x)
+        panrange[1-i]-=abs(x)
+        if y<0:
+            i=1
+        else:
+            i=0
+        panrange[2+i]+=abs(y)
+        panrange[3-i]-=abs(y)
+        selfpan=self.data.panrange+panrange
+        settingpan=self.setting.data.panrange+panrange
+        if not False in [z>=0 for z in settingpan]:
+            self.setting.data.panrange=settingpan
+            self.setting.pan(rel)
+        if not False in [z>=0 for z in selfpan]:
+            self.data.panrange=selfpan
+            self.pan(rel)
     def drag(self):
         return False
 

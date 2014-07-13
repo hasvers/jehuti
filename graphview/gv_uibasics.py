@@ -1035,13 +1035,6 @@ class Emote(UI_Icon):
         self.type='emote'
         UI_Icon.__init__(self,**kwargs)
         self.set='idle'
-        #for i,j in kwargs.iteritems(): #Obsolete due to clever handling in UI Icon
-            #if 'font' in i:
-                #self.font=j
-            #if 'color' in i:
-                #self.color=j
-            #if 'ephem' in i:
-                #self.ephemeral=j
         if not hasattr(contents,'__iter__'):
             contents=[contents]
         self.contents=contents
