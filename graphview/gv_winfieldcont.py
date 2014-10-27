@@ -329,6 +329,30 @@ class FieldContainer(UI_Widget):
             return False
 
 ## -------------------  Field related ---------------------------------------------
+
+    def next_field(self):
+        focus=user.focused_on
+        idx=None
+        for x in sorted(self.table):
+            for y in sorted(self.table[x]):
+                if self.table[x][y]==focus:
+                    x0,y0,idx=x,y,self.children.index(focus)
+                elif idx:
+                    try:
+                        if self.table[x][y].focusable:
+                            return user.focus_on(self.table[x][y])
+                    except:
+                        pass
+        if not idx:
+            return None
+        for y in range(y0):
+            for x in sorted(self.table):
+                try:
+                    if self.table[x][y].focusable:
+                        return user.focus_on(self.table[x][y])
+                except:
+                    pass
+
     def parse(self,struct):
         #simple parsing for menus
         if not struct:

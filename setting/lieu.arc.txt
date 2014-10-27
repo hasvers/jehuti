@@ -1,0 +1,204 @@
+#0#
+ ##class:PlaceData
+ ##initparam:[]
+##attr
+"_precursors":()
+"bg":None
+"children":[]
+"infotypes":{'"sprite"': ('"name"', '"layer"'), '"layer"': ('"offset"', '"state"', '"zoom"', '"distance"', '"items"', '"name"', '"bound"', '"order"')}
+"music":""
+"name":"lieu"
+"overwrite_item":False
+"panrange":array([20,20,0,0])
+"parent":None
+"rule":"all"
+"transparent":False
+"typID":{'"sprite"': 6, '"layer"': 7}
+##infos
+#1#:{'"order"': 4}
+#3#:{'"order"': 0, '"distance"': 1.0}
+#5#:{'"pos"': 'array([544,368])', '"layer"': '#6#'}
+#6#:{'"order"': 3}
+#7#:{'"pos"': 'array([529,379])', '"layer"': '#8#'}
+#9#:{'"pos"': 'array([556,337])', '"layer"': '#10#'}
+#10#:{'"order"': 1, '"distance"': 0.66}
+#4#:{'"pos"': 'array([506,408])', '"layer"': '#3#'}
+#8#:{'"order"': 2, '"distance"': 0.3}
+#2#:{'"pos"': 'array([500,253])', '"layer"': '#1#'}
+#11#:{'"name"': u'"Empty"', '"order"': 5}
+##
+
+#2#
+ ##class:PlaceSprite
+ ##initparam:[]
+"source":"common/dec0-4.png"
+"scale":0.45
+"set":"default"
+"name":"Sprite2"
+"required":()
+"type":"sprite"
+"ID":2
+##
+
+#4#
+ ##class:PlaceSprite
+ ##initparam:[]
+"source":"common/dec0-0.png"
+"scale":0.5
+"set":"default"
+"name":"Sprite1"
+"required":()
+"type":"sprite"
+"ID":1
+##
+
+#5#
+ ##class:PlaceSprite
+ ##initparam:[]
+"source":"common/dec0-3.png"
+"scale":0.47
+"set":"default"
+"name":"Sprite3"
+"required":()
+"type":"sprite"
+"ID":5
+##
+
+#7#
+ ##class:PlaceSprite
+ ##initparam:[]
+"source":"common/dec0-2.png"
+"scale":0.45
+"set":"default"
+"name":"Sprite2"
+"required":()
+"type":"sprite"
+"ID":4
+##
+
+#9#
+ ##class:PlaceSprite
+ ##initparam:[]
+"source":"common/dec0-1.png"
+"scale":0.45
+"set":"default"
+"name":"Sprite1"
+"required":()
+"type":"sprite"
+"ID":3
+##
+
+#1#
+ ##class:PlaceLayer
+ ##initparam:[]
+"distance":0
+"name":"Layer"
+"parent":None
+"items":['#2#']
+"required":()
+"bound":None
+"pos":{'#2#': 'array([500,253])'}
+"state":"idle"
+"offset":array([0,0])
+"alpha":1
+"ID":2
+"type":"layer"
+"children":[]
+"zoom":1
+##
+
+#3#
+ ##class:PlaceLayer
+ ##initparam:[]
+"distance":0
+"name":"Layer"
+"parent":None
+"items":['#4#']
+"required":()
+"bound":None
+"pos":{'#4#': 'array([506,408])'}
+"state":"idle"
+"offset":array([0,0])
+"alpha":1
+"ID":1
+"type":"layer"
+"children":[]
+"zoom":1
+##
+
+#6#
+ ##class:PlaceLayer
+ ##initparam:[]
+"distance":0
+"name":"Layer"
+"parent":None
+"items":['#5#']
+"required":()
+"bound":None
+"pos":{'#5#': 'array([544,368])'}
+"state":"idle"
+"offset":array([0,0])
+"alpha":1
+"ID":5
+"type":"layer"
+"children":[]
+"zoom":1
+##
+
+#8#
+ ##class:PlaceLayer
+ ##initparam:[]
+"distance":0
+"name":"Layer"
+"parent":None
+"items":['#7#']
+"required":()
+"bound":None
+"pos":{'#7#': 'array([529,379])'}
+"state":"idle"
+"offset":array([0,0])
+"alpha":1
+"ID":4
+"type":"layer"
+"children":[]
+"zoom":1
+##
+
+#10#
+ ##class:PlaceLayer
+ ##initparam:[]
+"distance":0
+"name":"Layer"
+"parent":None
+"items":['#9#']
+"required":()
+"bound":None
+"pos":{'#9#': 'array([556,337])'}
+"state":"idle"
+"offset":array([0,0])
+"alpha":1
+"ID":3
+"type":"layer"
+"children":[]
+"zoom":1
+##
+
+#11#
+ ##class:PlaceLayer
+ ##initparam:[]
+"distance":0
+"name":"Layer"
+"parent":None
+"items":[]
+"required":()
+"bound":None
+"pos":{}
+"state":"idle"
+"offset":array([0,0])
+"alpha":1
+"ID":6
+"type":"layer"
+"children":[]
+"zoom":1
+##
+

@@ -73,10 +73,10 @@ class CutsceneSpriteIcon(BaseCanvasIcon):
         return img
 
 
-    def hotspot(self,*args,**kwargs):
+    def get_hotspot(self,*args,**kwargs):
         if kwargs.get('balloon',False):
-            return self.canvas.hotspot(self)
-        return UI_Icon.hotspot(self,*args,**kwargs)
+            return self.canvas.get_hotspot(self)
+        return UI_Icon.get_hotspot(self,*args,**kwargs)
 
 class CutsceneLayer(BaseCanvasLayer):
     pass

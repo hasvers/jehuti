@@ -144,17 +144,14 @@ class QueueEvt(MatchEvent):
             if 'claim' in evt.type:
                 self.batch.add_event(evt)   #If i do this, declaration is not in root_events
                 self.batch.add_event(evt.decl)
-                try:
+                if hasattr(evt,'expl'):
                     self.batch.add_event(evt.expl)
-                except:
-                    pass
+
                 for f in evt.subclaims:
                     self.batch.add_event(f)
                     self.batch.add_event(f.decl)
-                    try:
+                    if hasattr(f,'expl'):
                         self.batch.add_event(f.expl)
-                    except:
-                        pass
             elif True in [ i in evt.type  for i in ('expl','polit') ]:
                 self.batch.add_event(evt)
             return True

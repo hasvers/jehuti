@@ -757,6 +757,8 @@ class DataItem(DataBit):
         kwargs.setdefault('add_param',[])
         kwargs['add_param']=set(kwargs['add_param'])
         kwargs['add_param'].update(set(['required','ID']))
+        if hasattr(self,'truename'):
+            kwargs['add_param'].add('truename')
         DataBit.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
 

@@ -115,10 +115,10 @@ class PlaceView(BaseCanvasView):
         self.parent=parent
         super(PlaceView, self).__init__(**kwargs)
 
-    def hotspot(self,icon):
+    def get_hotspot(self,icon):
         bound= self.handler.data.get_info(icon.item,'bound')
         if bound:
-            return self.handler.cast.view.hotspot(icon)
+            return self.handler.cast.view.get_hotspot(icon)
         else:
             return icon.rect.center
 

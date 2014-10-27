@@ -24,12 +24,13 @@ def mainlaunch():
         user.music=MusicMaster()
         pg.display.set_caption('Graphview')
         pg.init()
-        pg.scrap.init()
-        pg.scrap.set_mode (SCRAP_CLIPBOARD)
+        #pg.scrap.init()
+        #pg.scrap.set_mode (SCRAP_CLIPBOARD)
         size = width, height = 640, 480
         background=image_load(database['image_path']+database['default_bg']).convert()
         canvas=canvasinit(bg=background)
-        user.set_ui(EditorUI(None,canvas))
+        ui=EditorUI(None,canvas)
+        user.set_ui(ui)
         pg.key.set_repeat(300,30)
         pg.time.set_timer(30,int(round(1000/ergonomy['animation_fps'])))# Animation pulse: event type 30
         while 1:

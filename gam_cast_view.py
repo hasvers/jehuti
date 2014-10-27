@@ -104,14 +104,14 @@ class ActorIcon(UI_Icon):
         return graphic_chart.get('actor_'+state+'_color_mod',UI_Icon.color_mod(self,state))
         #return UI_Icon.color_mod(self,state)
 
-    def hotspot(self,*args,**kwargs):
+    def get_hotspot(self,*args,**kwargs):
         if kwargs.get('balloon',False):
-            return self.cast.hotspot(self)
+            return self.cast.get_hotspot(self)
             #shift=array(self.rect.size)/10
             #if self.mirrorx:
                 #return self.rect.topleft+shift
             #return self.rect.topright+array([-shift[0],shift[1]])
-        return UI_Icon.hotspot(self,*args,**kwargs)
+        return UI_Icon.get_hotspot(self,*args,**kwargs)
 
 class ResIcon(UI_Icon):
     mutable=True
@@ -241,7 +241,7 @@ class CastSceneView(View):
     def upd_actor(self,actor):
         return True
 
-    def hotspot(self,icon):
+    def get_hotspot(self,icon):
         #icon=self.icon[actor]
         shift=(0,0)# array(icon.rect.size)/10
         if icon.rect.center[0]<self.parent.viewport.center[0]:
@@ -286,7 +286,7 @@ class CastView(View):
         self.pos[hud]=icon.rect.topleft
 
 
-    def hotspot(self,icon):
+    def get_hotspot(self,icon):
         #icon=self.icon[actor]
         shift=array(icon.rect.size)/10
         if icon.mirrorx:

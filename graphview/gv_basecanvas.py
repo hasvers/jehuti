@@ -47,7 +47,7 @@ class BaseCanvasData(Data):
     #In general the items put in layers can be items from other datastructures,
     #or dedicated sprites
 
-    dft={'size':ergonomy['default_canvas_size']}
+    dft={'size':ergonomy['default_canvas_size'],'pan':(0,0),'zoom':1 }
     infotypes={'layer':('offset','state','zoom','distance','items','name','bound','order'),
          }
 
@@ -55,6 +55,8 @@ class BaseCanvasData(Data):
     Layer=BaseCanvasLayer
 
     def __init__(self,**kwargs):
+        self.pan=(0,0)
+        self.zoom=1
         Data.__init__(self,**kwargs)
         #if not self.layers:
             #self.add(self.Layer())
@@ -90,6 +92,8 @@ class BaseCanvasIcon(UI_Icon):
     sound=True
     draggable=True
     bounded=0 #limited to borders of canvas
+    hotspot={} #Anchor for bubbles and emotes
+
     def __init__(self,canvas,item):
         self.item=item
         self.rect=pgrect.Rect((0,0),(1,1))
@@ -138,6 +142,7 @@ class BaseCanvasIcon(UI_Icon):
 class BaseCanvasView(View):
     icon_types={'dft':BaseCanvasIcon}
     bg=None
+    BaseCanvasflag=True
     dft_size=(1000,800)
     def __init__(self,handler,parent=None,**kwargs):
         View.__init__(self,handler,parent,**kwargs)
@@ -170,12 +175,13 @@ class BaseCanvasView(View):
         self.viewport=pgrect.Rect((0,0),size)
 
         if not hasattr(self,'surface'):
-            self.surface = pgsurface.Surface(self.rect.size,Canvasflag)
+            self.surface = pgsurface.Surface(self.rect.size,self.BaseCanvasflag)
             self.surface.set_colorkey(COLORKEY)
+        #self.veil=None
         self.surface.fill(COLORKEY)
         if handler :
             self.set_handler(handler)
-
+        self.mask=pg.mask.from_surface(self.surface)
 
     def set_handler(self,handler):
         self.handler=handler
@@ -219,15 +225,16 @@ class BaseCanvasView(View):
             self.animated.update()
         if self.dirty:
             if self.handler.clickable:
-                surface=self.surface.copy()
+                surface=self.surface#.copy()
                 surface.fill(COLORKEY)
                 for s in self.group:
             #if s.rect.colliderect(self.handler.viewport.rect.move(self.handler.viewport.offset)):
                     surface.blit(s.image,self.pos[s.item]-array(s.rect.size)/2)
-                self.mask=pg.mask.from_surface(surface)
-            else:
-                self.mask=pg.mask.from_surface(surface)
-                self.mask.clear()
+                if not user.grabbed:
+                    self.mask=pg.mask.from_surface(surface)
+            #else:
+                #self.mask=pg.mask.from_surface(self.surface)
+                #self.mask.clear()
             self.dirty=0
 
 
@@ -236,6 +243,7 @@ class BaseCanvasView(View):
             surface=self.surface
             if not self.bg:
                 self.surface.fill(COLORKEY)
+
         offset=self.offset
         viewrect=self.viewport.move(offset)
         offset=-array((offset[0],offset[1]))
@@ -243,11 +251,14 @@ class BaseCanvasView(View):
             surface.blit(self.bg,offset)
         relzoom=1.
         reloffset=0.
-
+        w,h=surface.get_rect().size
         for c in self.children:
             if hasattr(c,'paint'):
                 c.paint(surface)
+        #if hasattr(self,'veil') and self.veil:
+            #surface.blit(self.veil,(0,0),None,pg.BLEND_RGBA_MULT )
         self.group.draw(surface)
+
         return
         #for l in self.data.layers:
             #inf=self.data.get_info(l)
@@ -370,6 +381,21 @@ class BaseCanvasView(View):
     def event(self,event,**kwargs):
         if View.event(self,event,**kwargs):
             return True
+        #if event.type==29:#pg.USEREVENT  :
+            #self.veil=pg.surface.Surface(user.ui.screen.get_rect().size )
+            #self.veil.fill( (255,255,255,255))
+            #self.aboriginize(self.veil)
+            ##VEIL TO CHANGE
+            #if not self.veil:
+                #self.veil=pgsurface.Surface(self.rect.size).convert()
+                #self.veil.fill((100,100,100,100) )
+            #t1= pg.time.get_ticks()
+            #self.veil.fill((0,0,0 ) )
+            #w,h=self.veil.get_rect().size
+            #for l in range(1500):
+                #pg.draw.circle(self.veil,(55,55,55),(rnd.randint(0,w),
+                    #rnd.randint(0,h) ),rnd.randint(5,20) )
+            #print pg.time.get_ticks()-t1
         if event.type==30 and self.motion:
             m=self.motion[0]
             dist=array(m)-self.offset
@@ -530,9 +556,13 @@ class BaseCanvasHandler(Handler):
         self.view.assess_itemstate()
 
     def pan(self,rel):
-        for l in self.layers:
-            offset=tuple(int(i*(1.-self.data.get_info(l,'distance'))) for i in rel)
-            user.evt.do(ChangeInfosEvt(l,self.data,offset=array(offset),additive=1),self)
+        evt=PanEvt(self.data,rel)
+        evt.prep_init()
+        evt.state=1
+        user.evt.go(evt,2,ephemeral=1)
+        #for l in self.layers:
+            #offset=tuple(int(i*(1.-self.data.get_info(l,'distance'))) for i in rel)
+            #user.evt.do(ChangeInfosEvt(l,self.data,offset=array(offset),additive=1),self)
 
 
     def set_data(self,data):
@@ -623,6 +653,9 @@ class BaseCanvasHandler(Handler):
         grabbed= user.grabbed
         if user.ungrab():
             user.state ='idle'
+            if grabbed==self.view:
+                #For some cases of bg drag, when I want to update the view but not the mask
+                return
             grabbed=grabbed.item
             inf= self.data.get_info(self.active_layer)
             pos=array((array(self.view.pos[grabbed])-inf['offset'])/inf['zoom'],dtype='int')
@@ -864,7 +897,6 @@ class BaseCanvasHandler(Handler):
 class BaseCanvasEditor(BaseCanvasHandler):
 
     def menu(self,event=None,**kwargs):
-        print self
         target=self.view.hovering
         try:
             typ=target.item.type

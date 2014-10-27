@@ -146,6 +146,11 @@ class InputField(TextField):
                         self.moveindex(len(test))
                 if event.key==pg.K_c:
                     clipboard.copy(self.val)
+            if event.key == pg.K_TAB:
+                try:
+                    return self.parent.next_field()
+                except:
+                    return False
             else :
                 euni= event.unicode
                 if (self.allchars=='all' or
@@ -319,12 +324,15 @@ class DragField(WindowField):
     keyincrements=ergonomy['dragfield_keyincrements'] #number of times a key must be pressed to cover whole span
     cursorstate='idle'
     showval=1
+    focusable=True
     reverse_dir=0 #for things increasing when you go down (e.g. scrollbars)
 
     def __init__(self,parent,**kwargs):
         self.unit=kwargs.pop('unit',1./ database['floatprecision'])
         self.color=graphic_chart['window_field_bg_idle']
         WindowField.__init__(self,parent,**kwargs)
+        self.modimg+=('focus',)
+        self.states['focus']=0
         self.minval=0
         self.maxval=1
         dirdict={'h':0,'v':1}
@@ -352,9 +360,17 @@ class DragField(WindowField):
         if draw :
             self.redraw()
 
+
+    def color_mod(self,state,*args):
+        if state=='focus':
+            return (1.8,1.8,1.8,1)
+        return (1,1,1,1)
+
     def redraw(self,**kwargs):
         self.group.empty()
-        color=kwargs.get('color',self.color)
+        color=kwargs.get('color',None)
+        if color is None:
+            color=self.color
         if len(color)==2:
             if self.direction == 0 :
                 self.image.blit(gradients.horizontal(self.rect.size, *color),(0,0))
@@ -386,6 +402,7 @@ class DragField(WindowField):
         self.image.blit(self.cursor.image,self.cursor.rect.topleft)
         if self.showval:
             self.image.blit(pgu_writen(str(self.val),basefont,graphic_chart['text_color_label']),(0,0))
+        self.images['idle']=self.image
 
 
     def set_val(self,val=None,rel=None):
@@ -427,6 +444,7 @@ class DragField(WindowField):
             self.image.blit(self.cursor.image,self.cursor.rect.topleft)
             if self.showval:
                 self.image.blit(pgu_writen(str(self.val),basefont,graphic_chart['text_color_label']),(0,0))
+            self.images['idle']=self.image
 
             return True
         return False
@@ -463,6 +481,11 @@ class DragField(WindowField):
             if event.button ==5: #wheel down
                 increment,direction=1,0
         if event.type == pg.KEYDOWN :
+            if event.key == pg.K_TAB:
+                try:
+                    return self.parent.next_field()
+                except:
+                    return False
             if self.direction=='v':
                 if event.key==pg.K_UP:
                     increment,direction=1,1

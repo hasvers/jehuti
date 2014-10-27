@@ -338,6 +338,14 @@ class MatchLinkIcon(LinkIcon):
         if desc in self.premade:
             return self.premade[desc].copy()
 
+        if desc[0]==desc[1]:
+            surf=pgsurface.Surface((blength,wid) )
+            surf.fill(COLORKEY)
+            if bordercolor:
+                surf.fill(bordercolor)
+            surf.fill(desc[0],pgrect.Rect(0,borderw,blength,wid-2*borderw) )
+            self.premade[desc]=surf
+            return surf
         for x in range(blength):
             for y in range(wid):
                 if min(y,wid-y)<=borderw:

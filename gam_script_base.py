@@ -185,7 +185,7 @@ class SceneScriptEffect(DataBit):
                     'variable':( ('target','input',{'width':200}),
                          ('info','input',{'width':200,'height':200}),) })
             templatelist['Game']=(
-                ('evt','arrowsel',{'values': ('call','variable','save')  }),
+                ('evt','arrowsel',{'values': ('call','variable','save')  ,'remake':True}),
                 ) +temps.get(self.evt,())
         return templatelist
 

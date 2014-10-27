@@ -138,7 +138,7 @@ class BasicUI(UI_Widget):
         anchor=kwargs.pop('anchor','')
         if anchor and not isinstance(anchor,basestring) and pointpos is None:
             try:
-                pointpos=anchor.hotspot(balloon=True)
+                pointpos=anchor.get_hotspot(balloon=True)
             except:
                 pointpos=anchor.rect.topleft
 
@@ -312,13 +312,32 @@ class BasicUI(UI_Widget):
         for i, j in kwargs.iteritems():
             if i =='default' :
                 default =j
+        if 'path' in kwargs:
+            path=kwargs['path']
+        else:
+            path=database[typ+'_path']
+        candidates = olistdir(path)
+        print path,candidates
+        flist=[]
         window=FloatMenu(self.screen,self,(128,100),oneshot=True,**kwargs)
-        window.add('text',val='Input name:',selectable=False)
-        tmp=window.add('input',val=default,width=150,pos=(1,0),allchars='alnum')
-        tmp.bind_command(output_method,default,queue=True)
-        window.add('text',val=kwargs.get('ext',database.get(typ+'_ext','')),selectable=False,pos=(1,1))
-        window.add('text',val='Ok',output_method='confirm',selectable=True,pos=(2,0))
-        window.add('text',val='Cancel',output_method='cancel',selectable=True,pos=(2,1))
+        v=0
+        ext=kwargs.get('ext',database.get(typ+'_ext',''))
+        for c in candidates:
+            if ext in str(c):
+                flist.append((str(c),str(c).replace(ext,'') ))
+        if flist :
+            window.add('text',val='Overwrite:',selectable=False,pos=(0,0) )
+            v+=1
+            window.add('list',val=flist,output_method=output_method,pos=(v,0))
+            v+=1
+        window.add('text',val='New file:',selectable=False,pos=(v,0) )
+        v+=1
+        tmp=window.add('input',val=default,width=150,pos=(v,0),allchars='alnum')
+        tmp.bind_command(output_method,default)
+        window.add('text',val=kwargs.get('ext',database.get(typ+'_ext','')),selectable=False,pos=(v,1))
+        v+=1
+        window.add('text',val='Ok',output_method='confirm',selectable=True,pos=(v,0))
+        window.add('text',val='Cancel',output_method='cancel',selectable=True,pos=(v,1))
         self.float_core(window,'floatmenu',**kwargs)
 
     def load_menu(self,typ_or_list,output_method,**kwargs):
@@ -408,12 +427,12 @@ class BasicUI(UI_Widget):
             lay = self.layers[::-1]
             for l in lay :
                 if not l in exclude :
-                    try :
+                    if hasattr(l.view,'paint'):
                         l.view.paint(self.screen)
 #                        l.group.update()
 #                        l.group.draw(self.screen)
-                    except :
-                        pass
+                    #except :
+                        #pass
         self.group.update()
         self.group.draw(self.screen)
 

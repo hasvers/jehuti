@@ -10,6 +10,7 @@ class User():
     paused=0
     recording=0 #for video making
     last_recorded=0
+    use_pil=0
 
     def __init__(self,**kwargs):
         self.state='idle'
@@ -94,7 +95,8 @@ class User():
         try:
             evt=Event(affects=self, type='status')
             self.evt.pass_event(evt,self,True)
-        except:
+        except Exception as e:
+            print e
             pass
 
     def set_mouseover(self,txt,anim=None,**kwargs):
@@ -129,8 +131,16 @@ class User():
     def trigger_video(self):
         if self.recording:
             self.recording=False
+            print 'Video off'
+            self.video.close()
+            self.video=None
         else:
+            from ffmpegwriter import FFMPEG_VideoWriter
+            print 'Video on'
             self.recording=True
+            self.video=FFMPEG_VideoWriter(os.path.join(database['basepath'],'Video{}.mp4'.format(time.strftime("%c"))),
+                 self.ui.screen.get_rect().size,
+                 ergonomy['animation_fps'],"libx264")
         return 1
 
     def screenshot(self):
@@ -141,6 +151,22 @@ class User():
         except Exception as e:
             print e
         return 1
+
+    def add_video_frame(self,img=None,enhance=False):
+        if img is None:
+            img =self.ui.screen
+        if ['show_cursor_on_video']:
+            img.blit(mycursor,pg.mouse.get_pos())
+        pil_string_image = pg.image.tostring(img, "RGB")
+        if enhance:
+            pil_image = pilImage.fromstring("RGB",img.get_rect().size,pil_string_image)
+            enhancer=pilImageEnhance.Sharpness(pil_image)
+            pil_image=enhancer.enhance(1.2)
+            pil_string_image=pil_image.tostring()
+            #new=pg.surfarray.array2d(img)
+            #self.video.write_frame(new)
+        self.video.write_frame(pil_string_image )#pg.image.tostring(img, "RGB"))
+        return
 
     def debug(self,item):
         struct=None
@@ -187,6 +213,7 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
               'grab':3,
               'ghost':3,
               'disabled':4,
+              'blur':8,
               'anim':9, #I want items to finish their animation before changing again
               'busy':10,
               }
@@ -196,6 +223,7 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
     sound=False
     anim_mod=(1,1,1,1) #animated modifier
     per_pixel_alpha=1
+    blur_mode=graphic_chart['default_blur_mode'] #(margin, nb of repetitons,flag,total amplitude)
 
     #OPTIMIZATION: Clear modimg if necessary to improve runtime performance, however will cause storing many more pictures
     modimg=('base','hover','select','ghost')#states that translate as simple modifiers such as hover, select
@@ -315,65 +343,161 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
                 key=itemgetter(1),reverse=1) :
                     self.base_image=self.images[state]
 
+        if self.per_pixel_alpha:
+            try:
+                image=self.base_image.convert_alpha()
+            except:
+                image=self.images['idle'].convert_alpha()
+        else:
+            try:
+                surf=self.base_image
+            except:
+                surf=self.images['idle']
+            image=pgsurface.Surface(surf.get_rect().size,pg.SRCALPHA)
+            image.blit(surf,(0,0))
 
-        if 1 : ## if state in self.modimg:
-            if self.per_pixel_alpha:
-                try:
-                    image=self.base_image.convert_alpha()
-                except:
-                    image=self.images['idle'].convert_alpha()
+        mod=array((1.,1.,1.,1.))
+        for i in self.modimg:
+            if self.states[i]:
+                j=self.color_mod(i)
+                if j=='grayed':
+                    image=convert_to_greyscale(image)
+                else:
+                    mod *= array(j)
+
+        if not self.per_pixel_alpha:
+            useflag=pg.BLEND_MULT
+            modalp=mod[3]
+            mod=mod[:3]
+        else:
+            useflag=pg.BLEND_RGBA_MULT
+
+        excess=tuple(max(0.,i-1.) for i in mod)
+        if excess!=(0,0,0,0):
+            img=image.copy()
+            img.fill(tuple(min(255,int(i*255)) for i in excess),None,useflag)
+        else :
+            img = None
+        image.fill(tuple(min(255,int(i*255)) for i in mod),None,useflag)
+        if img:
+            image.blit(img,(0,0),None,pg.BLEND_RGB_ADD)
+
+
+        if not self.per_pixel_alpha:
+            surf=surf.convert()
+            surf.fill(COLORKEY)
+            surf.blit(image,(0,0))
+            image=surf
+            image.set_colorkey(COLORKEY)
+            image.set_alpha(rint(modalp*255),pg.RLEACCEL)
+
+            try:
+                if self.alpha and not self.states['anim']:
+                    image.set_alpha(self.alpha,pg.RLEACCEL)
+            except:
+                pass
+
+        if self.states.get('blur',None):
+            self.make_blur(image,self.blur_mode)
+        self.image=image
+        return self.image
+
+
+    def make_blur(self,img,blur_mode=None,use_pil=None):
+        if use_pil is None:
+            use_pil=user.use_pil
+        if use_pil:
+            pil_string_image = pg.image.tostring(img, "RGBA",False)
+            pil_image = pilImage.fromstring("RGBA",img.get_rect().size,pil_string_image)
+
+            #enhancer = pilImageEnhance.Contrast(pil_image)
+            #pil_image=enhancer.enhance(1.2)
+            #enhancer = pilImageEnhance.Brightness(pil_image)
+            #pil_image=enhancer.enhance(1.2)
+            for i in range(3):
+                enhancer = pilImageEnhance.Sharpness(pil_image)
+                pil_image=enhancer.enhance(-1.)
+
+            #image=pilImageOps.invert(pil_image)
+
+            mode = pil_image.mode
+            size = pil_image.size
+            data = pil_image.tostring()
+            #print mode
+            #assert mode in "RGB", "RGBA"
+
+            return img.blit(  pg.image.fromstring(data, size, mode), (0,0))
+
+        if blur_mode is None:
+            blur_mode=self.blur_mode
+        mrg,nrep,flag,amplitude=blur_mode
+        if flag=='add':
+            flag=pg.BLEND_ADD
+        if flag=='mult':
+            flag=pg.BLEND_MULT
+        w,h=img.get_rect().size
+        amplitude=min(1,amplitude/float(nrep+1))
+        #imgref=img.copy()
+        img.fill(tuple(rint(255*amplitude) for z in range(4)) ,None,pg.BLEND_MULT)
+        if 0<mrg<1:
+            mrg=rint(mrg*sqrt(w*h) )
+        for i in range(1,(nrep+1)/2)+range(-1,-nrep/2,-1):
+            nimg=pg.transform.scale(img, tuple(max(2,x-2*mrg*i) for x in (w,h) ))
+            nimg.fill(tuple(rint(255*amplitude) for z in range(4)) ,None,pg.BLEND_MULT)
+            img.blit(nimg,(mrg*i,mrg*i),None,flag )
+        #img2=pg.transform.smoothscale(img, tuple(x-16 for x in array(img.get_rect().size) ))
+        #img3=pg.transform.smoothscale(img, tuple(x-32 for x in array(img.get_rect().size) ))
+        #img.blit(img2,(8,8),None,pg.BLEND_MULT)
+        #img.blit(img3,(16,16),None,pg.BLEND_ADD)
+        #self.aboriginize(img)
+
+    def aboriginize(self,img):
+        #TODO: Make this seriously better
+        from math import pi,cos, sin
+        rect=img.get_rect()
+        center=rect.center#+array((10,-94))
+        w,h=rect.size
+        rads=[]
+        angles=[]
+        rad=0
+        while rad<max(w,h):
+            if not rads:
+                r=rnd.randint(48,64)
             else:
-                try:
-                    surf=self.base_image
-                except:
-                    surf=self.images['idle']
-                image=pgsurface.Surface(surf.get_rect().size,pg.SRCALPHA)
-                image.blit(surf,(0,0))
-
-            mod=array((1.,1.,1.,1.))
-            for i in self.modimg:
-                if self.states[i]:
-                    j=self.color_mod(i)
-                    if j=='grayed':
-                        image=convert_to_greyscale(image)
-                    else:
-                        mod *= array(j)
-
-            if not self.per_pixel_alpha:
-                useflag=pg.BLEND_MULT
-                modalp=mod[3]
-                mod=mod[:3]
+                r=rnd.randint(8,16)
+            rad+=r
+            rads.append(r)
+            atot=0
+            angles.append([])
+            angles[-1].append(0)
+            if len(rads)==1:
+                continue
+            while atot<2*pi*rad-2*r:
+                angles[-1].append(r+rnd.randint(6,8) )
+                atot+=angles[-1][-1]
+        surf=pg.surface.Surface((w,h),pg.SRCALPHA )
+        surf.fill((0,0,0,255))
+        rad=1
+        for c in range(len(rads)):
+            r=rads[c]
+            if c==0:
+                pr=r*2-rads[1]
             else:
-                useflag=pg.BLEND_RGBA_MULT
+                pr=r
+            atot=0
+            for a in angles[c]:
+                atot+=a
+                color = tuple((rnd.randint(200,255) for x in range(3) ))
+                color+=100,
+                pg.draw.circle(surf, color,
+                    tuple(rint(x) for x in center +
+                    array((cos(float(atot)/rad),sin(float(atot)/rad)) )*rad),
+                        pr/2 )
+            rad+=r
 
-            excess=tuple(max(0.,i-1.) for i in mod)
-            if excess!=(0,0,0,0):
-                img=image.copy()
-                img.fill(tuple(min(255,int(i*255)) for i in excess),None,useflag)
-            else :
-                img = None
-            image.fill(tuple(min(255,int(i*255)) for i in mod),None,useflag)
-            if img:
-                image.blit(img,(0,0),None,pg.BLEND_RGB_ADD)
-
-
-            if not self.per_pixel_alpha:
-                surf=surf.convert()
-                surf.fill(COLORKEY)
-                surf.blit(image,(0,0))
-                image=surf
-                image.set_colorkey(COLORKEY)
-                image.set_alpha(rint(modalp*255),pg.RLEACCEL)
-
-                try:
-                    if self.alpha and not self.states['anim']:
-                        image.set_alpha(self.alpha,pg.RLEACCEL)
-                except:
-                    pass
+        img.blit(surf,(0,0),None,pg.BLEND_MULT)
 
 
-            self.image=image
-            return self.image
 
     def set_state(self,state,force_redraw=False,**kwargs):
         #print 'set state',self,state,force_redraw
@@ -855,9 +979,18 @@ def '''+i+'''(self,val):
     def kill(self,recursive=True):
         UI_Item.kill(self,recursive)
 
-    def hotspot(self,emote=None,**kwargs):
+
+    def set_hotspot(self,spot,typ="default"):
+        self.hotspot[typ]=spot
+
+    def get_hotspot(self,emote=None,*args,**kwargs):
         #anchor for emotes and other interactive properties
         #if emotes anchored already, move the anchor point
+        if emote in self.hotspot:
+            return self.hotspot[emote]
+        elif "default" in self.hotspot:
+            return self.hotspot["default"]
+        #generic anchor:
         basepos= array(self.rect.size)*(-.1,.1)
         if not emote:
             return array(self.rect.topright)+ basepos
@@ -870,7 +1003,6 @@ def '''+i+'''(self,val):
                 basepos += (0,20)
         self.emotes[emote]=basepos
         return array(self.rect.topright)+basepos
-
 
     def set_image(self,value):
         self.ref_image= UI_Item.set_image(self,value)
@@ -982,7 +1114,7 @@ def '''+i+'''(self,val):
 
     def call_emote(self,*args,**kwargs):
         em=Emote(*args,**kwargs)
-        em.rect.center=self.hotspot(em)
+        em.rect.center=self.get_hotspot(em)
         if not 'ephemeral' in kwargs:
             em.ephemeral=True
             em.set_anim('emote_jump')

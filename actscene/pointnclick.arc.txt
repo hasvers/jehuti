@@ -1,0 +1,215 @@
+#7#
+ ##class:ActsceneLayer
+ ##initparam:[]
+"distance":0
+"usable":"Off"
+"name":"Layer"
+"parent":None
+"items":['#8#']
+"required":()
+"bound":None
+"pos":{'#8#': 'array([747,490])'}
+"state":"idle"
+"offset":array([0,0])
+"alpha":1
+"ID":1
+"type":"layer"
+"children":[]
+"zoom":1
+##
+
+#5#
+ ##class:SettingData
+ ##initparam:[]
+##attr
+"_precursors":()
+"bg":""
+"children":[]
+"infotypes":{'"sprite"': ('"name"',), '"layer"': ('"offset"', '"state"', '"zoom"', '"distance"', '"items"', '"name"', '"bound"', '"order"')}
+"music":""
+"name":"place"
+"overwrite_item":False
+"panrange":(0, 0, 0, 0)
+"parent":None
+"rule":"all"
+"transparent":False
+"typID":{'"sprite"': 1, '"layer"': 2}
+##infos
+#6#:{'"order"': 0}
+##
+
+#0#
+ ##class:ActsceneData
+ ##initparam:[]
+##attr
+"_precursors":()
+"bg":""
+"cast":#1#
+"children":[]
+"infotypes":{'"sprite"': ('"name"', '"bound"', '"usable"', '"scripts"', '"desc"', '"mouseover"', '"layer"'), '"layer"': ('"offset"', '"state"', '"zoom"', '"distance"', '"items"', '"name"', '"bound"', '"order"', '"usable"')}
+"music":""
+"name":"pointnclick"
+"overwrite_item":False
+"panrange":array([20,20,0,0])
+"parent":None
+"rule":"all"
+"scripts":['#3#']
+"setting":#5#
+"transparent":False
+"typID":{'"sprite"': 2, '"layer"': 2}
+##infos
+#7#:{'"usable"': '"On"', '"order"': 0, '"distance"': -0.38}
+#8#:{'"bound"': '#2#', '"usable"': '"On"', '"scripts"': ['#9#'], '"mouseover"': u'"Talk"', '"pos"': 'array([747,490])', '"layer"': '#7#'}
+##
+
+#3#
+ ##class:Script
+ ##initparam:[]
+"name":"Script0"
+"conds":[]
+"logic":""
+"type":"script"
+"iter":"always"
+"effects":['#4#']
+##
+
+#9#
+ ##class:Script
+ ##initparam:[]
+"name":"Script0"
+"conds":[]
+"logic":""
+"type":"script"
+"iter":"always"
+"effects":['#10#', '#11#']
+##
+
+#2#
+ ##class:Actor
+ ##initparam:[]
+"control":"human"
+"perc":0.5
+"subt":0.5
+"required":()
+"name":"Biscuit"
+"agil":0.5
+"color":(200, 50, 50, 255)
+"prox":{}
+"face":0.33
+"react":[]
+"truename":"Biscuit140470644508504"
+"status":"Unknown"
+"portrait":"default"
+"prof":[]
+"ID":5
+"type":"actor"
+"terr":0.2
+##
+
+#8#
+ ##class:ActsceneSprite
+ ##initparam:[]
+"usable":"Off"
+"scale":0.5
+"name":"Sprite1"
+"required":()
+"bound":None
+"source":"common/perso2a.png"
+"set":"default"
+"scripts":[]
+"mouseover":""
+"type":"sprite"
+"ID":1
+"desc":""
+##
+
+#1#
+ ##class:LocCastData
+ ##initparam:[]
+##attr
+"_precursors":()
+"children":[]
+"infotypes":{'"actor"': ('"perc"', '"control"', '"subt"', '"name"', '"agil"', '"color"', '"prox"', '"face"', '"react"', '"status"', '"portrait"', '"prof"', '"terr"')}
+"name":"dft_cast"
+"overwrite_item":False
+"parent":None
+"rule":"all"
+"transparent":True
+"typID":{'"actor"': 6}
+##infos
+#2#:{}
+##
+
+#4#
+ ##class:SceneScriptEffect
+ ##initparam:[]
+"info":""
+"type":"scripteffect"
+"name":"Effect"
+"source":None
+"text":"This is a point'n'click phase."
+"actor":"Narrator"
+"delay":"None"
+"start":0
+"target":None
+"evt":None
+"typ":"Text"
+"display":"Off"
+"wait":"None"
+##
+
+#10#
+ ##class:SceneScriptEffect
+ ##initparam:[]
+"info":""
+"type":"scripteffect"
+"name":"Effect"
+"source":None
+"text":"Welcome to my abode."
+"actor":#2#
+"delay":"None"
+"start":0
+"target":None
+"evt":None
+"typ":"Text"
+"display":"On"
+"wait":"None"
+##
+
+#11#
+ ##class:SceneScriptEffect
+ ##initparam:[]
+"info":""
+"type":"scripteffect"
+"name":"Effect"
+"source":None
+"text":""
+"actor":None
+"delay":"None"
+"start":0
+"target":"scene.cutscene"
+"evt":"call"
+"typ":"Game"
+"display":"Off"
+"wait":"None"
+##
+
+#6#
+ ##class:PlaceLayer
+ ##initparam:[]
+"distance":0
+"name":"Layer"
+"parent":None
+"items":[]
+"required":()
+"bound":None
+"pos":{}
+"state":"idle"
+"offset":array([0,0])
+"alpha":1
+"ID":1
+"type":"layer"
+"children":[]
+"zoom":1
+##
+

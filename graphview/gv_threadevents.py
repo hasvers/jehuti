@@ -186,6 +186,7 @@ class PanEvt(ThreadEvent):
         super(PanEvt, self).__init__(type='pan',**kwargs)
         self.rel=rel
         self.scene=scene
+        self.absolute_mode=kwargs.get('absolute',True)
 
     def __repr__(self):
         return '{} {} {}'.format(self.desc,self.scene,self.rel)
@@ -194,33 +195,56 @@ class PanEvt(ThreadEvent):
         return (self.scene,)+tuple(self._affects)
 
     def prep_init(self,*args,**kwargs):
-        self.oldpos={l:self.scene.get_info(l,'offset') for l in self.scene.layers}
+        if self.absolute_mode:
+            self.oldpos=self.scene.pan
+        else:
+            self.oldpos={l:self.scene.get_info(l,'offset') for l in self.scene.layers}
 
     def do(self,fraction,*args,**kwargs):
         if 0<fraction<1:
-            rel=fraction*array(self.rel)
             scene=self.scene
+            rel=fraction*array(self.rel)
+            if self.absolute_mode:
+                trueoff=self.oldpos+array(rel)
+                self.scene.pan=tuple(rint(i) for i in trueoff)
             for l in scene.layers:
-                offset=tuple(int(i*(1.-scene.get_info(l,'distance'))) for i in rel)
-                scene.set_info(l,'offset',self.oldpos[l]+array(offset))
+                if self.absolute_mode:
+                    offset=tuple(rint(i*(1.-scene.get_info(l,'distance'))) for i in trueoff)
+                    scene.set_info(l,'offset',array(offset))
+                else:
+                    offset=tuple(rint(i*(1.-scene.get_info(l,'distance'))) for i in rel)
+                    scene.set_info(l,'offset',self.oldpos[l]+array(offset))
             return True
         return False
 
     def end(self ,*args,**kwargs):
         scene=self.scene
+        if self.absolute_mode:
+            trueoff=self.oldpos+array(self.rel)
+            self.scene.pan=tuple(rint(i) for i in trueoff)
         for l in scene.layers:
-            offset=tuple(int(i*(1.-scene.get_info(l,'distance'))) for i in self.rel)
-            offset+=array(self.oldpos[l])
-            scene.set_info(l,'offset',offset,additive=False)
+            if self.absolute_mode:
+                offset=tuple(rint(i*(1.-scene.get_info(l,'distance'))) for i in trueoff)
+                scene.set_info(l,'offset',array(offset))
+            else:
+                offset=tuple(rint(i*(1.-scene.get_info(l,'distance'))) for i in self.rel)
+                offset+=array(self.oldpos[l])
+                scene.set_info(l,'offset',offset,additive=False)
         return True
 
     def undo(self,*args,**kwargs):
         scene=self.scene
+        if self.absolute_mode:
+            trueoff=self.oldpos
+            self.scene.pan=tuple(rint(i) for i in trueoff)
         for l in scene.layers:
-            scene.set_info(l,'offset',self.oldpos[l],additive=False)
+            if self.absolute_mode:
+                offset=tuple(rint(i*(1.-scene.get_info(l,'distance'))) for i in trueoff)
+                scene.set_info(l,'offset',array(offset))
+            else:
+                scene.set_info(l,'offset',self.oldpos[l],additive=False)
+            self.scene.pan=tuple(rint(i) for i in trueoff)
         return True
-
-
 
 
 class ZoomEvt(ThreadEvent):
@@ -229,6 +253,7 @@ class ZoomEvt(ThreadEvent):
         super(ZoomEvt, self).__init__(type='zoom',**kwargs)
         self.target=target
         self.scene=scene
+        self.absolute_mode=kwargs.get('absolute',True)
 
     def __repr__(self):
         return '{} {} {}'.format(self.desc,self.scene,self.target)
@@ -237,8 +262,12 @@ class ZoomEvt(ThreadEvent):
         return (self.scene,)+tuple(self._affects)
 
     def prep_init(self,*args,**kwargs):
-        self.oldzoom={l:self.scene.get_info(l,'zoom') for l in self.scene.layers}
-        self.oldpos={l:self.scene.get_info(l,'offset') for l in self.scene.layers}
+        if self.absolute_mode:
+            self.oldzoom=self.scene.zoom
+            self.oldpos=self.scene.pan
+        else:
+            self.oldzoom={l:self.scene.get_info(l,'zoom') for l in self.scene.layers}
+            self.oldpos={l:self.scene.get_info(l,'offset') for l in self.scene.layers}
 
 
     def do(self,fraction,*args,**kwargs):
@@ -246,28 +275,57 @@ class ZoomEvt(ThreadEvent):
             handler=args[0]
             target= fraction*(self.target-1)
             scene=self.scene
+            if self.absolute_mode:
+                truezoom=(1+target)
+                trueoff=self.oldpos+(truezoom-1)*array(handler.parent.screen.get_rect().size)/2
+                self.scene.pan=tuple(rint(i) for i in trueoff)
+                self.scene.zoom=truezoom*self.oldzoom
             for l in scene.layers:
-                zoom=1+target*(1.-self.scene.get_info(l,'distance'))
-                scene.set_info(l,'zoom',self.oldzoom[l]*zoom)
-                offset=(zoom-1)*array(handler.parent.screen.get_rect().size)/2
-                scene.set_info(l,'offset',array(self.oldpos[l]-offset,dtype='int'))
+                if self.absolute_mode:
+                    zoom=1+(truezoom-1)*(1.-self.scene.get_info(l,'distance'))
+                    scene.set_info(l,'zoom',zoom*self.oldzoom)
+                    offset=trueoff*zoom/truezoom
+                    scene.set_info(l,'offset',self.oldpos-array(offset,dtype='int'))
+                else:
+                    zoom=1+target*(1.-self.scene.get_info(l,'distance'))
+                    scene.set_info(l,'zoom',self.oldzoom[l]*zoom)
+                    offset=(zoom-1)*array(handler.parent.screen.get_rect().size)/2
+                    scene.set_info(l,'offset',array(self.oldpos[l]-offset,dtype='int'))
             return True
         return False
 
     def end(self ,*args,**kwargs):
         scene=self.scene
         handler=args[0]
+        if self.absolute_mode:
+            self.scene.zoom=truezoom=self.target
+            self.scene.pan=trueoff=self.oldpos+(truezoom-1)*array(handler.parent.screen.get_rect().size)/2
         for l in scene.layers:
-            zoom=1+(self.target-1)*(1.-self.scene.get_info(l,'distance'))
-            scene.set_info(l,'zoom',self.oldzoom[l]*zoom)
-            offset=(zoom-1)*array(handler.parent.screen.get_rect().size)/2
-            scene.set_info(l,'offset',array(self.oldpos[l]-offset,dtype='int'))
+            if self.absolute_mode:
+                zoom=1+(truezoom-1)*(1.-self.scene.get_info(l,'distance'))
+                scene.set_info(l,'zoom',zoom)
+                offset=trueoff*zoom/truezoom
+                scene.set_info(l,'offset',array(offset,dtype='int'))
+            else:
+                zoom=1+(self.target-1)*(1.-self.scene.get_info(l,'distance'))
+                scene.set_info(l,'zoom',self.oldzoom[l]*zoom)
+                offset=(zoom-1)*array(handler.parent.screen.get_rect().size)/2
+                scene.set_info(l,'offset',array(self.oldpos[l]-offset,dtype='int'))
         return True
 
     def undo(self,*args,**kwargs):
         scene=self.scene
         handler=args[0]
+        if self.absolute_mode:
+            self.scene.pan=trueoff=self.oldpos
+            self.scene.zoom=truezoom=self.oldzoom
         for l in scene.layers:
-            scene.set_info(l,'zoom',self.oldzoom[l])
-            scene.set_info(l,'offset',array(self.oldpos[l],dtype='int'))
+            if self.absolute_mode:
+                zoom=1+(truezoom-1)*(1.-self.scene.get_info(l,'distance'))
+                scene.set_info(l,'zoom',zoom)
+                offset=trueoff*zoom/truezoom
+                scene.set_info(l,'offset',array(offset,dtype='int'))
+            else:
+                scene.set_info(l,'zoom',self.oldzoom[l])
+                scene.set_info(l,'offset',array(self.oldpos[l],dtype='int'))
         return True

@@ -1,0 +1,316 @@
+#15#
+ ##class:SettingData
+ ##initparam:[]
+##attr
+"_precursors":()
+"bg":""
+"children":[]
+"infotypes":{'"sprite"': ('"name"',), '"layer"': ('"offset"', '"state"', '"zoom"', '"distance"', '"items"', '"name"', '"bound"', '"order"')}
+"music":""
+"name":"place"
+"overwrite_item":False
+"panrange":(0, 0, 0, 0)
+"parent":None
+"rule":"all"
+"transparent":False
+"typID":{'"sprite"': 1, '"layer"': 2}
+##infos
+#16#:{'"order"': 0}
+##
+
+#2#
+ ##class:Script
+ ##initparam:[]
+"name":"Script0"
+"conds":[]
+"logic":""
+"type":"script"
+"iter":"always"
+"effects":['#3#', '#5#', '#7#', '#8#', '#9#', '#10#', '#11#', '#12#', '#13#', '#14#']
+##
+
+#0#
+ ##class:CutsceneData
+ ##initparam:[]
+##attr
+"_precursors":()
+"bg":""
+"cast":#1#
+"children":[]
+"infotypes":{'"sprite"': ('"name"', '"bound"', '"layer"'), '"layer"': ('"offset"', '"state"', '"zoom"', '"distance"', '"items"', '"name"', '"bound"', '"order"')}
+"music":"Doedelzak_track3.mp3"
+"name":"scene"
+"overwrite_item":False
+"panrange":(0, 0, 0, 0)
+"parent":None
+"rule":"all"
+"scripts":['#2#']
+"setting":#15#
+"transparent":False
+"typID":{'"sprite"': 3, '"layer"': 2}
+##infos
+#17#:{'"order"': 0}
+#4#:{'"pos"': 'array([220,518])', '"layer"': '#17#'}
+#6#:{'"pos"': 'array([772,467])', '"layer"': '#17#'}
+##
+
+#17#
+ ##class:CutsceneLayer
+ ##initparam:[]
+"distance":0
+"name":"Layer"
+"parent":None
+"items":['#4#', '#6#']
+"required":()
+"bound":None
+"pos":{'#6#': 'array([772,467])', '#4#': 'array([220,518])'}
+"state":"idle"
+"offset":array([0,0])
+"alpha":1
+"ID":1
+"type":"layer"
+"children":[]
+"zoom":1
+##
+
+#1#
+ ##class:LocCastData
+ ##initparam:[]
+##attr
+"_precursors":()
+"children":[]
+"infotypes":{'"actor"': ('"perc"', '"control"', '"subt"', '"name"', '"agil"', '"color"', '"prox"', '"face"', '"react"', '"status"', '"portrait"', '"prof"', '"terr"')}
+"name":"dft_cast"
+"overwrite_item":False
+"parent":None
+"rule":"all"
+"transparent":True
+"typID":{'"actor"': 1}
+##infos
+##
+
+#4#
+ ##class:CutsceneSprite
+ ##initparam:[]
+"scale":0.4
+"name":"Sprite1"
+"required":()
+"bound":None
+"source":"common/hero1.png"
+"set":"default"
+"type":"sprite"
+"ID":1
+##
+
+#6#
+ ##class:CutsceneSprite
+ ##initparam:[]
+"scale":0.45
+"name":"Sprite1"
+"required":()
+"bound":None
+"source":"common/perso2d.png"
+"set":"default"
+"type":"sprite"
+"ID":2
+##
+
+#3#
+ ##class:SceneScriptEffect
+ ##initparam:[]
+"info":"hide"
+"type":"scripteffect"
+"name":"Effect"
+"source":None
+"text":""
+"actor":None
+"delay":"None"
+"start":0
+"target":#4#
+"evt":"anim"
+"typ":"Scene"
+"display":"Off"
+"wait":"None"
+##
+
+#5#
+ ##class:SceneScriptEffect
+ ##initparam:[]
+"info":"hide"
+"type":"scripteffect"
+"name":"Effect"
+"source":None
+"text":""
+"actor":None
+"delay":"None"
+"start":0
+"target":#6#
+"evt":"anim"
+"typ":"Scene"
+"display":"Off"
+"wait":"None"
+##
+
+#7#
+ ##class:SceneScriptEffect
+ ##initparam:[]
+"info":""
+"type":"scripteffect"
+"name":"Effect"
+"source":None
+"text":"This is a cutscene"
+"actor":"Narrator"
+"delay":"None"
+"start":0
+"target":None
+"evt":None
+"typ":"Text"
+"display":"Off"
+"wait":"None"
+##
+
+#8#
+ ##class:SceneScriptEffect
+ ##initparam:[]
+"info":"appear"
+"type":"scripteffect"
+"name":"Effect"
+"source":None
+"text":""
+"actor":None
+"delay":"None"
+"start":0
+"target":#6#
+"evt":"anim"
+"typ":"Scene"
+"display":"Off"
+"wait":"None"
+##
+
+#9#
+ ##class:SceneScriptEffect
+ ##initparam:[]
+"info":"appear"
+"type":"scripteffect"
+"name":"Effect"
+"source":None
+"text":""
+"actor":None
+"delay":"None"
+"start":0
+"target":#4#
+"evt":"anim"
+"typ":"Scene"
+"display":"Off"
+"wait":"None"
+##
+
+#10#
+ ##class:SceneScriptEffect
+ ##initparam:[]
+"info":""
+"type":"scripteffect"
+"name":"Effect"
+"source":None
+"text":"The screen is going to be red."
+"actor":"Up"
+"delay":"None"
+"start":0
+"target":None
+"evt":None
+"typ":"Text"
+"display":"Off"
+"wait":"None"
+##
+
+#11#
+ ##class:SceneScriptEffect
+ ##initparam:[]
+"info":"100"
+"type":"scripteffect"
+"name":"Effect"
+"source":None
+"text":""
+"actor":None
+"delay":"None"
+"start":"phase"
+"target":1.16
+"evt":None
+"typ":"Zoom"
+"display":"Off"
+"wait":"None"
+##
+
+#12#
+ ##class:SceneScriptEffect
+ ##initparam:[]
+"info":100.0
+"type":"scripteffect"
+"name":"Effect"
+"source":(0, 0, 0, 0)
+"text":""
+"actor":None
+"delay":"None"
+"start":"phase"
+"target":array([100,0,0,255])
+"evt":None
+"typ":"Fade"
+"display":"Off"
+"wait":"On"
+##
+
+#13#
+ ##class:SceneScriptEffect
+ ##initparam:[]
+"info":"10.0"
+"type":"scripteffect"
+"name":"Effect"
+"source":array([100,0,0,255])
+"text":""
+"actor":None
+"delay":"None"
+"start":"phase"
+"target":array([0,0,0,255])
+"evt":None
+"typ":"Fade"
+"display":"Off"
+"wait":"On"
+##
+
+#14#
+ ##class:SceneScriptEffect
+ ##initparam:[]
+"info":"None"
+"type":"scripteffect"
+"name":"Effect"
+"source":None
+"text":""
+"actor":None
+"delay":"None"
+"start":0
+"target":"match.match"
+"evt":"call"
+"typ":"Game"
+"display":"Off"
+"wait":"None"
+##
+
+#16#
+ ##class:PlaceLayer
+ ##initparam:[]
+"distance":0
+"name":"Layer"
+"parent":None
+"items":[]
+"required":()
+"bound":None
+"pos":{}
+"state":"idle"
+"offset":array([0,0])
+"alpha":1
+"ID":1
+"type":"layer"
+"children":[]
+"zoom":1
+##
+

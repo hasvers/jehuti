@@ -445,7 +445,8 @@ class GamePlayer(GameHandler):
                 except:
                     pass
                 sm=self.save_state
-                struct+=('Save', lambda s=sm:user.ui.save_menu('save',s,
+                path=database['game_path']+self.data.name.split('.')[0]+'/'
+                struct+=('Save', lambda s=sm,p=path:user.ui.save_menu('save',s,path=p,
                     default=self.gamestate.name,exit_method=lambda:user.pause(False))),
 
                 struct+=('Exit',lambda: user.ui.confirm_menu(lambda:user.ui.game_ui.goto('title'),

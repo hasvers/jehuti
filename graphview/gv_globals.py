@@ -1,7 +1,7 @@
 import pygame as pg
 from pygame import surface as pgsurface, event as pgevent, sprite as pgsprite, rect as pgrect,mixer as pgmixer
 from copy import deepcopy
-from numpy import array, ndarray, uint8 as npuint8, int as npint,maximum as npmaximum
+from numpy import array, random as nprandom, ndarray,nditer, uint8 as npuint8, int as npint,maximum as npmaximum,newaxis as npnewaxis
 from math import *
 import colors as matcolors
 import random as rnd
@@ -13,6 +13,7 @@ from operator import itemgetter,attrgetter
 import networkx as nx
 import cProfile,pstats,sys,time,itertools,re
 import os
+from PIL import Image as pilImage, ImageEnhance as pilImageEnhance, ImageOps as pilImageOps
 
 
 pg.font.init()
@@ -146,6 +147,8 @@ def load_icon(typ,**kwargs):
             return icon_db['node']
         except:
             return False
+
+mycursor=pg.transform.smoothscale(pg.image.load(database['cursor_img']),database['cursor_size'])
 
 
 def get_color(txt):

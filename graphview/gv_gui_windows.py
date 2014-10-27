@@ -451,8 +451,9 @@ class EditorMenu(DragWindow):
                 self.chgevt[a].desc='Change '+desc[a].lower()
 
     def kill(self,*args,**kwargs):
-        user.ui.depend.rem_dep(self,self.ref)
-        user.ui.depend.rem_dep(self,self.infosource)
+        if user.ui:
+            user.ui.depend.rem_dep(self,self.ref)
+            user.ui.depend.rem_dep(self,self.infosource)
         DragWindow.kill(self,*args,**kwargs)
 
     def renew(self):

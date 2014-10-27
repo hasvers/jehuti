@@ -42,9 +42,22 @@ class ActsceneData(CutsceneData):
     def __repr__(self):
         return 'Actscene {}'.format(self.name)
 
+    def klassmake(self,klass,*args):
+        return eval(klass)(*args)
 
 class ActsceneSpriteIcon(CutsceneSpriteIcon):
     pass
+
+    #def set_state(self,state,*args,**kwargs):
+        #if state=='hover':
+            #self.set_state('blur')
+        #CutsceneSpriteIcon.set_state(self,state,*args,**kwargs)
+
+    #def rm_state(self,state,*args,**kwargs):
+        #if state=='hover':
+            #self.rm_state('blur')
+        #CutsceneSpriteIcon.rm_state(self,state,*args,**kwargs)
+
 
 class ActsceneView(CutsceneView):
     icon_types={'dft':ActsceneSpriteIcon}
@@ -136,6 +149,7 @@ class ActscenePlayer(ActsceneHandler,CutscenePlayer):
         return False
 
     def bgdrag(self,rel):
+        user.grab(self.view)
         self.limpan(rel)
         return 1
 
