@@ -2,34 +2,6 @@
 from gam_scene import *
 #from gam_cutscene_events import *
 
-class OldCutsceneScript(DataBit):
-    #obsolete
-    dft={'name':'Effect',
-        'actor':None,
-        'target':None,
-        'evt':None,
-        'text':'',
-        'display':'Off',
-        'typ':'Text',
-        'info':'',
-        'wait':'None',
-        }
-    def __init__(self,**kwargs):
-        super(CutsceneScript, self).__init__(**kwargs)
-
-    def __repr__(self):
-        return 'CutsceneScript:'+self.name
-
-    def templates(self,template=None,**kwargs):
-        sprites=cutscene.sprites
-        templatelist={
-            'Text':(('actor','listsel',{'values':('Narrator',)+tuple(actors)}),
-                ('display','arrowsel',{'values':('On','Off'),'legend':'    Display name:'}),
-                ('info','arrowsel',{'values':('Balloon','Dialbox'),'legend':'    Type:'}),
-                ('text','input',{'width':200,'height':200,'maxlines':None}) ),
-            }
-        return templatelist
-
 class CutsceneSprite(DataItem):
     dft={'name':'Sprite',
         'set':'default',
@@ -372,7 +344,8 @@ class CutsceneEditorUI(PlaceEditorUI,SceneUI):
         ref.typ=typ
         flist=(
             ('name','input',{'legend':'Name','width':200}),
-            )+ ref.templates(typ,handler=self.scene)
+            ('typ','toggle',{'templates':ref.templates})
+            )
         kwargs.setdefault('title','Script condition: {}'.format(typ))
         self.maker_menu(flist,output_method,klass,val=ref,**kwargs)
 
@@ -384,7 +357,8 @@ class CutsceneEditorUI(PlaceEditorUI,SceneUI):
         ref.typ=typ
         flist=(
             ('name','input',{'legend':'Name','width':200}),
-            )+ ref.templates(typ,handler=self.scene)
+            ('typ','toggle',{'templates':ref.templates}),
+            )
         kwargs.setdefault('title','Script effect: {}'.format(typ))
         self.maker_menu(flist,output_method,klass,val=ref,**kwargs)
 

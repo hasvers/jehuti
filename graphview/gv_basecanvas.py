@@ -710,7 +710,7 @@ class BaseCanvasHandler(Handler):
                         layers=self.layers
                     self.remove(item,layers,**evt.kwargs)
         if evt.kwargs.get('assess',False) :
-            self.view.assess_itemstate(item)
+            self.view.assess_itemstate(evt.item)
         if evt.kwargs.get('update',False) :
             self.update()
         for c in evt.states.node[evt.state]['children_states']:

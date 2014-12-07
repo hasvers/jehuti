@@ -243,7 +243,7 @@ class MatchEditorUI(EditorUI,SceneUI):
         self.maker_menu(flist,output_method,Script,**kwargs)
 
     def script_cond_maker(self,output_method,**kwargs):
-        klass=ScriptCondition
+        klass=MatchScriptCondition
         ref=kwargs.pop('val',None)
         if not isinstance(ref,klass):
             ref=klass()
@@ -255,7 +255,7 @@ class MatchEditorUI(EditorUI,SceneUI):
         self.maker_menu(flist,output_method,klass,val=ref,**kwargs)
 
     def script_effect_maker(self,output_method,**kwargs):
-        klass=ScriptEffect
+        klass=MatchScriptEffect
         ref=kwargs.pop('val',None)
         if not isinstance(ref,klass):
             ref=klass()

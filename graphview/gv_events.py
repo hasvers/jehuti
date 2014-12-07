@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from gv_globals import *
+from gv_data import *
 DEBUG=0
 
-class Signal(object):
+class Signal(DataBit):
 #
     def __init__(self,type,*args,**kwargs):
         self.source=kwargs.pop('source',None) #source is not that important if each handler has a list of events that it has responded to
@@ -489,6 +490,7 @@ class Event(Signal):
         self.cues={}
 
         self.states=nx.DiGraph()
+        self.durations={} #duration per state
         for n in (0,1):
             self.add_state(n)
         #self.states.add_edges_from(( (0,1), (1,0) ))

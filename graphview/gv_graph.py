@@ -35,19 +35,25 @@ class Link(DataItem):
         'val':.5,
         'desc':'',
         }
+    _required=None
 
     def __init__(self,parents,**kwargs):
         self.type ='link'
         self.parents=parents
         DataItem.__init__(self,**kwargs)
-
         self.lid =self.__class__.lid
         self.__class__.lid+=1
 
     @property
     def required(self):
-        return self.parents
+        if self._required!=None:
+            return self._required
+        else:
+            return self.parents
 
+    @required.setter
+    def required(self,val):
+        self._required=val
 
     def txt_export(self,keydic,txtdic,typdic,**kwargs):
         kwargs.setdefault('add_param',[]).append('parents')

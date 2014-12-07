@@ -146,7 +146,7 @@ class InputField(TextField):
                         self.moveindex(len(test))
                 if event.key==pg.K_c:
                     clipboard.copy(self.val)
-            if event.key == pg.K_TAB:
+            elif event.key == pg.K_TAB:
                 try:
                     return self.parent.next_field()
                 except:

@@ -15,6 +15,7 @@ import cProfile,pstats,sys,time,itertools,re
 import os
 from PIL import Image as pilImage, ImageEnhance as pilImageEnhance, ImageOps as pilImageOps
 
+from itertools import chain as iterchain
 
 pg.font.init()
 pgmixer.init(44100)

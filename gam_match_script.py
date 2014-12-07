@@ -16,8 +16,8 @@ class CFlag(Script):
         self.data=data
         Script.__init__(self,**kwargs)
         self.type='cflag'
-        self.cond=ScriptCondition()
-        self.effect=ScriptEffect()
+        self.cond=MatchScriptCondition()
+        self.effect=MatchScriptEffect()
         self.conds=[self.cond]
         self.effects=[self.effect]
 
@@ -66,7 +66,7 @@ class CFlag(Script):
 ##- Match state change: win, lose, interrupt,
 
 
-class ScriptEffect(SceneScriptEffect):
+class MatchScriptEffect(SceneScriptEffect):
     dft={'name':'Effect',
         'actor':None,
         'source':None,
@@ -139,6 +139,7 @@ class ScriptEffect(SceneScriptEffect):
         elif hasattr(template,'__iter__'):
             return [templatelist[i] for i in template]
         else:
+            print templatelist[template]
             return templatelist[template]
 
     def __repr__(self):
@@ -267,7 +268,7 @@ class ScriptEffect(SceneScriptEffect):
                 match.add_phase(FuncWrapper('wait',source=phase))
 
 
-class ScriptCondition(SceneScriptCondition):
+class MatchScriptCondition(SceneScriptCondition):
 
     def templatelist(self,match,gphinf,nodes,links, actors,castuple):
         castinf,castopt=castuple
@@ -375,7 +376,7 @@ class ScriptCondition(SceneScriptCondition):
             else:
                 if evt is None or not hasattr(evt,'infos') or not self.info in evt.infos:
                     return False
-                print 'Change', evt.item, self.info, evt.infos
+                #print 'Change', evt.item, self.info, evt.infos
                 if evt.item!=self.target:
                     return False
                 if self.evt=='Difference':

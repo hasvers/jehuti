@@ -189,6 +189,18 @@ class SceneScriptEffect(DataBit):
                 ) +temps.get(self.evt,())
         return templatelist
 
+
+    def templates(self,template=None,**kwargs):
+        scene=user.ui.scene
+        actors=sorted(scene.cast.actors)
+        templatelist=self.templatelist(scene,scene.data.sprites,actors)
+        if template is None:
+            return templatelist
+        elif hasattr(template,'__iter__'):
+            return [templatelist[i] for i in template]
+        else:
+            return templatelist[template]
+
     def infosep(self,info):
         infos=[]
         for inf in info.split(';'):
@@ -379,19 +391,6 @@ class SceneScriptEffect(DataBit):
             scene.add_phase(phase)
             if self.wait=='On':
                 scene.add_phase(FuncWrapper('wait',source=phase))
-
-
-
-    def templates(self,template=None,**kwargs):
-        scene=user.ui.scene
-        actors=sorted(scene.cast.actors)
-        templatelist=self.templatelist(scene,scene.data.sprites,actors)
-        if template is None:
-            return templatelist
-        elif hasattr(template,'__iter__'):
-            return [templatelist[i] for i in template]
-        else:
-            return templatelist[template]
 
     def __repr__(self):
         #base = self.name+' '+self.typ
