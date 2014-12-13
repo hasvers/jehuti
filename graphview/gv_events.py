@@ -176,10 +176,13 @@ class EventCommander(object):
                 else:
                     self.destination.setdefault(evt,[]).append((state,args,kwargs))
         else :
-            #try:
+            if kwargs.get('repeat_only',0):
+                state=evt.state
+            elif kwargs.get('time',None)!=None:
+                return self.go(evt,evt.state_at_time(kwargs['time']),*args,**kwargs)
+            else:
                 state=evt.states.successors(evt.state)[0]
-            #except:
-                #return False
+
        # print '> evt_do suite', id(evt)
         return self.evt_goto(evt,state,*args,**kwargs)
 
@@ -207,11 +210,14 @@ class EventCommander(object):
         edges=evt.states.edges()
         if edge in edges or redge in edges:
             return self.evt_goto(evt,state,*args,**kwargs)
-        try:
-            path = nx.shortest_path(evt.states,evt.state,state)
-        except:
-            path= nx.shortest_path(evt.states,state,evt.states)[::-1]
-        for i in path[1:]:
+        if evt.state==state:
+            path=[state]
+        else:
+            try:
+                path = nx.shortest_path(evt.states,evt.state,state)
+            except:
+                path= nx.shortest_path(evt.states,state,evt.state)[::-1]
+        for i in path:
             if not self.evt_goto(evt,i,*args,**kwargs):
                 return False
         return True
@@ -225,7 +231,8 @@ class EventCommander(object):
         if self.paused and not evt in self.moving and not (evt,state,args,kwargs) in self.stacked:
             self.stacked.append( (evt,state,args,kwargs))
             return False
-
+        if kwargs.get('repeat_only') and state != evt.state:
+            return False
         if evt.state==state and not evt.repeatable:
             #print '----- discontinued',id(evt)
             return False
@@ -257,8 +264,12 @@ class EventCommander(object):
         for p,c in priority:
             if c != evt :
                 s = evt.states.node[state]['children_states'][c]
-                arg,kwarg=deepcopy(args),deepcopy(kwargs)
+                #arg,kwarg=deepcopy(args),deepcopy(kwargs)
+                arg=deepcopy(args)
+                kwarg={}
+                kwarg.update(kwargs)
                 kwarg['ephemeral']=1
+                kwarg['handle']=handle
                 try:
                     arg=evt.states.node[state]['children_arg'][c]
                     kwarg=evt.states.node[state]['children_kwarg'][c]
@@ -274,11 +285,13 @@ class EventCommander(object):
                 if evt.state==state and not evt.repeatable:
                     continue
                 #evt.state=state
-                handle=kwargs.get('handle',self.handle)
+                kwarg={}
+                kwarg.update(kwargs)
+                handle=kwarg.pop('handle',self.handle)
                 if handle:
-                    evtdone =  evt.run(state,handle,*args)
+                    evtdone =  evt.run(state,handle,*args,**kwarg)
                 else :
-                    evtdone =  evt.run(state,*args)
+                    evtdone =  evt.run(state,*args,**kwarg)
 
                 handled = evtdone or handled
                 if evtdone:
@@ -287,7 +300,7 @@ class EventCommander(object):
                     if (evt,state) in self.data.calls.nodes() : #bound events
                         for e2,s2 in self.data.calls.neighbors( (evt,state) ):
                             if e2.state != s2:
-                                self.go(e2,s2)
+                                self.go(e2,s2,**kwargs)
                 #else:
                     #print 'FAIL', evt, state
         if evt.cues.get(state,None)=='destroy':
@@ -415,6 +428,7 @@ class EventGraph(object):
                                     self.calls.remove_edge((e,s),(e2,s2) )
                                 except:
                                     pass
+        print self.calls.edges()
 
     def old_bind_event(self,nevt,oevt,statecorresp):
         #never used yet
@@ -465,20 +479,21 @@ class Event(Signal):
     parent=None
     repeatable=False #accepts "movements" from one state to the same
     desc='Event' #for any event list
+    timed=False #flag to distinguished timed events (subclass)
 
     def __init__(self,*args,**kwargs):
         self.parent=None # optional parent event
         self.state=0
-        self.children={} #indexed by state
+        #self.children={} #indexed by state
         for i in kwargs.keys() :
             if i == 'parent' :
                 self.parent = kwargs.pop(i)
             if i == 'desc' :
                 self.desc = kwargs.pop(i)
-            if i == 'children' :
-                self.children = kwargs.pop(i)
-                for c in self.children:
-                    c.parent=self
+            #if i == 'children' :
+            #    self.children = kwargs.pop(i)
+            #    for c in self.children:
+            #        c.parent=self
             if i == 'repeatable':
                 self.repeatable=j
         self._affects=kwargs.pop('affects',() )
@@ -490,7 +505,6 @@ class Event(Signal):
         self.cues={}
 
         self.states=nx.DiGraph()
-        self.durations={} #duration per state
         for n in (0,1):
             self.add_state(n)
         #self.states.add_edges_from(( (0,1), (1,0) ))
@@ -798,3 +812,50 @@ class MoveEvt(Event):
                 return True
         print 'MOVE FAIL', state,tuple(self.graph.pos[item]),tuple(self.pos)
         return False
+
+
+class TimedEvent(Event):
+    timed=True
+    repeatable=1
+    def prepare(self,edge,*args,**kwargs):
+        if edge==(0,1):
+            for s in self.states.node:
+                self.states.node[s]['started']=None
+                self.states.node[s]['duration']=0
+        return Event.prepare(self,edge,*args,**kwargs)
+
+    def run(self,state,*args,**kwargs):
+        if state>0 and self.states.node[state]['started'] == None:
+            self.states.node[state]['started']=kwargs.get('time',None)
+        return Event.run(self,state,*args,**kwargs)
+
+    def state_at_time(self,time):
+        '''Find the state in which this timed event SHOULD be
+        at a given time (or else the last state before).'''
+        laststate=self.state
+        lasttime=0
+        for s in self.states.node:
+            state=self.states.node[s]
+            if state['started']!=None:
+                if 0< time -state['started'] < state['duration']:
+                    return s
+                if time -state['started']> state['duration']:
+                    laststate=s
+        state=self.states.node[laststate]
+        if state['started']!=None:
+            lasttime=state['started']+state['duration']
+        else:
+            lasttime=0
+        suc=self.states.successors(laststate)[:]
+        while suc:
+            nxt=suc.pop(0)
+            state=self.states.node[nxt]
+            if state['started']==None:
+                if time-lasttime<=state['duration']:
+                    return nxt
+            suc+=self.states.successors(nxt)
+            laststate=nxt
+        try:
+            return self.states.successors(laststate)[0]
+        except:
+            return laststate

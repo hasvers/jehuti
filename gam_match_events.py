@@ -121,7 +121,7 @@ class QueueEvt(MatchEvent):
                 return False
             match.time_cost-=evt.cost
             match.queue.remove(evt)
-            for c in evt.children:
+            for c in evt.current_children():
                 try:
                     match.queue.remove(evt)
                 except:
@@ -135,7 +135,7 @@ class QueueEvt(MatchEvent):
             match.data.time_left-=evt.cost
             match.time_cost-= evt.cost
             match.queue.remove(evt)
-            for c in evt.children:
+            for c in evt.current_children():
                 try:
                     match.queue.remove(c)
                 except:

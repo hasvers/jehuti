@@ -5,14 +5,14 @@ from gv_events import *
 
 #Could include animations, as events that affect nothing (thus no passing around)
 
-class ThreadEvent(Event):
+class ThreadEvent(TimedEvent):
     #Event occuring over time
     #States: 1 - busy; 2- done (possible to jump from 0 to 2 or 2 to 0)
     #Two modes when going from 1 to 1 (i.e. still busy doing the event):
         # absolute, i.e. finite duration with absolute starting point &
         # step-by-step i.e.  finite number of mid-points (e.g. anim frames)
 
-    repeatable=1
+    repeatable=True
     def __init__(self,*args,**kwargs):
         self.block_thread=kwargs.get('block_thread',0) #for sequential events
         self.tinit=kwargs.get('tinit',None)
@@ -35,7 +35,8 @@ class ThreadEvent(Event):
                     self.tinit=kwargs.get('tinit',pg.time.get_ticks() )
                 else:
                     self.tinit=kwargs.get('time',0)
-            return self.prep_init(handler)
+            test= self.prep_init(handler)
+            return test
         if edge==(1,1):
             if self.mode=='abs':
                 pass
@@ -63,7 +64,7 @@ class ThreadEvent(Event):
         self.step=0
 
     def run(self,state,*args,**kwargs):
-        if state==0:
+        if state==0 and self.state!=0:
             return self.undo(*args,**kwargs)
         if state==1:
             if self.mode=='abs':
@@ -77,7 +78,7 @@ class ThreadEvent(Event):
             if fraction >1:
                 return False
             return self.do(fraction,*args,**kwargs)
-        if state==2:
+        if state==2 and self.state!=2:
             return self.end(*args,**kwargs)
 
     def do(self,fraction,*args,**kwargs):
@@ -116,10 +117,13 @@ class ThreadMoveEvt(ThreadEvent):
         if tuple(self.graph.pos[self.item])!=tuple(self.pos):
             self.graph.pos[self.item]=self.pos
             return True
+        return False
+
     def undo(self,*args,**kwargs):
         if tuple(self.graph.pos[self.item])!=tuple(self.oldpos):
             self.graph.pos[self.item]=self.oldpos
             return True
+        return False
 
 class FadeEvt(ThreadEvent):
     desc='Fade'
@@ -145,10 +149,11 @@ class FadeEvt(ThreadEvent):
         color=tuple(max(0,min(255,i)) for i in self.mod[0])
         ui.veils['fade'].fill(color)
         ui.veils['fade'].set_alpha(color[3] )
+        return True
 
     def do(self,fraction,handle,*args,**kwargs):
         ui=handle.parent
-        if 0<fraction<1:
+        if 0<=fraction<1:
             color=tuple(max(0,min(255,rint(x))) for x in (
                 self.mod[0]+fraction*(array(self.mod[1])-self.mod[0]) ) )
             try:
@@ -199,9 +204,11 @@ class PanEvt(ThreadEvent):
             self.oldpos=self.scene.pan
         else:
             self.oldpos={l:self.scene.get_info(l,'offset') for l in self.scene.layers}
+        return True
 
     def do(self,fraction,*args,**kwargs):
         if 0<fraction<1:
+            print fraction
             scene=self.scene
             rel=fraction*array(self.rel)
             if self.absolute_mode:
@@ -268,6 +275,7 @@ class ZoomEvt(ThreadEvent):
         else:
             self.oldzoom={l:self.scene.get_info(l,'zoom') for l in self.scene.layers}
             self.oldpos={l:self.scene.get_info(l,'offset') for l in self.scene.layers}
+        return True
 
 
     def do(self,fraction,*args,**kwargs):

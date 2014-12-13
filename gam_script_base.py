@@ -34,7 +34,7 @@ class FuncWrapper(object):
 
 
 
-class Script(DataBit):
+class Script(TimedEvent):
     lastid=0
     dft={'name':'',
         'conds':[],
@@ -46,12 +46,13 @@ class Script(DataBit):
     #For scripted conversation bouts and effects
 
     def __init__(self,**kwargs):
-        self.type='script'
+        self.type=kwargs['type']='script'
         self.runs=0
         if not 'name' in kwargs:
             kwargs['name']='Script{}'.format(Script.lastid)
             Script.lastid+=1
         DataBit.__init__(self,**kwargs)
+        TimedEvent.__init__(self,**kwargs)
 
     def __repr__(self):
         return 'Script:'+self.name
@@ -65,7 +66,23 @@ class Script(DataBit):
                 handled+=1
         return handled==len(self.conds)
 
-    def run(self,batch=None):
+    def prepare(self,edge,*args,**kwargs):
+        if not (self.iter =='always' or self.runs<self.iter):
+            return False
+
+        if edge==(0,1):
+            self.schedule(args[0])
+        return TimedEvent.prepare(self,edge,*args,**kwargs)
+
+    def run(self,state,*args,**kwargs):
+        if state==1:# not self.states.successors(state):
+            #TODO:
+            #decide whether I should increment runs when script has finished running
+            #or when it starts
+            self.runs+=1
+        return TimedEvent.run(self,state,*args,**kwargs)
+
+    def run_old(self,batch=None):
         if self.iter =='always' or self.runs<self.iter:
             self.runs+=1
             if not True in [c.attach_to_event for c in self.conds]:
@@ -73,7 +90,73 @@ class Script(DataBit):
             for e in self.effects:
                 e.run(batch)
 
-class SceneScriptEffect(DataBit):
+    def schedule(self,scene):
+        '''Run through effects to make a timed schedule
+        (i.e. bind states of children events to states of script).'''
+        states=[1]
+        times=[0]
+        state=1
+        time=0
+        starting={}
+        startstate={}
+        ending={}
+        durs=[]
+        #Effects with absolute timing
+        #(mostly visual/spatial effects)
+        for e in self.effects:
+            e.prepare((0,1),scene)
+            self.states.node[0]['children_states'][e]=0
+            if e.start!='phase':
+                starting[e]=e.start
+                ending[e]=e.start+e.duration
+                durs.append(ending[e])
+                startstate[e]=state
+        #Effects with sequential timing
+        for e in self.effects:
+            if e.start!='phase':
+                continue
+            starting[e]=time
+            ending[e]=time+e.duration
+            startstate[e]=state
+            durs.append(e.duration)
+            if e.wait=='On' or e.block_thread:
+                durs=[d-e.duration for d in durs]
+                time+=e.duration
+                state+=1
+                states.append(state)
+                times.append(time)
+        states.append(state+1)
+        times.append(time+max(0,max(durs)))
+        eff=self.effects[:]
+        for i in range(len(states)):
+            if i>0:
+                pred=states[i-1]
+            else:
+                pred=None
+            self.add_state(states[i],pred=pred)
+            stat=self.states.node[states[i]]
+            stat['waiting']=0
+            for e in tuple(eff):
+                if starting[e]<=times[i]<ending[e] and startstate[e]==states[i]:
+                    stat['children_states'][e]=1
+                elif ending[e]<=times[i] and startstate[e]<=states[i]:
+                    stat['children_states'][e]=2
+                    eff.remove(e)
+                    if e.block_thread:
+                        stat['waiting']=1
+                else:
+                    stat['children_states'][e]=0
+
+            stat['time']=times[i]
+            if i<len(states)-1:
+                stat['duration']=times[i+1]-times[i]
+            else:
+                stat['duration']=0
+            stat['started']=None #Time at which node is stated
+        print self.states.node
+
+
+class SceneScriptEffect(TimedEvent):
     dft={'name':'Effect',
         'actor':None,
         'source':None,
@@ -83,15 +166,18 @@ class SceneScriptEffect(DataBit):
         'display':'Off',
         'typ':'Text',
         'info':'',
-        'start':0,
+        'start':'phase',
         'wait':'None',
         'delay':'None',
+        'duration':0
         }
 
-
     def __init__(self,**kwargs):
-        self.type='scripteffect'
+        self.type=kwargs['type']='scripteffect'
         DataBit.__init__(self,**kwargs)
+        TimedEvent.__init__(self,**kwargs)
+        self.add_state(2,pred=1)
+        self.block_thread=kwargs.get('block_thread',0)
 
     def templatelist(self,scene,items,actors):
         if items is None:
@@ -107,19 +193,19 @@ class SceneScriptEffect(DataBit):
                         'Fade':(
                 ('source','array',{'val':(0,0,0,0),'length':4,'width':200, 'charlimit':3,'allchars':'num','charlist':(),'typecast':int}),
                 ('target','array',{'val':(0,0,0,255),'length':4,'width':200, 'charlimit':3,'allchars':'num','charlist':(),'typecast':int}),
-                ('info','input',{'val':10,'legend':'Duration'}),
+                ('duration','input',{'val':10,'legend':'Duration'}),
                 ('start','input',{'val':0,'legend':'Start'}),
                 ('wait','arrowsel',{'values':('Off','On'),'legend':'Wait'}),
                     ),
                         'Pan':(
                 ('target','array',{'val':(0,0),'length':2, 'charlimit':5,'allchars':'relnum','charlist':(),'typecast':int}),
-                ('info','input',{'val':10,'legend':'Duration'}),
+                ('duration','input',{'val':10,'legend':'Duration'}),
                 ('start','input',{'val':0,'legend':'Start'}),
                 ('wait','arrowsel',{'values':('Off','On'),'legend':'Wait'}),
                     ),
                         'Zoom':(
                 ('target','drag',{'val':1,'minval':0.1,'maxval':2.}),
-                ('info','input',{'val':10,'legend':'Duration'}),
+                ('duration','input',{'val':10,'legend':'Duration'}),
                 ('start','input',{'val':0,'legend':'Start'}),
                 ('wait','arrowsel',{'values':('Off','On'),'legend':'Wait'}),
                     ),
@@ -143,7 +229,7 @@ class SceneScriptEffect(DataBit):
                         'Move':(
                 ('evt','extsel',{'val':None,'values':items,
                         'selsource':scene.data,'evttype':'move','seltype':'event'}),
-                ('info','input',{'val':10, 'legend':'Duration'}),
+                ('duration','input',{'val':10, 'legend':'Duration'}),
                 ('start','input',{'val':0,'legend':'Start'}),
                 ('wait','arrowsel',{'values':('Off','On'),'legend':'Wait'}),
                     ),
@@ -216,61 +302,49 @@ class SceneScriptEffect(DataBit):
             infos.append( (att,val) )
         return dict(infos)
 
-    def run(self,batch=None,scene=None,**kwargs):
-        #infotypes=kwargs.get('infotypes', ('Cast','Scene') )
-        if scene is None:
-            scene=user.ui.scene
-        if batch:
-            src=batch
-        else:
-            src=self
-        phase=None
+    def prepare(self,edge,scene,**kwargs):
+        if edge==(0,1):
+            return self.prep_do(scene,**kwargs)
+        return True
+
+    def run(self,state,scene,**kwargs):
+        if state==1:
+            return self.do(scene,**kwargs)
+        return True
+
+    def prep_do(self,scene,**kwargs):
         if self.typ=='Text':
-            name=False
-            if self.display=='On':
-                name=True
-            for txt in self.text.split("|"):
-                phase=FuncWrapper(lambda t:scene.add_balloon(user.ui.game_ui.game.replace_variables(t),
-                    anchor= self.actor,show_name=name,source=src,priority=-1),txt,type='set_balloon')
-                scene.add_phase(phase)
-            #name=False
-            phase=None
-        elif self.typ=='Python':
-            if self.info=='exec':
-                #TODO
-                phase=FuncWrapper(lambda e:e,self.text,type='exec')
-            elif self.info=='eval':
-                try:
-                    txt=self.text
-                    phase=FuncWrapper(lambda t:scene.add_balloon(str(eval(
-                        user.ui.game_ui.game.replace_variables(t))),source=src,
-                        priority=-1),txt,type='set_balloon')
-                except Exception as e:
-                    print e
+            self.block_thread=1
         elif self.typ=='Call':
-            phase=FuncWrapper(lambda e=self.info:scene.call_scripts(e))
+            called=scene.get_scripts(call=self.info )
+            for c in called:
+                c.prepare((0,1),scene)
+                laststate= [n for n in c.states.nodes() if
+                     not c.states.successors(n)][0]
+                scene.evt.data.bind( (self,c), {(self,c):[ (0,0),(1,laststate) ] } )
+                #self.add_child(c,states={2:1,0:c.state},priority=-1)
         elif self.typ in ('Move','Pan','Fade','Zoom'):
-            self.info=float(self.info)
+            if self.all_children():
+                #Already prepared
+                return True
+            self.duration=float(self.duration)
             if self.start=='phase':
                 start=None
             else:
-                start=float(self.start)
+                self.start=start=float(self.start)
             if self.typ=='Move':
-                tdevt=ThreadMoveEvt(self.evt.item,self.evt.graph,self.evt.pos,duration=self.info,tinit=start)
+                tdevt=ThreadMoveEvt(self.evt.item,self.evt.graph,self.evt.pos,duration=self.duration)
             elif self.typ=='Fade':
-                tdevt=FadeEvt(self.source,self.target,duration=self.info,tinit=start)
+                tdevt=FadeEvt(self.source,self.target,duration=self.duration)
             elif self.typ=='Pan':
-                tdevt=PanEvt(scene.data,self.target,duration=self.info,tinit=start)
+                tdevt=PanEvt(scene.data,self.target,duration=self.duration)
             elif self.typ=='Zoom':
-                tdevt=ZoomEvt(scene.data,self.target,duration=self.info,tinit=start)
-            if self.start=='phase':
-                scene.add_phase(FuncWrapper(tdevt,type=self.typ.lower(),method=scene.add_threadevt, source=src,priority=-1))
-            else:
-                scene.add_threadevt(tdevt)
-            if self.wait=='On':
-                tdevt.block_thread=True
-
+                tdevt=ZoomEvt(scene.data,self.target,duration=self.duration)
+            self.add_sim_child(tdevt)
         elif self.typ in ('Cast','Scene') :
+            if self.all_children():
+                #Already prepared
+                return True
             if self.evt in ('info','add'):
                 infos=self.infosep(self.info)
                 if self.typ=='Scene':
@@ -281,13 +355,31 @@ class SceneScriptEffect(DataBit):
                     evt= ChangeInfosEvt(self.target,data,**infos )
                 elif self.evt=='add':
                     evt= AddEvt(self.target,data,infos=infos )
-                if batch is None:
-                    phase=FuncWrapper(evt,type='evt',method=user.evt.do, source=src,priority=-1)
-                else:
-                    batch.add_event(evt)
-                    evt.parent=batch
-                    batch.add_child(evt,{1:0,2:1},priority=1)
-            elif self.evt in ('anim','emote','state'):
+                self.add_child(evt,{1:0,2:1},priority=1)
+        return True
+
+
+    def do(self,scene,**kwargs):
+        if self.typ=='Text':
+            name=False
+            if self.display=='On':
+                name=True
+            for txt in self.text.split("|"):
+                scene.add_balloon(user.ui.game_ui.game.replace_variables(txt),
+                    anchor= self.actor,show_name=name)
+        elif self.typ=='Python':
+            if self.info=='exec':
+                #TODO
+                pass
+                #exec(self.text)
+            elif self.info=='eval':
+                try:
+                    scene.add_balloon(str(eval(
+                        user.ui.game_ui.game.replace_variables(self.text))))
+                except Exception as e:
+                    print e
+        elif self.typ in ('Cast','Scene') :
+            if self.evt in ('anim','emote','state'):
                 if self.typ=='Scene':
                     ic=scene.view.icon
                 elif self.typ=='Cast':
@@ -321,8 +413,7 @@ class SceneScriptEffect(DataBit):
                                 func=ic[target].set_state
                             phase=FuncWrapper(lambda e=k,f=func,op=opts:f(e,**op),
                                 type='visual_state')
-                        scene.add_phase(phase)
-                phase=None
+                        phase.run()
             elif self.evt=='hud':
                 if self.target=='all':
                     targets=scene.cast.actors
@@ -334,7 +425,8 @@ class SceneScriptEffect(DataBit):
                     phase=FuncWrapper(lambda t=target:scene.signal('{}_hud'.format(info),
                         t,*margs,affects=(scene.cast.data, )))
                     scene.add_phase(phase)
-                phase=None
+                phase.run()
+
         elif self.typ=='Game':
             if self.evt =='call':
                 tdevt=None
@@ -380,17 +472,15 @@ class SceneScriptEffect(DataBit):
                     phase= FuncWrapper(user.ui.game_ui.game.save_state,self.info,type='save')
         elif self.typ=='Sound':
             if 'Stop' in self.text:
-                phase=FuncWrapper(lambda f=int(self.delay):user.ui.soundmaster.stop(self.target,fadeout=f),type='sound')
+                user.ui.soundmaster.stop(self.target,fadeout=f)
             else:
                 if 'Start' in self.text:
                     loops=0
                 elif 'Loop'in self.text :
                     loops=-1
-                phase=FuncWrapper(lambda l=loops, f=int(self.delay):user.ui.soundmaster.play(self.target,float(self.info),loop=l,fadein=f),type='sound')
-        if phase:
-            scene.add_phase(phase)
-            if self.wait=='On':
-                scene.add_phase(FuncWrapper('wait',source=phase))
+                user.ui.soundmaster.play(self.target,float(self.info),
+                    loop=loops,fadein=int(self.delay))
+        return True
 
     def __repr__(self):
         #base = self.name+' '+self.typ
