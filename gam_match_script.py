@@ -156,50 +156,9 @@ class MatchScriptEffect(SceneScriptEffect):
             return base +': {} {}'.format(self.evt,self.target)
         return SceneScriptEffect.__repr__(self)
 
-    def run(self,batch=None,match=None):
-        if match is None:
-            match=user.ui.scene
-        if batch:
-            src=batch
-        else:
-            src=self
-        phase=None
-        #if self.typ=='Text':
-            #name=False
-            #if self.display=='On':
-                #name=True
-            #for txt in self.text.split("|"):
-                #match.add_balloon(txt, anchor= self.actor,show_name=name,source=src,priority=-1)
-                #name=False
-        if self.typ=='Action':
-            #if self.evt=='focus':
-                ##Redundant with Canvas.set camera, so eliminated
-                #anim=lambda e=eff:lambda:match.canvas.handler.center_on(self.target)
-                #phase=FuncWrapper(anim,type='visual_focus',source=src,priority=2)
-            #else:
-                dic={'claim':ClaimEvt,'explore':ExploreEvt}
-                kwargs=self.infosep(self.info)
-                evt=dic[self.evt]( self, self.actor, self.target,**kwargs)
-                if batch is None:
-                    cevt=QueueEvt(evt,match.data,newbatch=True)
-                    eevt=AddEvt(self.target,match.data.actorsubgraphs[self.actor][self.actor] )
-                    wlist=(FuncWrapper(eevt,1,type='evt',method=user.evt.do, source=src),
-                        FuncWrapper(cevt,1,type='evt',method=user.evt.do, source=src),
-                        FuncWrapper(cevt,2,type='evt',method=lambda e,*args:user.evt.do(e.batch,*args), source=src))
-                    for wrap in wlist[:-1]:
-                        match.add_phase(wrap)
-                    phase=wlist[-1]
-                else:
-                    batch.add_event(evt)
-        elif self.typ =='Canvas':
-            pos= match.canvas.pos[self.target]
-            glide=self.info=='Glide'
-            move=self.info in ('Glide','Jump')
-            if self.evt=='set barycenter':
-                phase=FuncWrapper(lambda e=pos, g=glide,m=move : match.set_barycenter(e,glide=g,move=m))
-            elif self.evt=='set camera':
-                phase=FuncWrapper(lambda e=pos, g=glide : match.canvas.handler.center_on(e,g),type='visual_focus',source=src,priority=2)
-        elif self.typ in ('Graph',):
+    def prep_do(self,scene,**kwargs):
+        batch=kwargs.get('batch',None)
+        if self.typ in ('Graph',):
             if self.evt in ('info','add'):
                 infos=self.infosep(self.info)
                 if self.typ == 'Graph':
@@ -209,63 +168,66 @@ class MatchScriptEffect(SceneScriptEffect):
                 elif self.evt=='add':
                     evt= AddEvt(self.target,data,infos=infos,addrequired=True )
                 if batch is None:
-                    phase=FuncWrapper(evt,type='evt',method=user.evt.do, source=src,priority=-1)
-                    if self.evt=='add':
-                        ophase=phase
-                        targets=[self.target]
-                        #for c in evt.states.node[1]['children_states']:
-                            #if 'add' in c.type:
-                                #targets.append(c.item)
-                            #TODO:Wont work because children strates are created during preparation
-                        #for tar in targets:
-                            #match.add_phase(phase)
-                            #anim=lambda t=self.target:match.canvas.icon[t].set_anim('appear')
-                            #phase=FuncWrapper(anim,type='visual_appear',source=ophase,priority=1)
+                    if not self.all_children(): #If not already prepared
+                        self.add_child(evt,{1:0,2:1},priority=1)
                 else:
                     batch.add_event(evt)
                     evt.parent=batch
                     batch.add_child(evt,{1:0,2:1},priority=1)
-            elif self.evt in ('anim','emote'):
+                return True
+        return SceneScriptEffect.prepare_do(self,scene,**kwargs)
+
+    def do(self,scene,**kwargs):
+        if self.typ=='Action':
+            dic={'claim':ClaimEvt,'explore':ExploreEvt}
+            kwargs=self.infosep(self.info)
+            evt=dic[self.evt]( self, self.actor, self.target,**kwargs)
+            if batch is None:
+                cevt=QueueEvt(evt,match.data,newbatch=True)
+                eevt=AddEvt(self.target,match.data.actorsubgraphs[self.actor][self.actor] )
+                self.add_child(eevt,{1:0,2:1},priority=2)
+                self.add_sim_child(cevt,priority=1)
+            else:
+                batch.add_event(evt)
+        elif self.typ =='Canvas':
+            pos= match.canvas.pos[self.target]
+            glide=self.info=='Glide'
+            move=self.info in ('Glide','Jump')
+            if self.evt=='set barycenter':
+                match.set_barycenter(pos,glide=glide,move=move)
+            elif self.evt=='set camera':
+                user.ui.add_visual(lambda e=pos, g=glide : match.canvas.handler.center_on(e,g))
+        elif self.typ in ('Graph',):
+            if self.evt in ('anim','emote'):
                 if self.typ == 'Graph':
                     ic=match.canvas.icon
                 for j in self.info.split(';'):
                     if self.evt=='anim':
-                        phase=FuncWrapper(lambda e=j:ic[self.target].set_anim(e),type='visual_{}'.format(j))
+                        user.ui.add_visual(lambda e=j:ic[self.target].set_anim(e))
                     elif self.evt=='emote':
-                        phase=FuncWrapper(lambda e=j:ic[self.target].call_emote(e),type='visual_emote')
+                        user.ui.add_visual(lambda e=j:ic[self.target].call_emote(e))
                     elif self.evt=='state':
-                        phase=FuncWrapper(lambda e=j:ic[self.target].set_state(e),type='visual_state')
-        #elif self.typ=='Game':
-            #if self.evt=='end':
-                ##match.add_phase(FuncWrapper(match.return_to_editor,type='END'))
-                #match.add_phase(FuncWrapper(user.ui.return_to_title,type='END',priority='end'))
-                #match.add_phase(FuncWrapper(match.clear_conv,type='CLEAR',priority='end'))
-            #if self.evt=='variable':
-                #match.parent.state.vargraph.add_edge(self,self.target)
+                        user.ui.add_visual(lambda e=j:ic[self.target].set_state(e))
         elif self.typ=='Conversation':
             if self.evt=='set viewpoint':
-                phase=FuncWrapper(match.set_player,self.actor,0,1,type='set_player')
+                match.set_player(self.actor,0,1)
             if self.evt=='set player':
-                phase=FuncWrapper(match.set_player,self.actor,type='set_player')
+                match.set_player(self.actor)
             elif self.evt=='set controller':
                 info=self.info
                 if info=='AI':
                     info=AIPlayer(self.actor,match)
                 elif info=='None':
                     info=None
-                phase=FuncWrapper(lambda a=self.actor,i=info:
-                    match.controller.__setitem__(a,i),type='set_controller')
-                if self.actor==match.active_player:
-                    match.add_phase(FuncWrapper(lambda:match.signal('set_player',self.actor)),type='set_player')
+                match.signal('set_player',self.actor)
+                match.controller.__setitem__(self.actor,info)
         elif self.typ=='Interface':
             evt='{}_ui'.format(self.evt)
-            phase=FuncWrapper(lambda:match.signal(evt,self.info),type=evt)
+            match.signal(evt,self.info)
         else:
-            SceneScriptEffect.run(self,batch,match)
-        if phase:
-            match.add_phase(phase)
-            if self.wait=='On':
-                match.add_phase(FuncWrapper('wait',source=phase))
+            return SceneScriptEffect.do(self,scene,**kwargs)
+        return True
+
 
 
 class MatchScriptCondition(SceneScriptCondition):

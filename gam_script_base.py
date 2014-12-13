@@ -75,6 +75,7 @@ class Script(TimedEvent):
         return TimedEvent.prepare(self,edge,*args,**kwargs)
 
     def run(self,state,*args,**kwargs):
+
         if state==1:# not self.states.successors(state):
             #TODO:
             #decide whether I should increment runs when script has finished running
@@ -137,7 +138,7 @@ class Script(TimedEvent):
             stat=self.states.node[states[i]]
             stat['waiting']=0
             for e in tuple(eff):
-                if starting[e]<=times[i]<ending[e] and startstate[e]==states[i]:
+                if starting[e]<=times[i]<ending[e] and startstate[e]<=states[i]:
                     stat['children_states'][e]=1
                 elif ending[e]<=times[i] and startstate[e]<=states[i]:
                     stat['children_states'][e]=2
@@ -153,7 +154,9 @@ class Script(TimedEvent):
             else:
                 stat['duration']=0
             stat['started']=None #Time at which node is stated
-        print self.states.node
+        self.states.node[0].update({'duration':0,'waiting':0,'time':0,'started':None} )
+        #print self.states.node
+        #print self, [ (s,self.states.node[s]['duration'],self.states.node[s]['children_states']) for s in self.states.node]
 
 
 class SceneScriptEffect(TimedEvent):

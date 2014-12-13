@@ -114,13 +114,13 @@ class WindowField(UI_Item):
 
 
     def resize(self,size):
-        self.width=self.rect.w=size[0]
-        self.height=self.rect.h=size[1]
-        self.image=pg.surface.Surface((self.width,self.height),pg.SRCALPHA)
-        self.image.set_colorkey(COLORKEY)
-        self.image.fill(COLORKEY)
-
-        self.redraw()
+        if (self.width,self.height)!=tuple(size):
+            self.width=self.rect.w=size[0]
+            self.height=self.rect.h=size[1]
+            self.image=pg.surface.Surface((self.width,self.height),pg.SRCALPHA)
+            self.image.set_colorkey(COLORKEY)
+            self.image.fill(COLORKEY)
+            self.redraw()
 
 
     def rm_state(self,state,**kwargs):
@@ -540,10 +540,15 @@ class TextField(WindowField):
         bb= (max(self.linewid),sum(self.linehei))
         img=pg.surface.Surface((self.width,self.height),pg.SRCALPHA)
         img.fill(bgcolor)
+
         img.blit(image,(0,0))
+        if kwargs.get('glow',0):
+            gv_effects.glow(img)
         if kwargs.get('return_bb',False):
             return img,bb
         return img
+
+
 
     def change_word(self):
         #if needed I will make a clever dynamical parser
@@ -569,13 +574,17 @@ class TextField(WindowField):
                 states = ('idle','hover','focus','disabled')
                 bgcolors = {s:graphic_chart['window_field_bg_'+s] for s in states}
                 colors = bgcolors
-            if self.box and self.hoverable and not array(self.bgcolor).any():
+            if 0 and self.box and self.hoverable and not array(self.bgcolor).any():
                 bgcolors['hover']=graphic_chart['window_field_text_hover']
             for i in states:
+                kw={}
+                kw.update(kwargs)
                 bgcolor=bgcolors.get(i,None)
                 if i in txtcolors:
-                    kwargs['color']=txtcolors[i]
-                self.images[i],bb=self.write(txt,bgcolor,return_bb=True,**kwargs)
+                    kw['color']=txtcolors[i]
+                if i=='hover':
+                    kw['glow']=1
+                self.images[i],bb=self.write(txt,bgcolor,return_bb=True,**kw)
                 bounding_box=npmaximum(bounding_box,bb)
                 if self.box and self.selectable :
                     img=self.images[i]

@@ -214,7 +214,7 @@ class CutscenePlayer(CutsceneHandler,PhaseHandler):
         for s in self.data.scripts:
             if s.test_cond('start'):
                 self.add_phase(s)
-                print s, [(c,c.state) for c in s.all_children()]
+                #print s, [(c,c.state) for c in s.all_children()]
 #                s.run(self)
         change=1
         while change:

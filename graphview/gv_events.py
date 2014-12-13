@@ -179,7 +179,8 @@ class EventCommander(object):
             if kwargs.get('repeat_only',0):
                 state=evt.state
             elif kwargs.get('time',None)!=None:
-                return self.go(evt,evt.state_at_time(kwargs['time']),*args,**kwargs)
+                state=evt.state_at_time(kwargs['time'])
+                return self.go(evt,state,*args,**kwargs)
             else:
                 state=evt.states.successors(evt.state)[0]
 
@@ -428,7 +429,6 @@ class EventGraph(object):
                                     self.calls.remove_edge((e,s),(e2,s2) )
                                 except:
                                     pass
-        print self.calls.edges()
 
     def old_bind_event(self,nevt,oevt,statecorresp):
         #never used yet
@@ -821,7 +821,7 @@ class TimedEvent(Event):
         if edge==(0,1):
             for s in self.states.node:
                 self.states.node[s]['started']=None
-                self.states.node[s]['duration']=0
+                self.states.node[s].setdefault('duration',0.)
         return Event.prepare(self,edge,*args,**kwargs)
 
     def run(self,state,*args,**kwargs):

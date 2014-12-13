@@ -13,7 +13,8 @@ from operator import itemgetter,attrgetter
 import networkx as nx
 import cProfile,pstats,sys,time,itertools,re
 import os
-from PIL import Image as pilImage, ImageEnhance as pilImageEnhance, ImageOps as pilImageOps
+from PIL import Image as pilImage, ImageEnhance as pilImageEnhance
+from PIL import ImageOps as pilImageOps, ImageFilter as pilImageFilter
 
 from itertools import chain as iterchain
 

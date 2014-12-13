@@ -1,6 +1,6 @@
 from gv_globals import *
 from gv_threadevents import *
-
+import gv_effects
 
 class User():
 #User controls uniaue states in the UI : a single object can be grabbed or focused for keyboard actions at a time
