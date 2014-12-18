@@ -150,42 +150,6 @@ class MatchEditorUI(EditorUI,SceneUI):
         else :
             return super(MatchEditorUI, self).input_menu(typ,output_method,**kwargs)
 
-    def old_maker_menu(self,flist,output_method,klass,**kwargs):
-        eff=kwargs.get('val',False)
-        if not isinstance(eff,klass):
-            eff=klass()
-        window=FloatMenu(self.screen,self,(128,10),exit_method=lambda : self.close(window),oneshot=True,**kwargs)
-        window.draggable=True
-        window.set_command('confirm',(output_method,(eff,)) )
-        for i,j in kwargs.iteritems():
-            if i =='on_exit':
-                window.set_command('exit',j)
-
-        window.ask_confirm()
-        window.add('text',val=kwargs.pop('title',klass.__name__+':'),selectable=False)
-        for a in flist:
-            attr=a[0]
-            val=getattr(eff,attr)
-            try:
-                opts=a[2]
-            except:
-                opts={}
-                a+=(opts,)
-            if (not val is None) and not 'val' in opts:
-                opts['val']=val
-            opts['bind']=lambda e,t=attr,s=eff:setattr(s,t,e)
-
-        window.parse_ext(flist)
-        cont = FieldContainer(window,margin=8,maxsize=self.screen.get_rect().size)
-        cont.add('text',val='Ok',output_method= 'confirm',selectable=True,pos=(0,0),width=50)
-        cont.add('text',val='Cancel',output_method='cancel',selectable=True,pos=(0,1),width=50)
-
-        cont.update()
-        window.add(cont)
-        self.float_core(window,'stackmenu')
-
-
-
     def ethos_effect_maker(self,output_method,**kwargs):
         flist=(('name','input'),
             ('res','arrowsel',{'values':('face','terr','path','prox')}),
@@ -210,13 +174,6 @@ class MatchEditorUI(EditorUI,SceneUI):
         flist+=('val','input',inopts),
         self.maker_menu(flist,output_method,klass,**kwargs)
 
-    def old_flag_maker(self,output_method,**kwargs):
-        flist=(
-            ('val', 'arrowsel',{'values':MatchGraph.Node.cflags}),
-            )
-        kwargs.setdefault('title','Conversation flag:')
-        self.maker_menu(flist,output_method,ConvFlag,**kwargs)
-
     def flag_maker(self,output_method,**kwargs):
         ref=kwargs.pop('val',None)
         klass=CFlag
@@ -236,6 +193,7 @@ class MatchEditorUI(EditorUI,SceneUI):
         flist=(
             ('name','input',{'legend':'Name','width':200}),
             ('iter','arrowsel',{'values':('always',0,1,2,3,4)}),
+            ('logic','input',{'legend':'Logic','width':300}),
             ('conds','inputlist',{'legend':'Conditions','width':200,'add':True,'menu':{'type':'scrcond'}}),
             ('effects','inputlist',{'legend':'Effects','width':200,'add':True,'menu':{'type':'screffect'}}),
             )
@@ -333,6 +291,8 @@ class MatchEditorUI(EditorUI,SceneUI):
                 m.save_to_file(m.data.name)
                 user.set_status('Saved as '+m.data.name)
                 handled=True
+        if event.key==pg.K_F9:
+            self.match.signal('start_match')
         return handled or EditorUI.keymap(self,event)
 
 class MatchSM(BasicSM):
@@ -517,7 +477,9 @@ class MatchUI(BasicUI,SceneUI):
                 print 'Debug: add pathos'
                 self.match.cast.set_info(self.match.active_player,'path',.2)
                 return 1
-
+        if event.key==pg.K_F9:
+            if self.editor_ui:
+                return self.match.return_to_editor()
         return self.match.keymap(event)
 
     def trigger_dialbox(self):

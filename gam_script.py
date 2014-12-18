@@ -29,6 +29,8 @@ class PhaseHandler(object):
             if 'call' in kwargs:
                 call=kwargs['call']
                 for script in scr:
+                    if not script.test_cond(self,call):
+                        continue
                     for c in script.conds:
                         if c.typ.lower()=='call' and c.info==call:
                             scripts.append(script)

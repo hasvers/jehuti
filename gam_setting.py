@@ -410,6 +410,8 @@ class PlaceEditorUI(EditorUI):
                 m.save_to_file(m.data.name)
                 user.set_status('Saved as '+m.data.name)
                 handled=True
+        if event.key==pg.K_F9:
+            self.scene.signal('start_scene')
         return handled or EditorUI.keymap(self,event)
 
 

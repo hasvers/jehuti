@@ -309,18 +309,6 @@ class CutsceneEditorUI(PlaceEditorUI,SceneUI):
         else :
             return super(CutsceneEditorUI, self).input_menu(typ,output_method,**kwargs)
 
-    def old_script_cond_maker(self,output_method,**kwargs):
-        klass=SceneScriptCondition
-        ref=kwargs.pop('val',None)
-        if not isinstance(ref,klass):
-            ref=klass()
-        flist=(
-            ('name','input',{'legend':'Name','width':200}),
-            ('typ','toggle',{'templates':ref.templates}),
-            )
-        kwargs.setdefault('title','Script condition:')
-        self.maker_menu(flist,output_method,klass,val=ref,**kwargs)
-
     def script_maker(self,output_method,**kwargs):
         test=SceneScriptCondition()
         condtyps=sorted(test.templates(handler=self.scene))
@@ -331,6 +319,7 @@ class CutsceneEditorUI(PlaceEditorUI,SceneUI):
         flist=(
             ('name','input',{'legend':'Name','width':200}),
             ('iter','arrowsel',{'values':('always',0,1,2,3,4)}),
+            ('logic','input',{'legend':'Logic','width':300}),
             ('conds','inputlist',{'legend':'Conditions','width':400,'add':True,'menu':{'type':condtyps}}),
             ('effects','inputlist',{'legend':'Effects','width':400,'add':True,'menu':{'type':efftyps}}),
             )
@@ -454,6 +443,9 @@ class CutsceneUI(BasicUI,SceneUI):
 
             if pg.key.get_pressed()[pg.K_LALT] and event.key==pg.K_v and database['edit_mode']:
                 return user.trigger_video()
+        if event.key==pg.K_F9:
+            if self.editor_ui:
+                return self.scene.return_to_editor()
         if self.game_ui:
             return handled or self.game_ui.game.keymap(event)
         else:

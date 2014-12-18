@@ -38,7 +38,7 @@ class Script(TimedEvent):
     lastid=0
     dft={'name':'',
         'conds':[],
-        'logic':'',
+        'logic':'and',
         'effects':[],
         'iter':'always'
         }
@@ -57,14 +57,32 @@ class Script(TimedEvent):
     def __repr__(self):
         return 'Script:'+self.name
 
-    def test_cond(self,scene,evt=None): #TODO: add logic i,e, cond1 && cond2 || cond3
+    def test_cond(self,scene,evt=None):
         handled=0
         if  True in [c.attach_to_event for c in self.conds] and (evt is None or not 'batch' in evt.type):
             return 0
-        for c in self.conds:
-            if c.test(scene,evt):
-                handled+=1
-        return handled==len(self.conds)
+
+        logic=self.logic
+
+        val={}
+        placeholders=[p for p in re.findall("#[0-9]*",logic)]
+        for ic,c in enumerate(self.conds):
+            pc='#{}'.format(ic+1)
+            val[pc]=val[c]= c.test(scene,evt)
+        if logic =='':
+            logic='and'
+        logic.replace('&&',' and ')
+        logic.replace('||',' or ')
+        logic=logic.strip()+' '
+        if placeholders:
+            for pc in placeholders:
+                logic=logic.replace('{} '.format(pc),'{} '.format(val[pc]))
+            return eval(logic)
+        elif logic.strip() =='and':
+            return val and not False in val.values()
+        elif logic.strip()=='or':
+            return True in val.values()
+        return False
 
     def prepare(self,edge,*args,**kwargs):
         if not (self.iter =='always' or self.runs<self.iter):
@@ -641,6 +659,8 @@ class SceneScriptCondition(DataBit):
 
 
     def test(self,scene,evt=None):
+        if self.typ=='Call':
+            return evt==self.info
         if self.typ=='Python':
             txt=user.ui.game_ui.game.replace_variables(self.info)
             try:
