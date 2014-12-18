@@ -389,6 +389,7 @@ class PlaceEditorUI(EditorUI):
         return struct
 
     def return_to_game(self):
+        fopen('.editor_last','w')
         user.set_ui(self.game_ui,False, no_launch=True )
 
     def return_to_title(self):

@@ -14,6 +14,7 @@ class PhaseHandler(object):
     def __init__(self):
         self.evt=EventCommander(user)
         self.stack=[]
+        self.done=[]
         pg.event.set_blocked(30)
 
 
@@ -46,8 +47,9 @@ class PhaseHandler(object):
         self.frozen=0
 
     def clear_phase(self):
-        for e in self.stack[::-1]:
+        for e in self.stack[::-1]+self.done[::-1]:
             self.evt.go(e,0,ephemeral=1,handle=self)
+            #print [c.state for c in e.all_children() ]
 
     def add_balloon(self,txt,**kwargs):
         if '|' in txt:
@@ -96,11 +98,12 @@ class PhaseHandler(object):
         self.add_phase(tdevt)
 
     def add_phase(self,phase):
-        self.stack.append(phase)
-        self.evt.do(phase,None,1,handle=self,ephemeral=True,time=self.time)
+        if not phase in self.stack and not phase in self.done:
+            self.stack.append(phase)
+            self.evt.do(phase,None,1,handle=self,ephemeral=True,time=self.time)
 
     def next_phase(self,**kwargs):
-        kwargs['repeat_only']=False
+        kwargs['pass_block']=True
         for e in self.stack:
             if e.states.node[e.state]['waiting']==True:
                 e.states.node[e.state]['started']=self.time
@@ -112,10 +115,15 @@ class PhaseHandler(object):
     def advance_phase(self,**kwargs):
         if user.paused or self.frozen:
             return 0
-        for e in self.stack:
+        for e in tuple(self.stack):
             kwargs.setdefault('handle',self)
             kwargs.setdefault('time',self.time)
             kwargs.setdefault('ephemeral',True)
-            kwargs.setdefault('repeat_only',True)
+            kwargs.setdefault('pass_block',False)
             self.evt.do(e,**kwargs)
+            if not e.states.successors(e.state):
+                state=e.states.node[e.state]
+                if state['started']+state['duration']<self.time:
+                    self.stack.remove(e)
+                    self.done.append(e)
 

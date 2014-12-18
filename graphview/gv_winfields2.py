@@ -8,6 +8,7 @@ class InputField(TextField):
     fixsize=True
     scrollable=True
     loop=False #Is it possible to go from beginning to end?
+    interpret=False
     def __init__(self,parent,**kwargs):
         kwargs.pop('draw',None)
         TextField.__init__(self,parent,draw=False,**kwargs)

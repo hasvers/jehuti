@@ -75,7 +75,7 @@ class Script(TimedEvent):
         return TimedEvent.prepare(self,edge,*args,**kwargs)
 
     def run(self,state,*args,**kwargs):
-
+        #print '\nRUNSCRIPT',state,self, [(c.state,c,str(c.parent)[:5], hash(c.parent)) for c in self.all_children(True) ]
         if state==1:# not self.states.successors(state):
             #TODO:
             #decide whether I should increment runs when script has finished running
@@ -83,17 +83,11 @@ class Script(TimedEvent):
             self.runs+=1
         return TimedEvent.run(self,state,*args,**kwargs)
 
-    def run_old(self,batch=None):
-        if self.iter =='always' or self.runs<self.iter:
-            self.runs+=1
-            if not True in [c.attach_to_event for c in self.conds]:
-                batch =None
-            for e in self.effects:
-                e.run(batch)
 
     def schedule(self,scene):
         '''Run through effects to make a timed schedule
         (i.e. bind states of children events to states of script).'''
+        self.clear_children()
         states=[1]
         times=[0]
         state=1
@@ -104,9 +98,15 @@ class Script(TimedEvent):
         durs=[]
         #Effects with absolute timing
         #(mostly visual/spatial effects)
+
         for e in self.effects:
+            e.clear_children()
             e.prepare((0,1),scene)
             self.states.node[0]['children_states'][e]=0
+            if e.start is '':
+                #TODO removde this
+                e.start='phase'
+                e.duration=0
             if e.start!='phase':
                 starting[e]=e.start
                 ending[e]=e.start+e.duration
@@ -155,7 +155,6 @@ class Script(TimedEvent):
                 stat['duration']=0
             stat['started']=None #Time at which node is stated
         self.states.node[0].update({'duration':0,'waiting':0,'time':0,'started':None} )
-        #print self.states.node
         #print self, [ (s,self.states.node[s]['duration'],self.states.node[s]['children_states']) for s in self.states.node]
 
 
@@ -174,6 +173,7 @@ class SceneScriptEffect(TimedEvent):
         'delay':'None',
         'duration':0
         }
+    repeatable=False
 
     def __init__(self,**kwargs):
         self.type=kwargs['type']='scripteffect'
@@ -311,8 +311,11 @@ class SceneScriptEffect(TimedEvent):
         return True
 
     def run(self,state,scene,**kwargs):
+        #print 'RUNNIN',self,state
         if state==1:
             return self.do(scene,**kwargs)
+        #if state==0:
+        #    print [c.state for c in self.all_children(True) ]
         return True
 
     def prep_do(self,scene,**kwargs):
@@ -327,6 +330,7 @@ class SceneScriptEffect(TimedEvent):
                 scene.evt.data.bind( (self,c), {(self,c):[ (0,0),(1,laststate) ] } )
                 #self.add_child(c,states={2:1,0:c.state},priority=-1)
         elif self.typ in ('Move','Pan','Fade','Zoom'):
+            self.repeatable=True
             if self.all_children():
                 #Already prepared
                 return True
@@ -359,6 +363,28 @@ class SceneScriptEffect(TimedEvent):
                 elif self.evt=='add':
                     evt= AddEvt(self.target,data,infos=infos )
                 self.add_child(evt,{1:0,2:1},priority=1)
+        elif self.typ=='Game':
+            if self.evt =='call':
+                self.duration=ergonomy['transition_time']/2
+                tdevt=None
+                if self.info=='Fade':
+                    surf=None
+                elif self.info !='None':
+                    if self.info=='XFade':
+                        surf=scene.parent.screen.copy()
+                    else:
+                        try:
+                            surf=image_load(database['image_path']+'splash/{}'.format(self.info) )
+                            surf=pg.transform.smoothscale(surf,scene.parent.screen.get_rect().size)
+                        except:
+                            surf=None
+                if not surf is None:
+                    surfkey=hash(self)
+                    ui.veils[surfkey]=surf
+                if self.info!='None':
+                    tdevt=FadeEvt((0,0,0,0),(0,0,0,365),surface=surfkey, duration=self.duration)
+                    tdevt.block_thread=1
+                self.add_child(tdevt,{1:0,2:2},priority=1)
         return True
 
 
@@ -380,7 +406,7 @@ class SceneScriptEffect(TimedEvent):
                     scene.add_balloon(str(eval(
                         user.ui.game_ui.game.replace_variables(self.text))))
                 except Exception as e:
-                    print e
+                    print self, e
         elif self.typ in ('Cast','Scene') :
             if self.evt in ('anim','emote','state'):
                 if self.typ=='Scene':
@@ -424,39 +450,17 @@ class SceneScriptEffect(TimedEvent):
                     targets=[self.target]
                 info = self.info.split()[0]
                 margs=self.info.split()[1:]
-                for target in targets:
-                    phase=FuncWrapper(lambda t=target:scene.signal('{}_hud'.format(info),
-                        t,*margs,affects=(scene.cast.data, )))
-                    scene.add_phase(phase)
-                phase.run()
+                for t in targets:
+                    scene.signal('{}_hud'.format(info),t,*margs,
+                        affects=(scene.cast.data, ))
 
         elif self.typ=='Game':
             if self.evt =='call':
-                tdevt=None
-                if self.info=='Fade':
-                    surf=None
-                elif self.info !='None':
-                    if self.info=='XFade':
-                        surf=scene.parent.screen.copy()
-                    else:
-                        try:
-                            surf=image_load(database['image_path']+'splash/{}'.format(self.info) )
-                            surf=pg.transform.smoothscale(surf,scene.parent.screen.get_rect().size)
-                        except:
-                            surf=None
-                if self.info!='None':
-                    tdevt=FadeEvt((0,0,0,0),(0,0,0,365),surface=surf, duration=ergonomy['transition_time']/2)
-                    tdevt.block_thread=1
-                    scene.add_phase(FuncWrapper(tdevt,type='fade',method=scene.add_threadevt, source=src,priority=-1))
-                    #scene.add_phase(FuncWrapper('wait',source=tdevt),method=scene.add_phase)
                 if not user.ui.editor_ui:
-                    phase=FuncWrapper(lambda t=self.target,f=tdevt:user.ui.game_ui.goto(t,splash=f),
-                        type='call',source=src,priority=-1)
+                    user.ui.game_ui.goto(self.target,splash=f)
                 else:
-                    phase= FuncWrapper(lambda t=self.target:scene.return_to_editor(),
-                         type='call',source=src,priority=-1)
-                scene.add_phase(phase)
-                phase=FuncWrapper(scene.freeze )
+                    scene.return_to_editor()
+                scene.freeze()
 
             elif self.evt=='variable':
                 try:
@@ -467,12 +471,13 @@ class SceneScriptEffect(TimedEvent):
                     else:
                         phase=FuncWrapper(lambda t=self.target,i=self.info,b=batch:evt(t,i,batch=b),
                             type='game_var',source=src,priority=-1)
+                    phase.run()
                 except Exception as e:
-                    print e
+                    print self, e
 
             elif self.evt=='save':
                 if not user.ui.editor_ui:
-                    phase= FuncWrapper(user.ui.game_ui.game.save_state,self.info,type='save')
+                    user.ui.game_ui.game.save_state(self.info)
         elif self.typ=='Sound':
             if 'Stop' in self.text:
                 user.ui.soundmaster.stop(self.target,fadeout=f)
@@ -641,7 +646,7 @@ class SceneScriptCondition(DataBit):
             try:
                 return eval(txt)
             except Exception as e:
-                print e
+                print self, e
         if self.typ in ('Scene','Cast'):
             if self.typ == 'Scene':
                 data=scene.data

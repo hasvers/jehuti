@@ -222,7 +222,7 @@ def shallow_nested(item,make_new=0,**kwargs):
         # but not dataitems that serve as reference (e.g. node),
         # neither fields contained in those dataitems
         make_new=0
-    if hasattr(item,'update'):
+    if hasattr(item,'iteritems'):
         new= item.__class__()
         new.update({ shallow_nested(i,make_new,**kwargs):shallow_nested(j,make_new,**kwargs) for i,j in item.iteritems()})
         return new

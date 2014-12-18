@@ -314,6 +314,7 @@ class MatchEditorUI(EditorUI,SceneUI):
         return struct
 
     def return_to_game(self):
+        fopen('.editor_last','w')
         user.set_ui(self.game_ui,False, no_launch=True )
 
     def return_to_title(self):
@@ -543,7 +544,7 @@ class MatchUI(BasicUI,SceneUI):
                     j=t[i]
                     newt=j+txt
                     struct+=(i,lambda n=newt:self.parse_text(n) ),
-                return self.match.add_phase(FuncWrapper(lambda s=struct:self.float_menu(s,pos='center',draggable=0) ))
+                #return self.match.add_phase(FuncWrapper(lambda s=struct:self.float_menu(s,pos='center',draggable=0) ))
             self.match.add_balloon(t,anchor=None)
 
 

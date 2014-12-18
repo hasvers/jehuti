@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from gv_globals import *
-from gv_data import *
+from gv_data import DataBit
 DEBUG=0
 
 class Signal(DataBit):
@@ -176,10 +176,9 @@ class EventCommander(object):
                 else:
                     self.destination.setdefault(evt,[]).append((state,args,kwargs))
         else :
-            if kwargs.get('repeat_only',0):
-                state=evt.state
-            elif kwargs.get('time',None)!=None:
-                state=evt.state_at_time(kwargs['time'])
+            if kwargs.get('time',None)!=None:
+                state=evt.state_at_time(kwargs['time'],
+                    pass_block=kwargs.get('pass_block',False))
                 return self.go(evt,state,*args,**kwargs)
             else:
                 state=evt.states.successors(evt.state)[0]
@@ -218,6 +217,8 @@ class EventCommander(object):
                 path = nx.shortest_path(evt.states,evt.state,state)
             except:
                 path= nx.shortest_path(evt.states,state,evt.state)[::-1]
+            if not evt.repeatable and path[0]==evt.state:
+                path=path[1:]
         for i in path:
             if not self.evt_goto(evt,i,*args,**kwargs):
                 return False
@@ -231,8 +232,6 @@ class EventCommander(object):
     def evt_goto(self,evt,state,*args,**kwargs): #Forward or backward
         if self.paused and not evt in self.moving and not (evt,state,args,kwargs) in self.stacked:
             self.stacked.append( (evt,state,args,kwargs))
-            return False
-        if kwargs.get('repeat_only') and state != evt.state:
             return False
         if evt.state==state and not evt.repeatable:
             #print '----- discontinued',id(evt)
@@ -262,15 +261,20 @@ class EventCommander(object):
                 priority.append( (0,c) )
 
         priority=sorted(priority,key = lambda e: e[0], reverse=True )
+        #if 'script' in evt.type or 'cflag' in evt.type:
+            #print '\nPRIO',state, evt,priority
         for p,c in priority:
             if c != evt :
                 s = evt.states.node[state]['children_states'][c]
                 #arg,kwarg=deepcopy(args),deepcopy(kwargs)
-                arg=deepcopy(args)
+                arg=args[:]
                 kwarg={}
                 kwarg.update(kwargs)
+                kwarg.pop('handle',None)
+                kwarg=shallow_nested(kwarg)
                 kwarg['ephemeral']=1
                 kwarg['handle']=handle
+                kwarg['traceback']=kwargs.get('traceback',[])[:]+[(evt,evt.state,p)]
                 try:
                     arg=evt.states.node[state]['children_arg'][c]
                     kwarg=evt.states.node[state]['children_kwarg'][c]
@@ -278,14 +282,10 @@ class EventCommander(object):
                     pass
 
                 chandled = self.go(c,s,*arg,**kwarg)
-                #if chandled :
-                #    self.pass_event(c,None,True)  #useless since evt_do calls goto which calls pass
                 handled=chandled or handled
-
             else :
                 if evt.state==state and not evt.repeatable:
                     continue
-                #evt.state=state
                 kwarg={}
                 kwarg.update(kwargs)
                 handle=kwarg.pop('handle',self.handle)
@@ -294,7 +294,6 @@ class EventCommander(object):
                 else :
                     evtdone =  evt.run(state,*args,**kwarg)
 
-                handled = evtdone or handled
                 if evtdone:
                     evt.state=state
                     self.pass_event(evt,None,kwargs.get('ephemeral',False) )
@@ -302,6 +301,7 @@ class EventCommander(object):
                         for e2,s2 in self.data.calls.neighbors( (evt,state) ):
                             if e2.state != s2:
                                 self.go(e2,s2,**kwargs)
+                handled = evtdone or handled
                 #else:
                     #print 'FAIL', evt, state
         if evt.cues.get(state,None)=='destroy':
@@ -481,6 +481,9 @@ class Event(Signal):
     desc='Event' #for any event list
     timed=False #flag to distinguished timed events (subclass)
 
+    allow_duplicates=False #Does this event accept duplicate children?
+            #Useful in case of successive do/undo
+
     def __init__(self,*args,**kwargs):
         self.parent=None # optional parent event
         self.state=0
@@ -528,6 +531,21 @@ class Event(Signal):
                 children|=set(c.current_children(1))
             return children
 
+
+    def clear_children(self):
+        for state in self.states:
+            children=self.states.node[state]['children_states'].keys()
+            for c in children:
+                del self.states.node[state]['children_states'][c]
+                for t in ('priority','children_arg','children_kwarg'):
+                    try:
+                        del self.states.node[state][t][c]
+                    except:
+                        pass
+                if c.parent==self:
+                    c.parent=None
+
+
     def all_children(self,recursive=False):
         children=set([])
         for state in self.states:
@@ -548,9 +566,25 @@ class Event(Signal):
         if suc!=None:
             self.states.add_edge(state,suc)
 
+    def duplicate_of(self,evt):
+        if self==evt:
+            return True
+        return False
+
+    def check_duplicate(self,state,child,**kwargs):
+        if not kwargs.get('duplicate_child',self.allow_duplicates):
+            dupl=False
+            for c in self.states.node[state]['children_states']:
+                if c.duplicate_of(child):
+                    dupl=True
+            return dupl
+        return False
+
     def add_child(self,child,statedict,*args,**kwargs):
         prior=kwargs.get('priority',False)
         for state in self.states.nodes():
+            if self.check_duplicate(state,child,**kwargs):
+                continue
             self.states.node[state]['children_states'][child]=statedict.get(state,0)
             if prior:
                 self.states.node[state]['priority'][child]=prior
@@ -560,6 +594,8 @@ class Event(Signal):
         prior=kwargs.get('priority',False)
         for state in self.states.nodes():
             if not state in child.states.nodes():
+                continue
+            if self.check_duplicate(state,child,**kwargs):
                 continue
             self.states.node[state]['children_states'][child]=state
             if prior:
@@ -571,11 +607,11 @@ class Event(Signal):
         for state in self.states.nodes():
             if child in self.states.node[state]['children_states']:
                 del self.states.node[state]['children_states'][child]
-                try:
-                    del self.states.node[state]['children_arg'][child]
-                    del self.states.node[state]['children_kwarg'][child]
-                except:
-                    pass
+                for t in ('priority','children_arg','children_kwarg'):
+                    try:
+                        del self.states.node[state][t][child]
+                    except:
+                        pass
         if child.parent==self:
             child.parent=None
 
@@ -608,10 +644,15 @@ class ChangeInfosEvt(Event):
     def __repr__(self):
         return '{} {} {} {}'.format(self.desc,self.data,self.item,self.kwargs)
 
-
     @property
     def infos(self):
         return self.sinfos(self.state)
+
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.item==evt.item and self.data==evt.data:
+            if self.kwargs==evt.kwargs:
+                return True
+        return False
 
     def sinfos(self,state):
         if state==1:
@@ -648,6 +689,7 @@ class ChangeInfosEvt(Event):
 
 
     def run(self,state,*args,**kwargs):
+        #print '\nCHANGEINFOS',state,self,kwargs.get('traceback','No traceback')
         return self.apply_infos(self.sinfos(state))#either new or old depending on state
 
     def update(self,**kwargs):
@@ -710,6 +752,11 @@ class AddEvt(Event):
     def __repr__(self):
         return '{} {} {} {}'.format(self.desc,self.item,self.data, self.state)
 
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.item==evt.item and self.data==evt.data:
+            return True
+        return False
+
     def affects(self):
         return (self.item,self.data)
 
@@ -770,6 +817,7 @@ class AddEvt(Event):
                     pass
             return handled
         if state== 0:
+            #print 'ADDEVT',self,state,kwargs.get('traceback','No traceback' )
             handled= self.data.remove(item)
             return handled
 
@@ -780,6 +828,10 @@ class SelectEvt(Event):
         self.item = args[0]
         self.cues={0:'destroy'}
 
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.item==evt.item:
+            return True
+        return False
 
 class MoveEvt(Event):
     desc='Move'
@@ -789,6 +841,11 @@ class MoveEvt(Event):
         self.pos=pos
         self.graph=graph
 
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.item==evt.item:
+            if self.pos==evt.pos and self.graph==evt.graph:
+                return True
+        return False
 
     def __repr__(self):
         return '{} {} {}'.format(self.desc,self.item,self.pos)
@@ -829,21 +886,27 @@ class TimedEvent(Event):
             self.states.node[state]['started']=kwargs.get('time',None)
         return Event.run(self,state,*args,**kwargs)
 
-    def state_at_time(self,time):
+    def state_at_time(self,time,**kwargs):
         '''Find the state in which this timed event SHOULD be
         at a given time (or else the last state before).'''
         laststate=self.state
-        lasttime=0
+        curstart=self.states.node[self.state]['started']
+        if not curstart:
+            curstart=0
         for s in self.states.node:
             state=self.states.node[s]
             if state['started']!=None:
                 if 0< time -state['started'] < state['duration']:
                     return s
                 if time -state['started']> state['duration']:
-                    laststate=s
+                    if not curstart or state['started']>curstart:
+                        laststate=s
+                        curstart=state['started']
         state=self.states.node[laststate]
         if state['started']!=None:
             lasttime=state['started']+state['duration']
+            if state['waiting'] and not kwargs.get('pass_block',False):
+                return laststate
         else:
             lasttime=0
         suc=self.states.successors(laststate)[:]

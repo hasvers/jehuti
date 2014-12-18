@@ -125,10 +125,10 @@ class MatchPlayer(MatchHandler,PhaseHandler):
     def clear_conv(self):
         #return 0
 
+        self.clear_phase()
         if self.data.convgraph:
             self.data.convgraph.kill()
         self.start_queue=['wait']
-        self.clear_phase()
         for i,j in self.data.actorsubgraphs.iteritems():
             for k,l in j.iteritems():
                 l.kill()
@@ -397,7 +397,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             'claimed') and not 'Req' in actgraph.get_info(l,'desc')]
         if not unclaimed and not unclinks:
             if callscripts:
-                self.add_phase(FuncWrapper(lambda:self.call_scripts('all_claimed_'+player.name)) )
+                self.call_scripts('all_claimed_'+player.name) #TODO: previously add_phase
             loc,loclinks= (),()
         else:
             undist=sorted([ (n,hypot(*(pos[n]-array(barycenter)))) for n in unclaimed ],
@@ -409,7 +409,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                         )<radius for p in l.parents)]
             if not loc and not  loclinks:
                 if callscripts:
-                    self.add_phase(FuncWrapper(lambda:self.call_scripts('loc_claimed_'+player.name)) )
+                    self.call_scripts('loc_claimed_'+player.name) #TODO: previously add_phase
                 #return (),()
         #print player,loc,loclinks
         return loc, loclinks
@@ -425,7 +425,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
         if tevt=='start' or True in [ x in tevt for x in 'info','add','batch','polite']:
             for scr in self.data.all_scripts():
                 if scr.test_cond(self,evt):
-                    scr.run(evt)
+                    self.add_phase(scr)
 
     def canvas_emote(self,c,txt,src):
         #c is an event, like a cange or other
@@ -438,9 +438,8 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             if subject:
                 color=self.cast.get_info(subject,'color')
                 anim= lambda t=target:self.canvas.icon[target].set_anim('blink')
-                wrap=FuncWrapper(anim,type='visual_blink',source=src,priority=1)
-                self.add_phase( wrap)
-               # self.add_phase(,visual=True)
+                #TODO: previously add_phase
+                user.ui.add_visual(anim)
                 self.canvas.icon[target].call_emote('#c{}#{}##'.format(color,txt))
 
     def toggle_subgraph(self,actor=None):
@@ -622,7 +621,8 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                         #print 'Calling:',call.val, item, item.name
                         self.call_scripts(call.val)
             if item.type=='node':
-                self.add_phase(FuncWrapper(lambda e=claim.item:self.canvas.handler.center_on(e),type='visual'))
+                #TODO: previously add_phase
+                self.canvas.handler.center_on(claim.item)
 
         if 'batch' in sgn and evt.state==2:
             ## Visual effects !
@@ -707,8 +707,8 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                     if target.type=='node' and  c.kwargs.get('claimed',False):
                         for eff in self.canvas.icon[target].effects.values():
                             anim=lambda e=eff:e.set_anim('blink',len=800)
-                            wrap=FuncWrapper(anim,type='visual_effblink',source=ultim,priority=1)
-                            self.add_phase( wrap)
+                            #TODO: previously add_phase
+                            user.ui.add_visual( anim)
             for t,val in evt.effects.iteritems():
                 act=t[0]
                 if hasattr(val,'keys'):

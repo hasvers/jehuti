@@ -412,8 +412,8 @@ class MatchCanvasPlayer(MatchCanvasHandler):
             item=evt.item
             self.canvas.icon[item].set_anim('hide')
             anim=lambda t=item:self.canvas.icon[t].set_anim('appear')
-            wrap=FuncWrapper(anim,type='visual_appear_{}'.format(evt.item),source=evt,priority=1)
-            match.add_phase(wrap)
+            user.ui.add_visual(anim)
+            #match.add_phase(wrap)
 
         if  'add' in evt.type or 'change' in evt.type and True in [x in evt.infos for x in ('logic','val')]:
             owner=evt.data.owner

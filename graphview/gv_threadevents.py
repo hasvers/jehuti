@@ -88,6 +88,11 @@ class ThreadEvent(TimedEvent):
     def end(self,*args,**kwargs):
         pass
 
+    def duplicate_of(self,evt):
+        if str(self)==str(evt):
+            return True
+        return False
+
 class ThreadMoveEvt(ThreadEvent):
     desc='Move'
     def __init__(self,item,graph,pos,**kwargs):
@@ -99,6 +104,12 @@ class ThreadMoveEvt(ThreadEvent):
 
     def __repr__(self):
         return '{} {} {}'.format(self.desc,self.item,self.pos)
+
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.item==evt.item:
+            if self.graph==evt.graph and self.pos==evt.pos:
+                return True
+        return False
 
     def affects(self):
         return (self.item, self.graph)+tuple(self._affects)
@@ -136,11 +147,15 @@ class FadeEvt(ThreadEvent):
     def __repr__(self):
         return 'Fade {} -> {}'.format(self.mod[0],self.mod[1])
 
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.mod==evt.mod:
+            return True
+        return False
 
     def prep_init(self,handle,*args,**kwargs):
         ui=handle.parent
-        if self.surface:
-            ui.veils['fade']=self.surface
+        if self.surface in ui.veils :
+            ui.veils['fade']=ui.veils[self.surface]
             return 1
         if ui.screen.get_flags()&pg.SRCALPHA:
             ui.veils['fade']=pg.surface.Surface(ui.screen.get_rect().size,pg.SRCALPHA)
@@ -196,6 +211,11 @@ class PanEvt(ThreadEvent):
     def __repr__(self):
         return '{} {} {}'.format(self.desc,self.scene,self.rel)
 
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.rel==evt.rel and self.scene==evt.scene:
+            return True
+        return False
+
     def affects(self):
         return (self.scene,)+tuple(self._affects)
 
@@ -207,8 +227,7 @@ class PanEvt(ThreadEvent):
         return True
 
     def do(self,fraction,*args,**kwargs):
-        if 0<fraction<1:
-            print fraction
+        if 0<=fraction<1:
             scene=self.scene
             rel=fraction*array(self.rel)
             if self.absolute_mode:
@@ -265,6 +284,11 @@ class ZoomEvt(ThreadEvent):
     def __repr__(self):
         return '{} {} {}'.format(self.desc,self.scene,self.target)
 
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.target==evt.target and self.data==evt.data:
+            return True
+        return False
+
     def affects(self):
         return (self.scene,)+tuple(self._affects)
 
@@ -279,7 +303,7 @@ class ZoomEvt(ThreadEvent):
 
 
     def do(self,fraction,*args,**kwargs):
-        if 0<fraction<1:
+        if 0<=fraction<1:
             handler=args[0]
             target= fraction*(self.target-1)
             scene=self.scene
@@ -331,8 +355,8 @@ class ZoomEvt(ThreadEvent):
             if self.absolute_mode:
                 zoom=1+(truezoom-1)*(1.-self.scene.get_info(l,'distance'))
                 scene.set_info(l,'zoom',zoom)
-                offset=trueoff*zoom/truezoom
-                scene.set_info(l,'offset',array(offset,dtype='int'))
+                offset=array(trueoff)*zoom/truezoom
+                scene.set_info(l,'offset',offset.astype('int'))
             else:
                 scene.set_info(l,'zoom',self.oldzoom[l])
                 scene.set_info(l,'offset',array(self.oldpos[l],dtype='int'))

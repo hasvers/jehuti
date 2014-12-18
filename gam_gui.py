@@ -167,6 +167,22 @@ class GameEditorUI(EditorUI):
         if self.window['statusbar']:
             self.depend.add_dep(self.window['statusbar'],user)
 
+    def launch(self):
+        EditorUI.launch(self)
+        if ergonomy["editor_memory"]:
+            nam=None
+            try:
+                with fopen('.editor_last','r') as last :
+                    for l in last:
+                        if l:
+                            nam=l
+                            break
+                if not nam is None:
+                    self.open_editor(self.game.data.get_node(nam))
+                    print 'Loading last map:',nam
+            except:
+                pass
+
     @property
     def components(self):
         return (self.game,)
@@ -217,8 +233,12 @@ class GameEditorUI(EditorUI):
     def open_editor(self,item):
         if isinstance(item.data,basestring):
             data= self.game.dataload(item)
+            with fopen('.editor_last','w') as last :
+                last.write(item.data)
         else:
             data=item.data
+            with fopen('.editor_last','w') as last :
+                last.write(data.name)
         self.game.open_node(item)
         if data in self.children_ui:
             user.set_ui(self.children_ui[data])#,no_launch=True)
@@ -238,7 +258,6 @@ class GameEditorUI(EditorUI):
             #self.children_ui[data]=newui
             #TODO: children_ui doesn't work yet
             user.set_ui(newui,False)
-
 
     def react(self,evt,**kwargs):
         if 'open' in evt.type:
@@ -331,8 +350,7 @@ class GameUI(BasicUI):
             tdevt.block_thread=0
             scene=newui.scene
             newui.veils['fade']=self.screen.copy()
-            scene.add_phase(FuncWrapper(tdevt,type='fade',method=scene.add_threadevt, source='start',priority='start'))
-            #scene.add_phase(FuncWrapper('wait',source='start',priority='start'),method=scene.add_phase)
+            scene.add_phase(tdevt)
         user.set_ui(newui,False)
         self.game.goto(node)
         user.pause(0)

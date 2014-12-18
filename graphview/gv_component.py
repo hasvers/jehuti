@@ -5,6 +5,8 @@
 #while allowing multiple relationships between views and data
 
 
+from gv_data import *
+
 from gv_uibasics import *
 
 class View(UI_Widget):

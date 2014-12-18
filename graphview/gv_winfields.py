@@ -160,11 +160,13 @@ class TextField(WindowField):
     curval=-1
     linehei=False
     hover_word=None
+    interpret=True #interpret code e.g. color, font
 
     class Word(object):
         sticky=False
         hover,select,highlight=0,0,0
         referent=None
+        cache={}
         def __init__(self,**kwargs):
             kws=('txt','rect','color','font','img','referent','sticky')
             for kw,arg in kwargs.iteritems():
@@ -198,10 +200,19 @@ class TextField(WindowField):
                 font.set_underline(1)
             else:
                 font.set_underline(0)
-            if graphic_chart['text_borders']:
-                rend=pgu_writen(self.txt,font,color)
+            txt=self.txt
+            if (txt,font,color) in self.cache:
+                rend= self.cache[(txt,font,color)]
             else:
-                rend=font.render(self.txt,1,color)
+                if graphic_chart['text_borders']:
+                    rend=pgu_writen(txt,font,color)
+                else:
+                    rend=font.render(txt,1,color)
+                ckeys=self.cache.keys()
+                if len(ckeys)>database["word_cache_limit"]:
+                    print sys.getsizeof(self.cache)
+                    del self.cache[ckeys[0]]
+                self.cache[(txt,font,color)]=rend
                         #TODO render on rect with height given by font.get_linesize()
 
             if self.highlight:
@@ -349,7 +360,7 @@ class TextField(WindowField):
             for idx, w in l: #Right now i dont use idx at all, should I remove it?
                 if not w:
                     continue
-                if len(w)>1 and w[0]== w[-1]=='#': #options
+                if self.interpret and len(w)>1 and w[0]== w[-1]=='#': #options
                     if w[1]=="#":
                         if len(options)>1: #remove the last option
                             options.pop(-1)

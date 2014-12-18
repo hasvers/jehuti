@@ -79,9 +79,11 @@ class MatchScriptEffect(SceneScriptEffect):
         'typ':'Text',
         'info':'',
         'wait':'Off',
-        'start':'',
+        'start':'phase',
         'delay':'None',
+        'duration':0
         }
+
 
     def templatelist(self,match,nodes,links,actors):
         templatelist=SceneScriptEffect.templatelist(self,match,nodes+links,actors)
@@ -129,7 +131,7 @@ class MatchScriptEffect(SceneScriptEffect):
         return templatelist
 
     def templates(self,template=None,**kwargs):
-        match=user.ui.scene
+        match=kwargs.get('scene',user.ui.scene) #TODO: remove the dependence in user.ui
         actors=sorted(match.actors)
         nodes=sorted(match.canvas.graph.nodes,key=lambda e:e.ID)
         links = [l for n,ls in match.canvas.graph.links.iteritems() for l in ls]
@@ -162,7 +164,7 @@ class MatchScriptEffect(SceneScriptEffect):
             if self.evt in ('info','add'):
                 infos=self.infosep(self.info)
                 if self.typ == 'Graph':
-                    data=match.data.actorsubgraphs[self.owner][self.subject]
+                    data=scene.data.actorsubgraphs[self.owner][self.subject]
                 if self.evt=='info':
                     evt= ChangeInfosEvt(self.target,data,**infos )
                 elif self.evt=='add':
@@ -171,36 +173,44 @@ class MatchScriptEffect(SceneScriptEffect):
                     if not self.all_children(): #If not already prepared
                         self.add_child(evt,{1:0,2:1},priority=1)
                 else:
-                    batch.add_event(evt)
-                    evt.parent=batch
-                    batch.add_child(evt,{1:0,2:1},priority=1)
+                    if not True in [oth.type==evt.type and oth.item==evt.item
+                             for oth in batch.rec_events()]:
+                        batch.add_event(evt)
+                        evt.parent=batch
+                        batch.add_child(evt,{1:0,2:1},priority=1)
                 return True
-        return SceneScriptEffect.prepare_do(self,scene,**kwargs)
-
-    def do(self,scene,**kwargs):
-        if self.typ=='Action':
+        elif self.typ=='Action':
             dic={'claim':ClaimEvt,'explore':ExploreEvt}
             kwargs=self.infosep(self.info)
             evt=dic[self.evt]( self, self.actor, self.target,**kwargs)
             if batch is None:
-                cevt=QueueEvt(evt,match.data,newbatch=True)
-                eevt=AddEvt(self.target,match.data.actorsubgraphs[self.actor][self.actor] )
-                self.add_child(eevt,{1:0,2:1},priority=2)
-                self.add_sim_child(cevt,priority=1)
+                if not self.all_children():
+                    cevt=QueueEvt(evt,scene.data,newbatch=True)
+                    eevt=AddEvt(self.target,scene.data.actorgraph[self.actor] )#[self.actor]
+                    self.add_child(eevt,{1:0,2:1},priority=2)
+                    #TODO:BREAK? understand if the add event had to be on [self.actor][self.actor]
+                    #TODO:BREAK? despite there being an identical addevt in claim
+                    self.add_sim_child(cevt,priority=1)
             else:
-                batch.add_event(evt)
-        elif self.typ =='Canvas':
-            pos= match.canvas.pos[self.target]
+                if not True in [oth.type==evt.type and oth.item==evt.item
+                         for oth in batch.rec_events()]:
+                    batch.add_event(evt)
+            return True
+        return SceneScriptEffect.prep_do(self,scene,**kwargs)
+
+    def do(self,scene,**kwargs):
+        if self.typ =='Canvas':
+            pos= scene.canvas.pos[self.target]
             glide=self.info=='Glide'
             move=self.info in ('Glide','Jump')
             if self.evt=='set barycenter':
-                match.set_barycenter(pos,glide=glide,move=move)
+                scene.set_barycenter(pos,glide=glide,move=move)
             elif self.evt=='set camera':
-                user.ui.add_visual(lambda e=pos, g=glide : match.canvas.handler.center_on(e,g))
+                user.ui.add_visual(lambda e=pos, g=glide : scene.canvas.handler.center_on(e,g))
         elif self.typ in ('Graph',):
             if self.evt in ('anim','emote'):
                 if self.typ == 'Graph':
-                    ic=match.canvas.icon
+                    ic=scene.canvas.icon
                 for j in self.info.split(';'):
                     if self.evt=='anim':
                         user.ui.add_visual(lambda e=j:ic[self.target].set_anim(e))
@@ -210,20 +220,20 @@ class MatchScriptEffect(SceneScriptEffect):
                         user.ui.add_visual(lambda e=j:ic[self.target].set_state(e))
         elif self.typ=='Conversation':
             if self.evt=='set viewpoint':
-                match.set_player(self.actor,0,1)
+                scene.set_player(self.actor,0,1)
             if self.evt=='set player':
-                match.set_player(self.actor)
+                scene.set_player(self.actor)
             elif self.evt=='set controller':
                 info=self.info
                 if info=='AI':
-                    info=AIPlayer(self.actor,match)
+                    info=AIPlayer(self.actor,scene)
                 elif info=='None':
                     info=None
-                match.signal('set_player',self.actor)
-                match.controller.__setitem__(self.actor,info)
+                scene.signal('set_player',self.actor)
+                scene.controller.__setitem__(self.actor,info)
         elif self.typ=='Interface':
             evt='{}_ui'.format(self.evt)
-            match.signal(evt,self.info)
+            scene.signal(evt,self.info)
         else:
             return SceneScriptEffect.do(self,scene,**kwargs)
         return True

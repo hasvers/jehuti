@@ -133,7 +133,7 @@ class Subgraph(Data):
     def set_info(self,item,ityp,val,**kwargs):
         if Data.set_info(self,item,ityp,val,**kwargs):
             if item.type=='node' and not item in self.nodes and item in self.infos:
-                print 'ERROR gv_graph: This should not happen.', item, ityp, val,self, debug.caller_name()
+                print 'ERROR gv_graph: Node in infos but not in nodes.', item, ityp, val,self, debug.caller_name()
 #                self.nodes.append(item)
             return True
         return False

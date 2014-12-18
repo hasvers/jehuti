@@ -1197,7 +1197,10 @@ class Emote(UI_Icon):
                 if opts:
                     opt=opts.pop(0)
                 if opt and opt[0]=='c':
-                    color=eval(opt[1:])
+                    try:
+                        color=eval(opt[1:])
+                    except:
+                        color=get_color(opt[1:])
                 else:
                     color=self.color
                 if isinstance(color,basestring):

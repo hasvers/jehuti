@@ -29,8 +29,10 @@ class MatchEvent(Event):
             self.prep_do(match)
         if edge ==(2,1) :
             self.prep_undo(match)
+        #print 'prep',self,edge, self.states.node[edge[1]]['children_states']
 
     def run(self,state,*args,**kwargs):
+        #print 'run',self,state
         return True
 
     def do_prior(self,evt,do,undo,prior):
@@ -48,16 +50,20 @@ class MatchEvent(Event):
     def child_add(self,item,data,do=2,undo=1,**kwargs):
         evt=AddEvt(item,data,infos=kwargs,assess=True,addrequired=True)
         evt.parent=self
+        if self.check_duplicate(do,evt,**kwargs):
+            return False
         self.states.node[do]['children_states'][evt]=1
         self.states.node[undo]['children_states'][evt]=0
         if do and undo : #neither is 0
             self.states.node[0]['children_states'][evt]=0
-        self.do_prior(evt,do,undo,kwargs.pop("priority",False))
+        self.do_prior(evt,do,undo,kwargs.pop("priority",{do:1,undo:-1}  ))
 
 
     def child_chginfo(self,item,data,do=2,undo=1,**kwargs):
         evt=ChangeInfosEvt(item,data,**kwargs)
         evt.parent=self
+        if self.check_duplicate(do,evt,**kwargs):
+            return False
         self.states.node[do]['children_states'][evt]=1
         self.states.node[undo]['children_states'][evt]=0
         if do and undo : #neither is 0
@@ -102,7 +108,13 @@ class QueueEvt(MatchEvent):
     def affects(self):
         return (self.evt,self.data)
 
-    def run(self,state,match):
+
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.evt==evt.evt and self.data==evt.data:
+            return True
+        return False
+
+    def run(self,state,match,**kwargs):
         evt=self.evt
         if state ==1 and evt.state==1 :
             self.cost=evt.cost
@@ -158,7 +170,6 @@ class QueueEvt(MatchEvent):
         return False
 
     def prep_init(self,match,*args,**kwargs):
-
         self.batch=None
         if not self.newbatch: #look for valid batch in match queue
             for evt in match.queue:
@@ -225,6 +236,11 @@ class ReactEvt(MatchEvent):
 
     def __repr__(self):
         return '{} {} Discovery: {}  -> {}'.format(self.desc,self.actor,self.is_discovery,self.parent)
+
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.actor==evt.actor and self.parent==evt.parent:
+            return True
+        return False
 
     @property
     def item(self):
@@ -346,6 +362,11 @@ class InterpretEvt(MatchEvent):
         return '{} {} Discovery: {}  -> {}'.format(self.desc,self.actor,self.is_discovery,self.parent)
 
 
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.actor==evt.actor and self.parent==evt.parent:
+            return True
+        return False
+
     @property
     def item(self):
         return self.parent.item
@@ -422,6 +443,10 @@ class LogicEvt(MatchEvent):
     def __repr__(self):
         return '{} {} {}'.format(self.desc,self.actor,self.item)
 
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.item==evt.item and self.actor==evt.actor:
+            return True
+        return False
 
     def prep_do(self,match,*args,**kwargs):
         for i in (self.actor,match.data):
@@ -494,6 +519,11 @@ class DeclareEvt(MatchEvent):
     def __repr__(self):
         return '{} {} {}'.format(self.desc,self.actor,self.item)
 
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.item==evt.item and self.actor==evt.actor:
+            return True
+        return False
+
     def prepare(self,edge,match,*args,**kwargs):
         for i in (self.actor,match.data):
             if not i in self._affects:
@@ -529,6 +559,11 @@ class ClaimEvt(MatchEvent):
 
     def __repr__(self):
         return '{} {} {}'.format(self.desc,self.actor,self.item)
+
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.item==evt.item and self.actor==evt.actor:
+            return True
+        return False
 
     @property
     def cost(self):
@@ -629,6 +664,12 @@ class ConcedeEvt(MatchEvent):
     def __repr__(self):
         return '{} {} to {} {}'.format(self.desc,self.actor, self.receiver,self.item)
 
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.item==evt.item:
+            if self.actor==evt.actor and self.receiver==evt.receiver:
+                return True
+        return False
+
     def prep_do(self,match,*args,**kwargs):
         item=self.item
         iti = match.canvas.get_info(item)
@@ -662,6 +703,11 @@ class ExploreEvt(MatchEvent):
     def __repr__(self):
         return '{} {} {}'.format(self.desc,self.actor,self.radius)
 
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.actor==evt.actor:
+            if self.kwargs.get('pos',None)==evt.kwargs.get('pos',None):
+                return True
+        return False
 
     def prep_init(self,match,**kwargs):
         self._affects=(match.canvas.graph,match.data)
@@ -734,6 +780,14 @@ class PathosEvt(MatchEvent):
     def __repr__(self):
         return '{} {} {} {} {} {} -- Targets {}'.format(self.desc, self.path_typ,self.actor,self.item, self.cond, self.val, self.targets)
 
+
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.item==evt.item and self.cond==evt.cond:
+            if self.val==evt.val and self.path_type==evt.path_type:
+                if self.targets==evt.targets:
+                    return True
+        return False
+
     def prep_do(self,match):
         val=self.val
         tgts=self.targets
@@ -776,8 +830,14 @@ class PolitenessEvt(MatchEvent):
         self.type='politeness_evt'
         self.disc_type=kwargs.get('type',self.type)
         if 'type' in kwargs:
-            self.desc+self.disc_type
+            self.desc+=self.disc_type
 
+
+    def duplicate_of(self,evt):
+        if self.type==evt.type and self.disc_type==evt.disc_type:
+            if self.actor==evt.actor and self.val==evt.val:
+                return True
+        return False
 
     def prep_init(self,match):
         #ainf=match.cast.get_info(self.actor)
@@ -814,6 +874,13 @@ class BatchEvt(MatchEvent):
 
     def __repr__(self):
         return '{} {}  -- {}'.format(self.desc,self.actor,self.root_events)
+
+
+    def duplicate_of(self,evt):
+        if not False in [True in [s.duplicate_of(s2) for s2 in evt.events() ]
+                for s in self.events()]:
+            return True
+        return False
 
     @property
     def rec_events(self):

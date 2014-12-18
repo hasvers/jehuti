@@ -179,7 +179,10 @@ class Data(object):
                         raise Exception('Item in list but not in infos.')
                     lst.append(item)
                 if hasattr(item, 'ID') and not item.ID is None:
-                    item.ID=max(item.ID, max(o.ID for o in lst )  +1 )
+                    for oth in lst:
+                        if oth!=item and oth.ID==item.ID:
+                            item.ID=max(item.ID, max(o.ID for o in lst )  +1 )
+                            break
                     if self.typID[ityp]<=item.ID:
                         self.typID[ityp]=item.ID+1
                 else:
