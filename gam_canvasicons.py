@@ -333,7 +333,7 @@ class MatchLinkIcon(LinkIcon):
         color_ext=graphic_chart['icon_node_fill_colors']
         t0=self.logic[0]
         t1= self.logic[1]
-        desc=(color_ext[t0], color_ext[t1],bordercolor,color_in,tuple(mod))
+        desc=(color_ext[t0], color_ext[t1],bordercolor,color_in,tuple(mod),unsaturated)
 
         if desc in self.premade:
             return self.premade[desc].copy()

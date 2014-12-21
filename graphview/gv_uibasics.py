@@ -389,13 +389,17 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
             surf.blit(image,(0,0))
             image=surf
             image.set_colorkey(COLORKEY)
-            image.set_alpha(rint(modalp*255),pg.RLEACCEL)
+            if self.alpha:
+                basalp=self.alpha
+            else:
+                basalp=255
+            image.set_alpha(rint(modalp*basalp),pg.RLEACCEL)
 
-            try:
-                if self.alpha and not self.states['anim']:
-                    image.set_alpha(self.alpha,pg.RLEACCEL)
-            except:
-                pass
+            #try:
+                #if self.alpha and not self.states['anim']:
+                    #image.set_alpha(self.alpha,pg.RLEACCEL)
+            #except:
+                #pass
 
         if self.states.get('blur',None):
             self.make_blur(image,self.blur_mode)
@@ -585,10 +589,11 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
         user.ui.anim.add_anim(self,anim,**kwargs)
         return True
 
-    def set_anim_mod(self,anim_mod):
+    def set_anim_mod(self,anim_mod,recursive=True):
         self.anim_mod=anim_mod
-        for c in self.children:
-            c.set_anim_mod(anim_mod)
+        if recursive:
+            for c in self.children:
+                c.set_anim_mod(anim_mod,recursive)
 
     def color_mod(self,state):
         if state == 'anim':
@@ -653,8 +658,8 @@ class UI_Widget(UI_Item):
             self.children=[]
         return UI_Item.kill(self)
 
-    def set_anim_mod(self,anim_mod):
-        self.anim_mod=anim_mod
+    def set_anim_mod(self,anim_mod,recursive=False):
+        UI_Item.set_anim_mod(self,anim_mod,recursive)
 
     def event(self,event,*args,**kwargs):
         if self.is_disabled:

@@ -12,7 +12,7 @@ class Window(FieldContainer):
         margin=kwargs.pop('margin',graphic_chart['window_margin'])
         w,h=max((w,3*margin)),max((h,3*margin))
         FieldContainer.__init__(self,interface,size=(w,h),margin=margin,**kwargs)
-        self.alpha=0
+        self.alpha=graphic_chart['window_base_alpha']
         self.field_commands={ 'always':['confirm'],
             'confirm':[(self.unselect,( ) ) ],
             'queue':['do'],
@@ -303,6 +303,10 @@ class Window(FieldContainer):
     def color_mod(self,state):
         if state == 'anim':
             return self.anim_mod
+        if state == 'hover':
+            dft=graphic_chart['window_hover_alpha']
+            if self.alpha<dft:
+                return (1,1,1,float(dft)/self.alpha)
         mod =graphic_chart.get('window_'+state+'_color_mod',(1,1,1,1))
         if self.alpha:
             mod=mod[:3]+(1,)
@@ -515,11 +519,8 @@ class SpeechBalloon(DecoratedWindow):
     def closing_event(self):
         self.set_command('queue','exit')
         self.exe_command('queue')
-        self.set_anim('disappear',len=200)
-        self.set_anim('close')
+        self.set_anim('disappear',len=200,affects=[self])
 
-    def special_anim(self,anim):
-        if anim=='close':
+    def react(self,evt):
+        if evt.type=='anim_stop':
             self.interface.close_balloon(self)
-            return True
-        return False
