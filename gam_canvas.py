@@ -410,9 +410,9 @@ class MatchCanvasPlayer(MatchCanvasHandler):
         if 'add' in evt.type and evt.data == self.canvas.active_graph:
             #print 'appear',id(evt), evt.data.name, evt,'\n'
             item=evt.item
-            self.canvas.icon[item].set_anim('hide')
-            anim=lambda t=item:self.canvas.icon[t].set_anim('appear')
-            user.ui.add_visual(anim)
+            #self.canvas.icon[item].set_anim('hide')
+            self.canvas.icon[item].set_anim('appear',len=500,easing='quad')
+            #user.ui.add_visual(anim)
             #match.add_phase(wrap)
 
         if  'add' in evt.type or 'change' in evt.type and True in [x in evt.infos for x in ('logic','val')]:

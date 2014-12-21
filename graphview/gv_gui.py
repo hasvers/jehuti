@@ -32,6 +32,7 @@ class BasicUI(UI_Widget):
         self.rect=self.screen.get_rect()
         self.available=self.rect.move(0,0)
         self.visual_queue=[] #queue for visual effects
+        self.anim=AnimationHandler() #Replacement for visual_queue
 
         for i in template['viewables']: #all possible viewables for any kind of UI
             self.store[i]=template[i]
@@ -96,7 +97,7 @@ class BasicUI(UI_Widget):
         window=FloatMenu(self.screen,self,graphic_chart['float_base_size'],
             struct=struct,**kwargs)
         window.set_command('exit',lambda : self.close(window))
-        window.set_anim('appear',len=120)
+        window.set_anim('appear',len=50)
         return  self.float_core(window,'floatmenu',**kwargs)
 
     def float_core(self,window,typ='floatmenu',**kwargs):
@@ -145,7 +146,7 @@ class BasicUI(UI_Widget):
         w,h=graphic_chart['dialbox_size']
         rect=self.screen.get_rect()
         ball=SpeechBalloon(self,(w,h),maxsize=array(self.rect.size)*.5,fixsize=0,**kwargs)
-        ball.add('text',val=txt,wrap=True,maxlines=None)
+        ball.add('text',val=txt,wrap=True,maxlines=None,font=fonts["dialogue"])
         brect=ball.rect
         w,h=brect.size
         bs=self.balloons.setdefault(anchor,[])
@@ -560,7 +561,8 @@ class BasicUI(UI_Widget):
         self.visual_queue.append(vis)
 
     def visual_advance(self):
-        if not user.evt.moving and self.visual_queue:
+        if not user.evt.moving:
+            self.anim.update()
             while self.visual_queue:
                 self.visual_queue.pop(0)()
 

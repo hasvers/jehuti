@@ -315,6 +315,15 @@ class Canvas():
             return False
 
     def react(self,evt):
+        if 'anim' in evt.type:
+            anim=evt.args[0]
+            item=anim.item
+            if evt.type=='anim_start':
+                [c.add_to_group(self.animated) for c in [item]+item.children]
+            if evt.type=='anim_stop':
+                [c.rem_from_group(self.animated) for c in [item]+item.children]
+                self.dirty=1
+            return
         if 'select' in evt.type :
             if hasattr(evt,'item') and evt.item in self.icon:
                 #if not hasattr item, it is a signal, not a SelectEvt, so it should be disregarded

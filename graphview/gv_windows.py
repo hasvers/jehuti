@@ -516,7 +516,7 @@ class SpeechBalloon(DecoratedWindow):
         self.set_command('queue','exit')
         self.exe_command('queue')
         self.set_anim('disappear',len=200)
-        self.set_anim('close',time='append')
+        self.set_anim('close')
 
     def special_anim(self,anim):
         if anim=='close':

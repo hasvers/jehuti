@@ -155,7 +155,7 @@ class TextField(WindowField):
     hypertext=False
     offset=(0,0)
     padding=(4,2,4,2)
-    font=basefont
+    _font=None
 
     curval=-1
     linehei=False
@@ -194,15 +194,16 @@ class TextField(WindowField):
                     color=kwargs.get('dft_color')
             if self.select:
                 color=[min(255,int(color[i]*graphic_chart['icon_select_color_mod'][i])) for i in range(3)]
-                font.set_underline(1)
+                #font.underline(1)
             elif self.hover:
                 color=[min(255,int(color[i]*graphic_chart['icon_hover_color_mod'][i])) for i in range(3)]
-                font.set_underline(1)
-            else:
-                font.set_underline(0)
+                #font.underline(1)
+            #else:
+                #font.underline(0)
             txt=self.txt
+            style=kwargs.get("style",font.style() )
             if (txt,font,color) in self.cache:
-                rend= self.cache[(txt,font,color)]
+                rend= self.cache[(txt,font,color,style)]
             else:
                 if graphic_chart['text_borders']:
                     rend=pgu_writen(txt,font,color)
@@ -212,7 +213,7 @@ class TextField(WindowField):
                 if len(ckeys)>database["word_cache_limit"]:
                     print sys.getsizeof(self.cache)
                     del self.cache[ckeys[0]]
-                self.cache[(txt,font,color)]=rend
+                self.cache[(txt,font,color,style)]=rend
                         #TODO render on rect with height given by font.get_linesize()
 
             if self.highlight:
@@ -261,6 +262,8 @@ class TextField(WindowField):
                     self.padding =(j,j,j,j)
                 else :
                     self.padding=  j
+            elif i=='font':
+                self._font=j
         if draw :
             self.redraw()
             self.rect=self.image.get_rect()
@@ -269,6 +272,15 @@ class TextField(WindowField):
     def sound(self):
         return  self.selectable or self.focusable
 
+    @property
+    def font(self):
+        if self._font:
+            return  self._font
+        return fonts["base"]
+
+    @font.setter
+    def font(self,val):
+        self._font=val
 
     def rm_state(self,state,**kwargs):
         if state=='hover' and self.hover_word:
@@ -377,8 +389,8 @@ class TextField(WindowField):
                             newopt[w[1]]=1
                         options.append(newopt)
                     font =options[-1]['font']
-                    for tx,fun in (('b',font.set_bold),('i',font.set_italic),
-                        ('u',font.set_underline)):
+                    for tx,fun in (('b',font.strong),('i',font.oblique),
+                        ('u',font.underline)):
                         if options[-1][tx]:
                             fun(1)
                         else:

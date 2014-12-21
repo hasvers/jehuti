@@ -4,6 +4,10 @@ import sys,site
 
 #site.addsitedir("/home/neve/Documents/Projets/")
 from graphview import *
+from gam_fonts import *
+
+
+
 
 
 class GameVariable(DataItem):

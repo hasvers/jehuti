@@ -1,5 +1,6 @@
 from gv_globals import *
 from gv_threadevents import *
+from gv_anims import *
 import gv_effects
 
 class User():
@@ -238,7 +239,6 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
               'ghost':False,
               'anim':False,
               'base':True} #Base is always true, allows permanent modifiers (e.g. link alpha)
-        self.current_anim=[]
         self.parent=None
         self.children=[] #Children of UI_Item allow multipart sprites. For interaction, use UI_Widget
         self.pos={}
@@ -563,11 +563,9 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
     def update(self):
         if self.children:
             self.upd_child()
-        if self.states['anim']:
-            if not self.current_anim:
-                self.rm_state('anim')
-            elif self.current_anim[0]!='hide':
-                self.animate()
+        #if self.states['anim']:
+            #if not self.current_anim:
+                #self.rm_state('anim')
 
     def kill(self,recursive=False):
         if not self.alive() and not recursive:
@@ -580,169 +578,17 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
 
 
     def set_anim(self,anim,**kwargs):
+        for c in [self]+self.children:
+            if not 'anim' in c.modimg:
+                c.modimg+='anim',
+        kwargs.setdefault('affects',(self.parent,) )
+        user.ui.anim.add_anim(self,anim,**kwargs)
+        return True
 
-        if hasattr(anim,'__iter__'):
-            self.current_anim=anim
-        elif True :#or not self.current_anim: #TODO: Is this condition necessary?
-
-            time=kwargs.get('time',pg.time.get_ticks())
-            if time == 'append':
-                time=max(a[0][0]+a[0][1] for a in self.current_anim if hasattr(a[0],'__iter__') )
-
-            time+=kwargs.get('delay',0)
-            if anim=='hide':
-                self.current_anim+=['hide']
-            elif anim=='appear':
-                length=kwargs.get('len',1200)
-                self.current_anim+=[((time,length),(0,0,0,0),(1,1,1,1))]
-                while 'hide' in self.current_anim:
-                    self.current_anim.remove('hide')
-            elif anim=='disappear':
-                length=kwargs.get('len',1200)
-                self.current_anim+=[((time,length),(1,1,1,1),(0,0,0,0))]
-                self.current_anim+=[(time+length,'hide')]
-            elif anim=='blink':
-                length=kwargs.get('len',400)
-                nblinks=kwargs.get('loops',1)
-                slen=length/2./nblinks
-                #self.current_anim=[]
-                for z in xrange(nblinks):
-                    ti=time+ 2*z*slen
-                    self.current_anim+=[((ti,slen),(1,1,1,1),(2,2,2,1)),
-                        ((ti+slen,slen),(2,2,2,1),(1,1,1,1)) ]
-            elif anim=='shake':
-                length=kwargs.get('len',1200)
-                amp=kwargs.get('amp',.4)
-                nshakes=kwargs.get('loops',3)*2
-                slen=length/2./nshakes
-                #self.current_anim=[]
-                for z in xrange(nshakes):
-                    ti=time+ 2*z*slen
-                    self.current_anim+=[((ti,slen),array(self.rect.center),(0,0),(0,amp)),
-                        ((ti+slen,slen),array(self.rect.center),(0,amp),(0,0))]
-                    amp*=-1
-            elif anim=='jump':
-                length=kwargs.get('len',1200)
-                amp=kwargs.get('amp',.4)
-                self.current_anim+=[((time,length),array(self.rect.center),(0,0),(0,amp))]
-            elif anim=='emote_jump':
-                length=float(kwargs.get('len',2500))
-                amp=kwargs.get('amp',-20)
-                self.set_anim('jump',len=length/2,amp=amp)
-                self.set_anim('appear',len=length/4)
-                self.set_anim('disappear',len=length/4+2,delay=3*length/4)
-            elif 'oscil' in anim:
-                length=kwargs.get('len',800)
-                amp=kwargs.get('amp',.1)
-                periods=kwargs.get('loops',2)
-                puls= periods/float(length)*2*pi
-                angle=0
-                self.current_anim +=[ (  (time,length),self.rect.center,('sin',amp,puls,angle)   ) ,
-                    (time+length+100,self.rect.center ) ]
-            else:
-                self.current_anim+=[(time,anim)]
-
-        if not 'anim' in self.modimg:
-            self.modimg+='anim',
-        try:
-            self.add_to_group(self.parent.animated)
-        except:
-            pass
-        #self.states['anim']=1
-        self.animate()
-
-        if kwargs.get('children',True):
-            for c in self.children:
-                try:
-                    c.set_anim(anim,**kwargs)
-                except:
-                    pass
-
-    def special_anim(self,anim):
-        #For override by subclasses
-        return False
-
-    def animate(self):
-        #print 'yay', self.current_anim
-        if not self.current_anim:
-            self.rm_state('anim')
-            try:
-                self.rem_from_group(self.parent.animated)
-            except:
-                pass
-            return False
-        todo=[]
-        time=pg.time.get_ticks()
-        for  t in tuple(self.current_anim) :
-            if t=='hide' or t[1]=='hide' and time> t[0]:
-                todo.append( (0.,0.,0.,0.) )
-            elif isinstance(t,basestring):
-                todo.append(t)
-            elif len(t)>1:
-                #Time and event
-                try:
-                    t1,t2=t[0][0],t[0][0]+ t[0][1] #Duration
-                    if t1<=time<t2:
-                        if len(t[1])==4: #Color
-                            todo.append( [i+float(j-i)*(time-t1)/t[0][1] for i,j in zip(*t[1:3])] )
-                        elif  len(t[1])==2: #Movement
-                            ref=array(t[1])
-                            if str(t[2][0])!=t[2][0]: #coordinates
-                                td=[]
-                                for i,j in zip(*t[2:4]):
-                                    frac=i+float(j-i)*(time-t1)/t[0][1]
-                                    if isinstance(i,float):
-                                        frac*=self.rect.size[len(td)]
-                                    td.append(int(frac))
-
-                            else: #Movement with function
-
-                                if t[2][0]=='sin':
-
-                                    amp,puls,angle=t[2][1:]
-                                    if isinstance(amp,float):
-                                        amp*=self.rect.h#sum(self.rect.size*array(sin(angle),cos(angle) ))
-
-                                    val= amp*sin(puls*time-t1)
-                                    td=array((int(val*sin(angle)),int(val*cos(angle))))
-
-                            todo.append( ref+ td )
-                        else:
-                            print 'Unknown type of animation', t[1]
-                    elif t2<time:
-                        self.current_anim.remove(t)
-                except:
-                    #Punctual
-                    if t[0]<=time:
-                        todo.append(t[1])
-                        self.current_anim.remove(t)
-                        break
-            else:
-                todo.append(t)
-                self.current_anim.remove(t)
-                break
-
-        if hasattr(self,'alpha'):
-            albase=self.alpha/255.
-        else:
-            albase=1.
-        anim_mod=array((1.,1.,1.,albase))
-        for t in todo:
-            if self.special_anim(t):
-                continue
-            try:
-                if len(t)==4:
-                    # Color
-                    anim_mod*=array(t,dtype=float)
-                elif len(t)==2:
-                    #Movement
-                    #print time,self,self.current_anim
-                    self.rect.center=array(t)
-            except:
-                pass
+    def set_anim_mod(self,anim_mod):
         self.anim_mod=anim_mod
-        self.set_state('anim',True)
-
+        for c in self.children:
+            c.set_anim_mod(anim_mod)
 
     def color_mod(self,state):
         if state == 'anim':
@@ -789,9 +635,9 @@ class UI_Widget(UI_Item):
         self.hovering=None
 
     def update(self):
-        if self.states['anim']:
-            self.animate()
-            return True
+        #if self.states['anim']:
+            #self.animate()
+            #return True
         return False
 
     def kill(self,recursive=False):
@@ -807,7 +653,8 @@ class UI_Widget(UI_Item):
             self.children=[]
         return UI_Item.kill(self)
 
-
+    def set_anim_mod(self,anim_mod):
+        self.anim_mod=anim_mod
 
     def event(self,event,*args,**kwargs):
         if self.is_disabled:
@@ -1161,10 +1008,10 @@ class Emote(UI_Icon):
     sound=True
     ephemeral=False
 
-    font=emotefont
     color=(255,255,255,255)
     def __init__(self,contents,*args, **kwargs):
         self.type='emote'
+        self.font=fonts["emote"]
         UI_Icon.__init__(self,**kwargs)
         self.set='idle'
         if not hasattr(contents,'__iter__'):
@@ -1224,11 +1071,10 @@ class Emote(UI_Icon):
         self.size=self.width,self.height=rect.size
         return True
 
-    def animate(self):
-        UI_Item.animate(self)
-
+    def update(self):
+        UI_Item.update(self)
         if self.ephemeral:
-            if not self.current_anim:
+            if not self.is_animated:
                 self.kill()
 
 

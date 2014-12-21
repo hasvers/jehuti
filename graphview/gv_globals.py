@@ -119,14 +119,9 @@ for i, j in tuple(database.iteritems()):
         database[i]=resource_path(j)
 
 
-
-try:
-    basefont = pg.font.Font(os.path.normpath(os.path.join( database['image_path'] , "fonts/" ,database['font'] )), database['font_default_size'])
-    emotefont = pg.font.Font( os.path.normpath(os.path.join( database['image_path'] , "fonts/" ,database['font'] )), database['font_emote_size'])
-except IOError as e:
-    print 'Font could not be loaded:',e
-    basefont = pg.font.SysFont(None, 21)
-    emotefont = pg.font.SysFont(None, 15)
+from gv_fonts import FontMaster
+fonts=FontMaster(database,resource_path)
+basefont= fonts["base"]
 
 for fname in database['modules']:
     confload(fname)
@@ -239,7 +234,11 @@ def shallow_nested(item,make_new=0,**kwargs):
             new+=  item.__class__( ((shallow_nested(i,make_new,**kwargs)), ))
         return new
     if make_new and hasattr(item,'__dict__') :
-        new= item.__class__()
+        try:
+            new= item.__class__()
+        except:
+            print "Shallow_nested: Couldn't make new", item.__class__.__name__
+            new=deepcopy(item)
         for i,j in item.__dict__.iteritems():
             if not i in exclude:
                 new.__dict__[i]=shallow_nested(j,make_new,**kwargs)

@@ -24,13 +24,6 @@ class CanvasIcon(UI_Icon):
             #return True
         #return False
 
-    #def animate(self):
-        #if self.current_anim:
-            #UI_Icon.animate(self)
-            #if not self.current_anim:
-                #if self.parent:
-                    #self.parent.dirty=1
-
     def event(self,event,**kwargs):
         return False #  self.canvas.handler.event(event)
 

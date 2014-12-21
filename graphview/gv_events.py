@@ -879,7 +879,8 @@ class TimedEvent(Event):
             for s in self.states.node:
                 self.states.node[s]['started']=None
                 self.states.node[s].setdefault('duration',0.)
-        return Event.prepare(self,edge,*args,**kwargs)
+                self.states.node[s].setdefault('waiting',False)
+        return True
 
     def run(self,state,*args,**kwargs):
         if state>0 and self.states.node[state]['started'] == None:
