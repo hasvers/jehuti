@@ -49,8 +49,8 @@ class MatchData(Data):
             del self.actorgraph[actor]
 
     def all_scripts(self):
-        return self.scripts+ list(fl for j in self.actorgraph.values()
-            for k,l in j.infos.iteritems() for fl in l.get('cflags',() ) if isinstance(fl,CFlag))
+        return set(self.scripts+ list(fl for j in self.actorgraph.values()
+            for k,l in j.infos.iteritems() for fl in l.get('cflags',() ) if isinstance(fl,CFlag)))
 
     def klassmake(self,klass,*args):
         #print klass, args

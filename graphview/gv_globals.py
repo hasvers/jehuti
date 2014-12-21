@@ -212,11 +212,14 @@ def rftoint(nb):
 def shallow_nested(item,make_new=0,**kwargs):
     exclude=kwargs.get('exclude',() )
     #Makes shallow copies of all containers at all levels while conserving all non-containers
-    if hasattr(item,'nested_copy') and not item.nested_copy:
-        #Tricky: I want databits to be duplicable (e.g. script effect)
-        # but not dataitems that serve as reference (e.g. node),
-        # neither fields contained in those dataitems
-        make_new=0
+    if hasattr(item,'nested_copy'):
+        if not item.nested_copy:
+            #Tricky: I want databits to be duplicable (e.g. script effect)
+            # but not dataitems that serve as reference (e.g. node),
+            # neither fields contained in those dataitems
+            make_new=0
+        else:
+            make_new=1
     if hasattr(item,'iteritems'):
         new= item.__class__()
         new.update({ shallow_nested(i,make_new,**kwargs):shallow_nested(j,make_new,**kwargs) for i,j in item.iteritems()})
@@ -234,14 +237,20 @@ def shallow_nested(item,make_new=0,**kwargs):
             new+=  item.__class__( ((shallow_nested(i,make_new,**kwargs)), ))
         return new
     if make_new and hasattr(item,'__dict__') :
+        if hasattr(item,'copy'):
+            return item.copy()
         try:
             new= item.__class__()
+            print 'Shallow_nested: Making new', item.__class__.__name__
         except:
-            print "Shallow_nested: Couldn't make new", item.__class__.__name__
-            new=deepcopy(item)
+            raise Exception( "Shallow_nested: Couldn't make new", item.__class__.__name__)
         for i,j in item.__dict__.iteritems():
             if not i in exclude:
-                new.__dict__[i]=shallow_nested(j,make_new,**kwargs)
+                if isinstance(j,nx.Graph):
+                    print 'Shallow_nested: Cannot replicate networkx.Graph securely.'
+                    new.__dict__[i]=j.__class__()
+                if True in [hasattr(j,k) for k in ('iteritems','nested_copy','__iter__')]:
+                    new.__dict__[i]=shallow_nested(j,make_new,**kwargs)
         return new
     if 'meth' in kwargs:
         return kwargs['meth'](item)

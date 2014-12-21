@@ -426,6 +426,10 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             for scr in self.data.all_scripts():
                 if scr.test_cond(self,evt):
                     self.add_phase(scr)
+                #if tevt=='start':
+                    #print scr, id(scr), [(c,id(c),c.state) for c in scr.all_children(1) ]
+            #if tevt=='start':
+                #print '\n+++++++\n\n'
 
     def canvas_emote(self,c,txt,src):
         #c is an event, like a cange or other

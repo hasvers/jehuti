@@ -49,8 +49,14 @@ class PhaseHandler(object):
         self.frozen=0
 
     def clear_phase(self):
+        cleared=[]
+        #for d in self.done:
+            #print d,d.item,d.effects
         for e in self.stack[::-1]+self.done[::-1]:
-            self.evt.go(e,0,ephemeral=1,handle=self)
+            if e in cleared:
+                continue
+            self.evt.go(e,0,ephemeral=1,handle=self)#,override=True)
+            cleared.append(e)
             #print [c.state for c in e.all_children() ]
 
     def add_balloon(self,txt,**kwargs):

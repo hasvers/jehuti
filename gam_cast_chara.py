@@ -32,8 +32,8 @@ class CharacterData(Data):
         self.scripts=[]
 
     def all_scripts(self):
-        return self.scripts+ list(fl for k,l in self.graph.infos.iteritems()
-            for fl in l.get('cflags',() ) if isinstance(fl,CFlag))
+        return set(self.scripts+ list(fl for k,l in self.graph.infos.iteritems()
+            for fl in l.get('cflags',() ) if isinstance(fl,CFlag)))
 
     def klassmake(self,klass,*args):
         return eval(klass)(*args)

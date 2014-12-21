@@ -258,15 +258,6 @@ class Canvas():
             icon.set_state('ghost')
         self.dirty=True
         return True
-        #link behaviour is broken : I should have a way to differentiate between
-        #a truly hidden link and a link that is hidden due to his parents
-        if item in self.graph.links :
-            for l in tuple(self.graph.links[item]) :
-                if tuple( self.icon[i].is_ghost for i in l.parents) ==(False,False):
-                    self.set_ghost(l,'show')
-                    pass
-                else :
-                    self.set_ghost(l,'hide')
 
     def set_view(self,item,mode='trigger'):
         """Makes an icon visible or hidden."""
@@ -282,14 +273,6 @@ class Canvas():
             icon.rem_from_group(self.group)
         self.dirty=True
         return True
-        #link behaviour is broken : I should have a way to differentiate between
-        #a truly hidden link and a link that is hidden due to his parents
-        if item in self.graph.links :
-            for l in tuple(self.graph.links[item]) :
-                if tuple( self.icon[i] in self.group for i in l.parents) ==(True,True):
-                    self.set_view(l,'show')
-                else :
-                    self.set_view(l,'hide')
 
 
     def rewire(self,link,newparents):

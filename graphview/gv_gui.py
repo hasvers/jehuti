@@ -98,6 +98,8 @@ class BasicUI(UI_Widget):
             struct=struct,**kwargs)
         window.set_command('exit',lambda : self.close(window))
         window.set_anim('appear',len=120)
+        for c in window.children:
+            c.set_anim('appear',len=250)
         return  self.float_core(window,'floatmenu',**kwargs)
 
     def float_core(self,window,typ='floatmenu',**kwargs):

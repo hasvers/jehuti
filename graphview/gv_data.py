@@ -623,6 +623,15 @@ class DataBit(object):
         #Useful if I want to override it (for instance have some change trigger another)
         setattr(self,i,j)
 
+    def copy(self):
+        new=self.__class__()
+        for i in self.dft:
+            j=getattr(self,i)
+            if hasattr(j,'__iter__'):
+                j=shallow_nested(j)
+            setattr(new,i,j)
+        return new
+
     def txt_export(self,keydic,txtdic,typdic,**kwargs):
         init_param=kwargs.pop('init_param',[])
         add_param=set(kwargs.pop('add_param',[]))

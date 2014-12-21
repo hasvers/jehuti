@@ -717,7 +717,10 @@ class ExploreEvt(MatchEvent):
 
         icon=ExplorerBeacon(match.canvas,self)
         if not match.controller[player]=='human':
-            icon.set_anim('hide')
+            #Hide enemy's explorer beacon
+            icon.rem_from_group(match.canvas.tools)
+        else:
+            icon.set_anim('appear',len=550)
         pos= kwargs.get('pos',self.kwargs.get('pos',None))
         if pos==None:
             pos = match.canvas.handler.mousepos()

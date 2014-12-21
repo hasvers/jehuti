@@ -78,7 +78,7 @@ class StartMenuUI(MenuUI):
             )
         struct+=('Exit','text',{'output_method':lambda: pgevent.post(pgevent.Event(pg.QUIT)),
             'selectable':True}),
-        window=FloatMenu(self.screen,self,(128,10),struct=struct,drag=False)
+        window=FloatMenu(self.screen,self,(128,10),struct=struct,font=fonts["title"],drag=False)
         window.update()
         window.rect.center=self.screen.get_rect().center
 
@@ -89,6 +89,11 @@ class StartMenuUI(MenuUI):
     def launch(self):
         user.music.play(database['title_music'])
         MenuUI.launch(self)
+        if not database['edit_mode']:
+            w=self.window['menu']
+            w.set_anim('appear',len=550,interpol='quad')
+            for c in w.children:
+                c.set_anim('appear',len=1250,interpol='quad')
 
     def general_menu(self,event=None):
         return False

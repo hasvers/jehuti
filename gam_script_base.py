@@ -57,6 +57,19 @@ class Script(TimedEvent):
     def __repr__(self):
         return 'Script:'+self.name
 
+    def copy(self):
+        new=self.__class__(type=self.type,name=self.name)
+        for i in self.dft:
+            if not getattr(self,i) in ('conds','effects') :
+                setattr(new,i,getattr(self,i))
+            else:
+                for e in getattr(self,i):
+                    if hasattr(e,'copy'):
+                        newe=e.copy()
+                        new.dft[i].append(newe)
+        return new
+
+
     def test_cond(self,scene,evt=None):
         handled=0
         if  True in [c.attach_to_event for c in self.conds] and (evt is None or not 'batch' in evt.type):
@@ -200,6 +213,14 @@ class SceneScriptEffect(TimedEvent):
         self.add_state(2,pred=1)
         self.block_thread=kwargs.get('block_thread',0)
 
+    def copy(self):
+        new=self.__class__()
+        new.type=self.type
+        for i in self.dft:
+            setattr(new,i,getattr(self,i))
+        new.block_thread=self.block_thread
+        return new
+
     def templatelist(self,scene,items,actors):
         if items is None:
             items=scene.data.sprites
@@ -332,8 +353,6 @@ class SceneScriptEffect(TimedEvent):
         #print 'RUNNIN',self,state
         if state==1:
             return self.do(scene,**kwargs)
-        #if state==0:
-        #    print [c.state for c in self.all_children(True) ]
         return True
 
     def prep_do(self,scene,**kwargs):
@@ -571,6 +590,13 @@ class SceneScriptCondition(DataBit):
         elif self.typ=='Game':
             return base +': {} {} {}'.format(self.evt, self.target, self.cond)
         return self.name
+
+    def copy(self):
+        new=self.__class__()
+        new.type=self.type
+        for i in self.dft:
+            setattr(new,i,getattr(self,i))
+        return new
 
     def set_attr(self,i,j):
         if self.evt in ('Change','Difference') or self.typ=='Event':

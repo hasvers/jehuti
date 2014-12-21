@@ -45,7 +45,8 @@ class AnimationHandler(object):
                 self.done.append(anim)
                 #anim.item.current_anim.remove(anim)
                 for affected in anim.affects:
-                    affected.react(Event(anim,type='anim_stop'))
+                    if hasattr(affected,'react'):
+                        affected.react(Event(anim,type='anim_stop'))
 
     def clear(self):
         self.stack=[]
@@ -64,7 +65,8 @@ class AnimationHandler(object):
         anim.run(0)
         anim.state=1
         for affected in anim.affects:
-            affected.react(Event(anim,type='anim_start'))
+            if hasattr(affected,'react'):
+                affected.react(Event(anim,type='anim_start'))
 
 class Animation(TimedEvent):
     perpetual=False
@@ -90,19 +92,13 @@ class Animation(TimedEvent):
             self.args=args
             self.opts=kwargs
 
-    @property
-    def has_ended(self):
-        return ( self.end>0 and  pg.time.get_ticks()>self.end )
-
-    @property
-    def has_started(self):
-        return ( self.start>0 and  pg.time.get_ticks()>self.start )
-
     def schedule(self,**kwargs):
         anim=self.anim
-        refpos=array(kwargs.get('pos',kwargs.get('ref',(0,0) )))
+        refpos=kwargs.get('pos',kwargs.get('ref',None ))
+        if not refpos is None:
+            refpos=array(refpos)
         if not kwargs.get('append',False):
-            self.steps=[ 'start' ]
+            self.steps=[ self.Step('start')]
         steps=[]
         if hasattr(anim,'__iter__'):
             steps+=anim
@@ -155,21 +151,42 @@ class Animation(TimedEvent):
                 length=kwargs.get('len',800)
                 amp=kwargs.get('amp',.1)
                 periods=kwargs.get('loops',2)
+                typ=kwargs.get('type','sin')
                 puls= periods/float(length)*2*pi
                 angle=0
-                st1=self.Step('osc',refpos,('sin',amp,puls,angle))
-                st2=self.Step('pos',refpos)
-                steps +=[ (time,length-100,st1) ,(time+length,0,st2) ]
+                st1=self.Step('osc',refpos,(typ,amp,puls,angle))
+                st2=self.Step('move',refpos,(0,0),(0,0))
+                steps +=[ (time,length,st1) ,(time+length,1,st2) ]
+            elif anim=='roll_in':
+                length=kwargs.get('len',1200)
+                st=self.Step('roll_in',self.item.image,kwargs.get('direction','right') )
+                steps+=[(time,length,st)]
+            elif anim=='blur_in':
+                length=kwargs.get('len',1200)
+                st=self.Step('blur_in' )
+                steps+=[(time,length,st)]
             else:
                 print 'ERROR: Unrecognized animation key:',anim
-        steps.append( (0,0,"stop" ))
+        steps.append( (0,0,self.Step("stop") ))
+
+        if refpos is None:
+            if hasattr(self.item.parent,'pos') and self.item in self.item.parent.pos:
+                refpos=self.item.parent.pos[self.item]
+            else:
+                refpos=self.item.rect.center
         for s,step in enumerate(steps):
             self.add_state(s+1,pred=s)
             stat=self.states.node[s+1]
             stat['time']=step[0]
             stat['duration']=step[1]
             self.steps.append(step[2] )
-
+            step=step[2]
+            if step.genre=='move' or step.genre=='osc':
+                #Follow trajectory
+                if step.args[0] is None:
+                    step.args= (refpos, )+step.args[1:]
+                if step.genre=='move':
+                    refpos+=array(step.args[-1])
 
     def prepare(self,edge,*args,**kwargs):
         if edge==(0,1):
@@ -189,10 +206,10 @@ class Animation(TimedEvent):
     def run(self,state,**kwargs):
         time=kwargs.get('time',None)
         step=self.steps[state]
-        if step is None or step=='start':
+        if step is None or step.genre=='start':
             self.item.set_state('anim',True)
             return True
-        if step=='stop':
+        if step.genre=='stop':
             self.item.rm_state('anim')
             return False
 
@@ -206,7 +223,7 @@ class Animation(TimedEvent):
 
         if tfrac<0 or tfrac>1.:
             return False
-        tfrac=self.easing(self.opts.get('interpol','lin'),tfrac)
+        tfrac=self.easing(self.opts.get('interpol','quad'),tfrac)
 
         if step.genre=='hide':
             todo.append( (0.,0.,0.,0.) )
@@ -217,20 +234,39 @@ class Animation(TimedEvent):
             td=[]
             for i,j in zip(*t[1:]):
                 frac=i+float(j-i)*tfrac
-                if isinstance(i,float):
+                if isinstance(i,float) or isinstance(j,float):
                     frac*=self.item.rect.size[len(td)]
                 td.append(int(frac))
             todo.append( ref+ td )
         elif step.genre=='osc':
-            if t[0]=='sin':
-                amp,puls,angle=t[1:]
+            ref=array(t[0])
+            td=[]
+            if t[1][0]=='sin' or t[1][0]=='rot':
+                amp,puls,angle=t[1][1:]
                 if isinstance(amp,float):
                     amp*=self.item.rect.h#sum(self.rect.size*array(sin(angle),cos(angle) ))
 
-                val= amp*sin(puls*time-t1)
+                if t[1][0]=='rot':
+                    angle=tfrac*puls*t2
+                    val=amp
+                else:
+                    val= amp*sin(puls*time-t1)
                 td=array((int(val*sin(angle)),int(val*cos(angle))))
             todo.append( ref+ td )
-
+        elif step.genre=='roll_in':
+            #rect=self.item.image.get_rect()
+            #self.item.image.fill( (0,0,0,0) )
+            #self.item.image.blit(t[0],(-rect.w*tfrac,0) )
+            pass
+        elif step.genre=='blur_in':
+            #rect=self.item.image.get_rect()
+            #self.item.image.fill( (0,0,0,0) )
+            #self.item.image.blit(t[0],(-rect.w*tfrac,0) )
+            self.item.set_state('blur')
+            dft=graphic_chart['default_blur_mode']
+            self.item.blur_mode=(rint(dft[0]*(1-tfrac)), )+tuple(dft[1:])
+            if tfrac>.95:
+                self.item.rm_state('blur')
         if hasattr(self.item,'alpha'):
             albase=self.item.alpha/255.
         else:
@@ -245,10 +281,15 @@ class Animation(TimedEvent):
                     anim_mod*=array(t,dtype=float)
                 elif len(t)==2:
                     #Movement
-                    self.item.rect.center=array(t)
+                    if hasattr(self.item.parent,'pos'):
+                        self.item.parent.pos[self.item]=array(t)
+                    else:
+                        self.item.rect.center=array(t)
             except:
                 pass
 
         self.item.set_anim_mod(anim_mod)
         self.item.set_state('anim',True)
+        if hasattr(self.item.parent,'dirty'):
+            self.item.parent.dirty=1
         return True

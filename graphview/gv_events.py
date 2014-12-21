@@ -28,6 +28,7 @@ class EventCommander(object):
         self.handle=None #component that is passed on to events
         self.moving=[] #events that are currently being processed
         self.destination={} #when receive an order for events in processing, just store the destination
+        self.killed=[] #events that were interrupted by force
 
         self._paused=False
         self.stacked=[]#events stacked during last pause
@@ -236,7 +237,18 @@ class EventCommander(object):
         if evt.state==state and not evt.repeatable:
             #print '----- discontinued',id(evt)
             return False
-        if evt in self.moving:
+        if evt in self.killed:
+            return False
+        if kwargs.get('override',False):
+            if evt in self.moving:
+                self.moving.remove(evt)
+            if evt in self.destination:
+                del self.destination[evt]
+            for s in self.stacked:
+                if s[0]==evt:
+                    self.stacked.remove(s)
+            self.killed.append(evt)
+        elif evt in self.moving:
             dest= self.destination.setdefault(evt,[])
             if not (state,args,kwargs) in dest:
                 dest.append((state,args,kwargs))
@@ -261,8 +273,8 @@ class EventCommander(object):
                 priority.append( (0,c) )
 
         priority=sorted(priority,key = lambda e: e[0], reverse=True )
-        #if 'script' in evt.type or 'cflag' in evt.type:
-            #print '\nPRIO',state, evt,priority
+        #if 'cflag' in evt.type:
+            #print '\nPRIO',state, evt,id(evt),priority
         for p,c in priority:
             if c != evt :
                 s = evt.states.node[state]['children_states'][c]
@@ -283,6 +295,8 @@ class EventCommander(object):
 
                 chandled = self.go(c,s,*arg,**kwarg)
                 handled=chandled or handled
+                #if  'cflag' in evt.type:
+                    #print '\n',evt, id(evt),c,id(c),'=====>',state,chandled
             else :
                 if evt.state==state and not evt.repeatable:
                     continue
@@ -330,8 +344,14 @@ class EventCommander(object):
             except:
                 pass
 
-
-
+        if kwargs.get('override',False):
+            #print 'OVERR',evt, state,'\n', kwargs.get('traceback',[]),'\n\n',
+            self.killed.remove(evt)
+        else:
+            pass
+            #if hasattr(evt,'effects'):
+                #print 'normal',evt, state, [(e,c,c.state) for e in evt.effects
+                    #for c in e.all_children()],handled
         try:
             self.stacked.remove((evt,state,args,kwargs))
         except:
@@ -571,6 +591,15 @@ class Event(Signal):
             return True
         return False
 
+    #def copy(self):
+        #return None
+        #for n,d in j.nodes_iter(data=True):
+            #new.__dict__[i].add_node(shallow_nested(n,make_new,**kwargs),
+                #attr_dict=shallow_nested(d,make_new,**kwargs))
+        #for e1,e2,d in j.edges_iter(data=True):
+            #new.__dict__[i].add_edge(*tuple(
+                #shallow_nested(x,make_new,**kwargs) for x in (e1,e2,d)))
+
     def check_duplicate(self,state,child,**kwargs):
         if not kwargs.get('duplicate_child',self.allow_duplicates):
             dupl=False
@@ -685,7 +714,10 @@ class ChangeInfosEvt(Event):
                     old[i]=getattr(self.item,i)
             else:
                 old=self.data.get_info(self.item)
-            self.oldinfo = {i:j for i,j in shallow_nested(old).iteritems() if i in self.kwargs}
+            self.oldinfo={}
+            for i,j in old.iteritems():
+                if i in self.kwargs:
+                    self.oldinfo[i]= shallow_nested(j)
 
 
     def run(self,state,*args,**kwargs):
@@ -897,9 +929,9 @@ class TimedEvent(Event):
         for s in self.states.node:
             state=self.states.node[s]
             if state['started']!=None:
-                if 0< time -state['started'] < state['duration']:
+                if 0<= time -state['started'] < state['duration']:
                     return s
-                if time -state['started']> state['duration']:
+                if time -state['started']>= state['duration']:
                     if not curstart or state['started']>curstart:
                         laststate=s
                         curstart=state['started']

@@ -21,6 +21,14 @@ class CFlag(Script):
         self.conds=[self.cond]
         self.effects=[self.effect]
 
+    def copy(self):
+        new=self.__class__(self.item,self.data,type=self.type,name=self.name)
+        new.cond=self.cond.copy()
+        new.effect=self.effect.copy()
+        new.conds=[new.cond]
+        new.effects=[new.effect]
+        return new
+
     def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
         kwargs.setdefault('add_param',[]).extend(['item','data'])
         kwargs.setdefault('init_param',[]).extend(['item','data'])
@@ -43,6 +51,7 @@ class CFlag(Script):
 
         if i=='name':
             if j in dftmodes:
+                print 'Setting',j,dftmodes[j]
                 for k,l in dftmodes[j][0].iteritems():
                     self.cond.set_attr(k,l)
                 for k,l in dftmodes[j][1].iteritems():
@@ -160,6 +169,9 @@ class MatchScriptEffect(SceneScriptEffect):
 
     def prep_do(self,scene,**kwargs):
         batch=kwargs.get('batch',None)
+
+        #print '@@@ PREPARING',self,id(self)
+        self.clear_children()
         if self.typ in ('Graph',):
             if self.evt in ('info','add'):
                 infos=self.infosep(self.info)
@@ -170,30 +182,27 @@ class MatchScriptEffect(SceneScriptEffect):
                 elif self.evt=='add':
                     evt= AddEvt(self.target,data,infos=infos,addrequired=True )
                 if batch is None:
-                    if not self.all_children(): #If not already prepared
-                        self.add_child(evt,{1:0,2:1},priority=1)
+                    self.add_child(evt,{1:0,2:1},priority=1)
                 else:
-                    if not True in [oth.type==evt.type and oth.item==evt.item
-                             for oth in batch.rec_events()]:
+                    if not True in [c.duplicate_of(evt) for c in batch.rec_events()]:
                         batch.add_event(evt)
                         evt.parent=batch
                         batch.add_child(evt,{1:0,2:1},priority=1)
+                #print '\n\n============\n',self,id(self),id(self.states),id(self.states.node)
                 return True
         elif self.typ=='Action':
             dic={'claim':ClaimEvt,'explore':ExploreEvt}
             kwargs=self.infosep(self.info)
             evt=dic[self.evt]( self, self.actor, self.target,**kwargs)
             if batch is None:
-                if not self.all_children():
-                    cevt=QueueEvt(evt,scene.data,newbatch=True)
-                    eevt=AddEvt(self.target,scene.data.actorgraph[self.actor] )#[self.actor]
-                    self.add_child(eevt,{1:0,2:1},priority=2)
-                    #TODO:BREAK? understand if the add event had to be on [self.actor][self.actor]
-                    #TODO:BREAK? despite there being an identical addevt in claim
-                    self.add_sim_child(cevt,priority=1)
+                cevt=QueueEvt(evt,scene.data,newbatch=True)
+                eevt=AddEvt(self.target,scene.data.actorgraph[self.actor] )#[self.actor]
+                self.add_child(eevt,{1:0,2:1},priority=2)
+                #TODO:BREAK? understand if the add event had to be on [self.actor][self.actor]
+                #TODO:BREAK? despite there being an identical addevt in claim
+                self.add_sim_child(cevt,priority=1)
             else:
-                if not True in [oth.type==evt.type and oth.item==evt.item
-                         for oth in batch.rec_events()]:
+                if not True in [c.duplicate_of(evt) for c in batch.rec_events()]:
                     batch.add_event(evt)
             return True
         return SceneScriptEffect.prep_do(self,scene,**kwargs)
