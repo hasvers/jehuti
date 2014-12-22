@@ -91,9 +91,9 @@ class StartMenuUI(MenuUI):
         MenuUI.launch(self)
         if not database['edit_mode']:
             w=self.window['menu']
-            w.set_anim('appear',len=550,interpol='quad')
+            w.set_anim('appear',ANIM_LEN['med'],interpol='quad')
             for c in w.children:
-                c.set_anim('appear',len=1250,interpol='quad')
+                c.set_anim('appear',ANIM_LEN['long'],interpol='quad')
 
     def general_menu(self,event=None):
         return False

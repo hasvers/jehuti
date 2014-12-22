@@ -924,6 +924,7 @@ class TimedEvent(Event):
         at a given time (or else the last state before).'''
         laststate=self.state
         curstart=self.states.node[self.state]['started']
+        pass_block=kwargs.get('pass_block',False) #Do you ignore blocking states?
         if not curstart:
             curstart=0
         for s in self.states.node:
@@ -938,7 +939,7 @@ class TimedEvent(Event):
         state=self.states.node[laststate]
         if state['started']!=None:
             lasttime=state['started']+state['duration']
-            if state['waiting'] and not kwargs.get('pass_block',False):
+            if state['waiting'] and not pass_block:
                 return laststate
         else:
             lasttime=0
@@ -947,7 +948,7 @@ class TimedEvent(Event):
             nxt=suc.pop(0)
             state=self.states.node[nxt]
             if state['started']==None:
-                if time-lasttime<=state['duration']:
+                if time-lasttime<=state['duration'] or state['waiting'] and not pass_block:
                     return nxt
             suc+=self.states.successors(nxt)
             laststate=nxt

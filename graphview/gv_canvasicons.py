@@ -1,4 +1,4 @@
-from gv_uibasics import *
+from gv_ui_complete import *
 
 
 class CanvasIcon(UI_Icon):

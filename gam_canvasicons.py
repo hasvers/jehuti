@@ -177,7 +177,7 @@ class MatchNodeIcon(NodeIcon):
         return surf#px.make_surface()
 
     def create(self,*args,**kwargs):
-        #print 'create', self, user.evt.moving#time.time(), args[1]
+        #print 'create', self.item, user.evt.moving,time.time(), args[1],debug.caller_name()
         test=NodeIcon.create(self,*args,**kwargs)
         try:
             self.effects.keys()
@@ -210,14 +210,13 @@ class MatchNodeIcon(NodeIcon):
         return(self.rect.midbottom,self.rect.midtop)[logic[pos]]
 
     def clear_effects(self):
-
         for eff,icon in tuple(self.effects.iteritems()):
-            try:
-                del self.effects[eff]
-                icon.kill()
+            del self.effects[eff]
+            icon.kill()
+            if icon in self.children:
                 self.children.remove(icon)
-            except:
-                pass
+            if icon in self.floating:
+                self.floating.remove(icon)
         self.effects={}
 
 

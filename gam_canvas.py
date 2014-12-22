@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 from gam_graph import *
 from gam_canvasicons import *
-from gam_script_base import FuncWrapper
-
 
 class LogicCanvas(Canvas):
     Graph=MatchGraph
@@ -324,7 +322,7 @@ class MatchCanvasPlayer(MatchCanvasHandler):
         if  event.type == pg.MOUSEBUTTONDOWN and self.fog.mask.get_at(self.mousepos()) :
             target= self.hovering
             if target and target.item.type=='node':
-                print 'TMP',target.item
+                print 'TODO: Node in fog',target.item
             return False
         return MatchCanvasHandler.event(self,event,**kwargs)
 
@@ -410,7 +408,7 @@ class MatchCanvasPlayer(MatchCanvasHandler):
         if 'add' in evt.type and evt.data == self.canvas.active_graph:
             #print 'appear',id(evt), evt.data.name, evt,'\n'
             item=evt.item
-            self.canvas.icon[item].set_anim('appear',len=500,easing='quad')
+            self.canvas.icon[item].set_anim('appear',len=ANIM_LEN['med'],easing='quad')
 
         if  'add' in evt.type or 'change' in evt.type and True in [x in evt.infos for x in ('logic','val')]:
             owner=evt.data.owner

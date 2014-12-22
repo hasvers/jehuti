@@ -1,6 +1,5 @@
 from gv_globals import *
 from gv_threadevents import *
-from gv_anims import *
 import gv_effects
 
 class User():
@@ -100,18 +99,18 @@ class User():
             print e
             pass
 
+
     def set_mouseover(self,txt,anim=None,**kwargs):
-        self.kill_mouseover()
-        self.mouseover=Emote(txt,**kwargs)
-        if anim:
-            self.mouseover.set_anim(anim)
-        user.ui.group.add(self.mouseover)
-        self.mouseover.rect.bottomleft=user.mouse_pos()
+        self.ui.set_mouseover(txt,anim,**kwargs)
 
     def kill_mouseover(self):
-        if self.mouseover:
-            self.mouseover.kill()
-            self.mouseover=None
+        self.ui.kill_mouseover()
+
+    def react(self,evt):
+        if 'anim' in evt.type:
+            if evt.args[0].item==self.mouseover and 'stop' in evt.type:
+                self.mouseover.kill()
+                self.mouseover=None
 
     def mouse_pos(self):
         return self.scale_vec(pg.mouse.get_pos())-self.screen_trans
@@ -240,7 +239,10 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
               'anim':False,
               'base':True} #Base is always true, allows permanent modifiers (e.g. link alpha)
         self.parent=None
-        self.children=[] #Children of UI_Item allow multipart sprites. For interaction, use UI_Widget
+        self.children=[] #Children of UI_Item allow multipart sprites.
+        self.floating=[] #Children that do not have a fixed relative position
+        self.float_type=kwargs.get('float_type','dft')#among: lin,arc,rot
+        #Type of arrangement for floating children
         self.pos={}
         if kwargs.get('state',0):
             self.set_state(kwargs['state'],invisible=True)
@@ -283,33 +285,64 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
         else:
             return False
 
-    def add_child(self,child=None,epos=None):
-        #If no child given, simply repositions children
-        basepos= array(array(self.rect.size)*(.1,.1),dtype='int')
-        reboot=False
-        for em,pos in tuple(self.pos.iteritems()):
-            if not em.alive():
-                reboot=True
-                del self.pos[em]
-
-        for c in self.children:
-            if reboot or not c in self.pos:
-                self.pos[c]=basepos
-            basepos += (16,0)
-            #em.rect.center=array(self.rect.topleft)+pos
-        if child:
-            if epos:
-                basepos=epos
-            elif child in self.pos:
-                basepos=self.pos[child]
-
+    def add_child(self,child,epos=None):
+        self.children.append(child)
+        if epos:
+            basepos=epos
             self.pos[child]=basepos
-            child.rect.center=array(self.rect.topleft)+basepos
-            self.children.append(child)
-            #child.parent=self #first try without this
-        return basepos
+            #child.rect.center=array(self.rect.topleft)+basepos
+        else:
+            self.floating.append(child)
+            self.repos_children()
+        #child.parent=self #first try without this
+        return self.pos[child]
+
+    def repos_children(self,clear=False):
+        if not self.floating:
+            return
+        if clear:
+            #Remove dead children
+            for c in tuple(self.floating):
+                if not c.alive():
+                    self.floating.remove(c)
+            if not self.floating:
+                return
+        size=array(self.rect.size)
+        nc=len(self.floating)
+        typ=self.float_type
+        if typ=='dft':
+            if nc<3:
+                typ='lin'
+            else:
+                typ='arc'
+        effsize=graphic_chart['effect_base_size']
+        if typ=='lin':
+            basepos= (size*.1)+(0,-effsize)
+        elif typ=='arc':
+            basepos=size/2
+            rad=  size*.5+effsize
+        elif typ=='rot':
+            #TODO: should be an animation instead
+            t=pg.time.get_ticks()*2*pi/8000
+            basepos=size/2
+        else:
+            basepos=array((0,0))
+        for ic,c in enumerate(self.floating):
+            if typ=='lin':
+                self.pos[c]=basepos.copy().astype('int')
+                basepos += (effsize*1.5,0)
+            elif typ=='rot':
+                tt=t+ ic*2*pi/nc
+                self.pos[c]= (basepos + rad*(cos(tt ),-sin(tt ))).astype('int')
+            elif typ=='arc':
+                tt=pi/2
+                if nc>1:
+                    amp=pi/12.*nc
+                    tt+=(1-ic*2./(nc-1))*amp
+                self.pos[c]= (basepos + rad*( cos(tt),-sin(tt) )).astype('int')
 
     def upd_child(self):
+        self.repos_children()
         for c in self.children:
             c.rect.center=self.abspos(c)
 
@@ -317,15 +350,17 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
         if not hasattr(self,'pos'):
             return (0,0)
         if child and child in self.pos :
+            pos=array(self.pos[child])
             if self.parent :
-                return tuple(array(self.parent.abspos(self))+array(self.pos[child]))
+                return tuple(self.parent.abspos(self)+pos)
             else :
-                return tuple(array(self.rect.topleft)+array(self.pos[child]))
+                return tuple(self.rect.topleft+pos)
         else :
             if self.parent :
                 return self.parent.abspos(self)
             else :
                 return self.rect.topleft
+
     def mousepos(self,child=None):
         return tuple(array(user.mouse_pos())-array(self.abspos(child)))
 
@@ -373,16 +408,16 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
         else:
             useflag=pg.BLEND_RGBA_MULT
 
-        excess=tuple(max(0.,i-1.) for i in mod)
-        if excess!=(0,0,0,0):
-            img=image.copy()
-            img.fill(tuple(min(255,int(i*255)) for i in excess),None,useflag)
-        else :
-            img = None
-        image.fill(tuple(min(255,int(i*255)) for i in mod),None,useflag)
-        if img:
-            image.blit(img,(0,0),None,pg.BLEND_RGB_ADD)
-
+        if not (mod==tuple(1. for i in mod ) ).all():
+            excess=tuple(max(0.,i-1.) for i in mod)
+            if excess!=(0,0,0,0):
+                img=image.copy()
+                img.fill(tuple(min(255,int(i*255)) for i in excess),None,useflag)
+            else :
+                img = None
+            image.fill(tuple(min(255,int(i*255)) for i in mod),None,useflag)
+            if img:
+                image.blit(img,(0,0),None,pg.BLEND_RGB_ADD)
 
         if not self.per_pixel_alpha:
             surf=surf.convert()
@@ -409,6 +444,9 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
 
     def set_state(self,state,force_redraw=False,**kwargs):
         #print 'set state',self,state,force_redraw
+        if kwargs.get('recursive',False):
+            for c in self.children:
+                c.set_state(state,force_redraw,**kwargs)
         if self.is_disabled and state != 'anim':
             return False
         if state == 'idle':
@@ -429,7 +467,6 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
             ekwargs['sound']=state
         if not kwargs.get('invisible',0):
             user.evt.pass_event(Event(**ekwargs),self,True)
-
 
         if state in self.modimg:
             force_redraw=True
@@ -550,7 +587,6 @@ class UI_Widget(UI_Item):
         return False
 
     def kill(self,recursive=False):
-
         self.unselect()
         self.unhover()
         for c in self.children :
@@ -690,316 +726,3 @@ class UI_Widget(UI_Item):
         event=Event(*args,type=signal,source=self.name,**kwargs)
         if user.ui:
             user.evt.pass_event(event,self,True)
-
-
-class UI_Icon(UI_Item):
-    """Class for anything that behaves as a static icon for some entity,
-    and therefore can have multiple sets of images depending on the state
-    of said entity (node, link and so on)"""
-
-    mutable=False #For icons that can be rotated, mirrored or resized
-    ref_image=None #Image after modifiers but before mutation
-
-    for i in ('angle','mirrorx','mirrory', 'zoom'):
-        exec('_'+i+'''=False
-@property
-def '''+i+'''(self):
-    return self._'''+i+'''
-
-@'''+i+'''.setter
-def '''+i+'''(self,val):
-    if val!=self._'''+i+''':
-        self._'''+i+'''=val
-        self.mutate()
-        ''')
-
-    def __init__(self,**kwargs):
-        self.image_sets={}
-        self.set_to_create=set([])
-        self.set=None
-        UI_Item.__init__(self,**kwargs)
-        self.emotes={} #current living emotes and their positions
-        #self.image_sets={}
-        for i, j in kwargs.iteritems():
-            if hasattr(self,i):
-                setattr(self,i,j)
-
-    @property
-    def images(self):
-        return self.image_sets[self.set]
-
-    @images.setter
-    def images(self,value):
-        self.image_sets[self.set]=value
-
-    def kill(self,recursive=True):
-        UI_Item.kill(self,recursive)
-
-
-    def set_hotspot(self,spot,typ="default"):
-        self.hotspot[typ]=spot
-
-    def get_hotspot(self,emote=None,*args,**kwargs):
-        #anchor for emotes and other interactive properties
-        #if emotes anchored already, move the anchor point
-        if emote in self.hotspot:
-            return self.hotspot[emote]
-        elif "default" in self.hotspot:
-            return self.hotspot["default"]
-        #generic anchor:
-        basepos= array(self.rect.size)*(-.1,.1)
-        if not emote:
-            return array(self.rect.topright)+ basepos
-
-        for em,pos in tuple(self.emotes.iteritems()):
-            if not em.alive():
-                del self.emotes[em]
-                continue
-            if (pos == basepos).all():
-                basepos += (0,20)
-        self.emotes[emote]=basepos
-        return array(self.rect.topright)+basepos
-
-    def set_image(self,value):
-        self.ref_image= UI_Item.set_image(self,value)
-
-
-    def set_state(self,state,force_redraw=False,**kwargs):
-        test=UI_Item.set_state(self,state,force_redraw,**kwargs)
-        if test :
-            self.mutate()
-        return test
-
-    def rm_state(self,state,force_redraw=False,**kwargs):
-        test=UI_Item.rm_state(self,state,force_redraw,**kwargs)
-        if test :
-            self.mutate()
-        return test
-
-    def mutate(self):
-        if self.mutable: #and self.state in self.images :
-            img=self.ref_image
-            if not img:
-                return False
-            #img=self.images[self.state]
-            if self.zoom :
-                img=pg.transform.scale(img,tuple(int(x) for x in array(self.size)*self.zoom))
-            elif img.get_rect().size != self.size:
-                img=pg.transform.scale(img,self.size)
-            if self.angle :
-                img=pg.transform.rotate(img,self.angle)
-            if self.mirrorx or self.mirrory:
-                img=pg.transform.flip(img,self.mirrorx,self.mirrory)
-            self.image=img
-            sz=img.get_rect().size
-            if sz!=self.rect.size:
-                old=self.rect.center
-                self.rect.size=img.get_rect().size
-                self.rect.center=old
-            return True
-        for c in self.children :
-            c.rect.center=self.abspos(c)
-            c.mutate()
-        return False
-
-
-
-    def select_set(self,setid):
-        if setid in self.image_sets and setid != self.set:
-            self.set=setid
-            if setid in self.set_to_create:
-                self.create(None,setid)
-            self.set_state(self.state,True)
-            return True
-        return False
-
-    def delete_set(self,setid):
-        if setid in self.set_to_create:
-            self.set_to_create.remove(setid)
-        if setid in self.image_sets :
-            del self.image_sets[setid]
-            if self.set==setid :
-                if self.image_sets :
-                    self.select_set (self.image_sets.keys()[0])
-            return True
-        return False
-
-    def color_mod(self,state):
-        if state == 'anim':
-            return self.anim_mod #return UI_Item.color_mod(self,state) if I change the way it works
-        return graphic_chart.get('icon_'+state+'_color_mod',(1,1,1,1))
-
-    def make_surface(self,size,mod,*args,**kwargs):
-        return False
-
-    def create(self,group,cset=None,**kwargs):
-        #print 'create',self,group,cset
-        if not cset:
-            cset=self.set
-        elif cset == 'all':
-            for s in self.image_sets.keys():
-                self.create(group,s)
-            return True
-        if not self.set:
-            self.set=cset
-        images = self.image_sets[cset] = {}
-        states= self.state_list
-        for state in states:
-            if not state in self.modimg:
-                images[state]=self.make_surface(self.size,self.color_mod(state),cset,**kwargs)
-
-        #images['ghost']=images['idle'].copy()
-        #images['ghost'].set_alpha(graphic_chart['ghost_alpha'])
-        for img in images.values():
-            img.set_colorkey(COLORKEY)
-
-        if self.set == cset :
-            self.base_image=None
-            try :
-                center=self.rect.center
-            except :
-                center= False
-            self.set_image(self.state)
-            self.rect=self.image.get_rect()
-            self.size=self.rect.size
-            if center :
-                self.rect.center=center
-        if group!=None :
-            self.add_to_group(group)
-
-
-    def call_emote(self,*args,**kwargs):
-        em=Emote(*args,**kwargs)
-        em.rect.center=self.get_hotspot(em)
-        if not 'ephemeral' in kwargs:
-            em.ephemeral=True
-            em.set_anim('emote_jump')
-        try:
-            em.add_to_group(self.parent.group)
-            em.add_to_group(self.parent.animated)
-        except:
-            print 'couldnt call emote', self, args,kwargs
-            pass
-
-class UI_IContainer(UI_Icon):
-    mutable=True
-    def __init__(self,**kwargs):
-        self.size=array( (0,0) )
-        UI_Icon.__init__(self,**kwargs)
-        for c in self.children:
-            if (array(c.size) >self.size).any():
-                self.size=npmaximum(c.size,self.size)
-            if not c in self.pos:
-                self.pos[c]=array(self.size)/2
-
-    def make_surface(self,size,mod,*args,**kwargs):
-        return pg.surface.Surface(size,pg.SRCALPHA)
-
-    def create(self,group,cset=None,**kwargs):
-        UI_Icon.create(self,group,cset,**kwargs)
-        for c in self.children:
-            #try:
-                c.create(group,cset,**kwargs)
-            #except:
-                #pass
-                c.rect.center=self.abspos(c)
-
-    def event(self,event,*args,**kwargs):
-        return False
-        for c in self.children:
-            if c.event(event,*args,**kwargs):
-                return True
-        return False
-
-class Emote(UI_Icon):
-    #Picture or text or combination, meant to appear upon interaction with icons
-    mutable=True
-    sound=True
-    ephemeral=False
-
-    color=(255,255,255,255)
-    def __init__(self,contents,*args, **kwargs):
-        self.type='emote'
-        self.font=fonts["emote"]
-        UI_Icon.__init__(self,**kwargs)
-        self.set='idle'
-        if not hasattr(contents,'__iter__'):
-            contents=[contents]
-        self.contents=contents
-        self.make_contents()
-
-    def make_surface(self,*args,**kwargs):
-        return self.image
-
-    def set_contents(self,contents):
-        oldrecenter=self.rect.center
-        self.contents=contents
-        self.make_contents()
-        self.rect.center=oldrecenter
-
-    def make_contents(self):
-        padding=2
-        imgs=[]
-        hei,wid=0,0
-        for c in self.contents:
-            #contents given as text, even if they are pictures
-            if '#' in c:
-                opts=['']+c.split('#')[1::2]
-                ws=c.split('#')[0::2]
-            else :
-                opts=['']
-                ws=c,
-            for wd in ws:
-                if opts:
-                    opt=opts.pop(0)
-                if opt and opt[0]=='c':
-                    try:
-                        color=eval(opt[1:])
-                    except:
-                        color=get_color(opt[1:])
-                else:
-                    color=self.color
-                if isinstance(color,basestring):
-                    color=get_color(color)
-                img=pgu_writen(wd,self.font,color)
-                w,h=img.get_rect().size
-                wid+=w+padding
-                hei=max(hei,h)
-                imgs.append(img)
-        size=(wid,hei)
-        images=self.image_sets[self.set]={}
-        img=pgsurface.Surface(size ,pg.SRCALPHA )
-        #img.fill( (255,0,0,255) )
-        w=0
-        for im in imgs:
-            img.blit(im,(w,0))
-            w+=im.get_rect().w
-        images[self.state]=img
-        self.set_image(self.state)
-        self.rect =rect=self.image.get_rect()
-        self.size=self.width,self.height=rect.size
-        return True
-
-    def update(self):
-        UI_Item.update(self)
-        if self.ephemeral:
-            if not self.is_animated:
-                self.kill()
-
-
-    #def event(self,event):
-        #if event.type == pg.MOUSEBUTTONDOWN :
-            #if event.button==1 :
-                #if self == user.just_clicked :
-                    #user.just_clicked=None
-                    #self.cast.handler.signal('edit',self.actor)
-                #else :
-                    #pg.time.set_timer(31,ergonomy['double_click_interval'])#just clicked remover
-                    #user.just_clicked=self
-                    #self.cast.select(self)
-            #if event.button==3:
-                #self.cast.handler.call_menu(self.cast.handler.menu())
-            #return True
-
-        #return False
-##        return self.cast.event(event)

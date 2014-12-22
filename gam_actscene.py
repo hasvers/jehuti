@@ -117,7 +117,7 @@ class ActscenePlayer(ActsceneHandler,CutscenePlayer):
 
         for s in self.data.scripts:
             if s.test_cond('start'):
-                s.run(self)
+                self.add_phase(s)
         change=1
         while change:
             change=self.advance_phase()
@@ -126,7 +126,7 @@ class ActscenePlayer(ActsceneHandler,CutscenePlayer):
         if ActsceneHandler.hover(self,target):
             mo= self.data.get_info(target,'mouseover')
             if mo:
-                user.set_mouseover(mo,ephemeral=1)
+                user.set_mouseover(mo)
             return 1
         return 0
 
@@ -137,11 +137,11 @@ class ActscenePlayer(ActsceneHandler,CutscenePlayer):
         return 0
 
     def left_click(self,target,event=None):
-        if target and not self.phase_queue:
+        if target and not self.stack:
             scripts= self.data.get_info(target.item,'scripts')
             for scr in scripts:
                 if scr.test_cond(self,event):
-                    scr.run(event)
+                    self.add_phase(scr)
         return True
     def double_click(self,target, event=None):
         return True

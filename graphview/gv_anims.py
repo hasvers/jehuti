@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
-from gv_globals import *
+from gv_ui_basics import *
 from gv_events import TimedEvent,Event
 import easing
+
+
+ANIM_LEN={'instant':120,
+                'short':250,
+                'med':500,
+                'medlong':900,
+                'long':1200}
 
 class AnimationHandler(object):
     '''Light version of an EventCommander, dealing only with animations
@@ -25,6 +32,9 @@ class AnimationHandler(object):
         self.done=[] #TODO: think of frequency for cleaning
         self.time=pg.time.get_ticks()
         for anim in tuple(self.stack):
+            if anim.states.node[0]['started'] is None:
+                anim.states.node[0]['started']=self.time
+                #print anim,self.time
             st=anim.state_at_time(self.time,**kwargs)
             ready=True
             while st!= anim.state:
@@ -61,7 +71,7 @@ class AnimationHandler(object):
         self.stack.append(anim)
         anim.prepare( (0,1))
         self.time=pg.time.get_ticks()
-        anim.states.node[0]['started']=self.time
+        anim.states.node[0]['started']=None
         anim.run(0)
         anim.state=1
         for affected in anim.affects:
@@ -289,7 +299,16 @@ class Animation(TimedEvent):
                 pass
 
         self.item.set_anim_mod(anim_mod)
-        self.item.set_state('anim',True)
+        self.item.set_state('anim',True,recursive=True)
+
         if hasattr(self.item.parent,'dirty'):
             self.item.parent.dirty=1
         return True
+
+
+class Anim_Item(UI_Item):
+    '''Subclass of UI_Item that contains graphical items attached to
+some item for the duration of an animation (e.g. particles)'''
+
+    def __init__(self):
+        pass

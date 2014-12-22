@@ -97,9 +97,9 @@ class BasicUI(UI_Widget):
         window=FloatMenu(self.screen,self,graphic_chart['float_base_size'],
             struct=struct,**kwargs)
         window.set_command('exit',lambda : self.close(window))
-        window.set_anim('appear',len=120)
+        window.set_anim('appear',len=ANIM_LEN['instant'])
         for c in window.children:
-            c.set_anim('appear',len=250)
+            c.set_anim('appear',len=ANIM_LEN['short'])
         return  self.float_core(window,'floatmenu',**kwargs)
 
     def float_core(self,window,typ='floatmenu',**kwargs):
@@ -201,6 +201,7 @@ class BasicUI(UI_Widget):
                     #allowing multiple balloons
                     for b in bs:
                         pos += array((0,b.rect.h))
+                    ball.set_point(bpos)
                 else:
                     for b in bs:
                         if b!=ball:
@@ -209,7 +210,7 @@ class BasicUI(UI_Widget):
         bs.append(ball)
         ball.anchor=anchor
 
-        ball.set_anim('appear',len=500)
+        ball.set_anim('appear',len=ANIM_LEN['med'],affects=[ball])
         border=self.screen.get_rect().inflate(w,h)
 
         self.float_core(ball,'balloon',pos=pos,bbox=border,**kwargs)
@@ -567,6 +568,26 @@ class BasicUI(UI_Widget):
             self.anim.update()
             while self.visual_queue:
                 self.visual_queue.pop(0)()
+
+    def set_mouseover(self,txt,anim=None,**kwargs):
+        if user.mouseover:
+            user.mouseover.kill()
+        user.mouseover=Emote(txt,**kwargs)
+        if anim:
+            user.mouseover.set_anim(anim,**kwargs)
+        else:
+            user.mouseover.set_anim('appear',len=ANIM_LEN['instant'])
+        self.group.add(user.mouseover)
+        pos=kwargs.get('pos',None)
+        if pos is None:
+            pos=user.mouse_pos()
+        user.mouseover.rect.bottomleft=pos
+
+    def kill_mouseover(self):
+        if user.mouseover:
+            user.mouseover.set_anim('disappear',
+                len=ANIM_LEN['short'],affects=[user])
+
 
 class BasicSM(SoundMaster):
     def react(self,evt):

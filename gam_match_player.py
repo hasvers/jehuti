@@ -430,9 +430,10 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                     #print scr, id(scr), [(c,id(c),c.state) for c in scr.all_children(1) ]
             #if tevt=='start':
                 #print '\n+++++++\n\n'
+        self.advance_phase()
 
     def canvas_emote(self,c,txt,src):
-        #c is an event, like a cange or other
+        #c is an event, like a change or other
         if (c.data.owner==self.active_player or c.data==self.canvas.active_graph) and self.controller[c.data.owner]=='human':
             subject =None
             target=c.item
@@ -442,7 +443,6 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             if subject:
                 color=self.cast.get_info(subject,'color')
                 anim= lambda t=target:self.canvas.icon[target].set_anim('blink')
-                #TODO: previously add_phase
                 user.ui.add_visual(anim)
                 self.canvas.icon[target].call_emote('#c{}#{}##'.format(color,txt))
 
@@ -555,182 +555,10 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             user.evt.do(cevt)
 
         if 'batch' in sgn and evt.state==1:
-            playerbatch=evt
-            reactree=self.data.reactree
-
-            #print 'Received batch', playerbatch, playerbatch.events, playerbatch.root_events
-            #playerbatch=BatchEvt([evt],actor=evt.actor, affects=self)
-            self.batchs[self.turn].append(evt)
-            batchs={}
-            if True in ['decl' in e.type for e in evt.events]:
-                reactree.add_node(evt)
-                for actor in self.cast.actors:
-                    if actor != playerbatch.actor  :
-
-                        batch=BatchEvt([],actor=actor, affects=playerbatch.affects() )
-                        interpret_batch=BatchEvt([],actor=playerbatch.actor, affects=playerbatch.affects() )
-                        recevts=[e for e in playerbatch.rec_events if 'claim' in e.type]
-                        sub= [s for e in recevts for s in e.subclaims]
-                        for e in recevts :
-                            if e in sub:
-                                continue
-                            #if not 'claim' in e.type:
-                            #if True in [i in evt.type for i in ('interpret' , 'react', 'politeness' )]:
-                                #do not react to reactions!
-                                #continue
-                            reac=ReactEvt(e.source,actor,e,**e.decl.kwargs) #transmit claimed truth to React
-                            #user.evt.do(reac,self,2)
-                            batch.states.node[1]['children_states'][reac]=2
-                            batch.states.node[1]['priority'][reac]=2
-                            batch.add_event(reac)
-                            interp=InterpretEvt(e.source,interpret_batch.actor,reac)
-                            #user.evt.do(interp,self,2)
-                            interpret_batch.states.node[1]['children_states'][interp]=2
-                            interpret_batch.states.node[1]['priority'][interp]=1
-                            interpret_batch.add_event(interp)
-
-                            reactree.add_edge(playerbatch,batch)
-                            reactree.add_edge(batch,interpret_batch)
-
-                            reactree.add_edge(e,reac) #In principle dispensable through reac.parent
-                            reactree.add_edge(reac,interp)
-                        #if reac.do(1,self):
-                            #user.evt.pass_event(reac,self.cast,True) #TODO: hackish to use cast as caller
-                            #self.batchs[self.turn][-1].add_event(reac)
-                        #interp=InterpretEvt(evt.source,evt,actor,reac)
-                        #actorbatch.add_event(interp)
-                        #print 'reac/interp',id(batch),id(interpret_batch)
-                        playerbatch.states.node[2]['children_states'][batch]=2
-                        playerbatch.states.node[2]['priority'][batch]=2
-                        playerbatch.states.node[2]['children_states'][interpret_batch]=2
-                        playerbatch.states.node[2]['priority'][interpret_batch]=1
-                        batchs[actor]=[batch,interpret_batch]
-            if batchs or not playerbatch in reactree.nodes():
-                user.evt.do(playerbatch,self,2)
-                #for actor in self.actors:
-                     #[user.evt.do(b,self,2)  for b in batchs.get(actor,[]) ]
-
-        if 'claim' in sgn and evt.state==2:
-            if 'queue' in sgn: #Always the case the way I do it
-                claim= evt.evt
-            else:
-                claim=evt
-            items=[claim.item]
-            if hasattr(claim.item,'parents'):
-                items+=claim.item.parents
-
-            for item in items:
-                for call in self.canvas.get_info(item,'calls'):
-                    if call.event_check(claim,item,self):
-                        #print 'Calling:',call.val, item, item.name
-                        self.call_scripts(call.val)
-            if item.type=='node':
-                #TODO: previously add_phase
-                self.canvas.handler.center_on(claim.item)
+            self.prepared_batch(evt)
 
         if 'batch' in sgn and evt.state==2:
-            ## Visual effects !
-            batch_evts=evt.rec_events
-            reactree= self.data.reactree
-            ultim=evt #Ultimate source of the batch
-            while ultim in reactree.nodes() and reactree.predecessors(ultim):
-                ultim= reactree.predecessors(ultim)[0]
-
-            #TEXT
-            if ultim==evt:
-                #Initial claim = explicit part
-                texter=TextMaker(self.data)
-                actor=evt.actor
-                ainf=self.cast.get_info(actor)
-                gph=self.data.actorsubgraphs[actor][actor]
-                clusters,semdata,txts=texter.batch_declaration(ainf,gph,evt)
-                for clus,txt in zip(clusters,txts):
-                    self.add_balloon(txt,anchor= actor,source=ultim,show_name=1)
-                    for reac in reactree.successors(evt):
-                        oact=reac.actor
-                        oinf=self.cast.get_info(oact)
-                        ogph=self.data.actorsubgraphs[oact][oact]
-                        effects={}
-                        effects.update(evt.effects)
-                        for i,j in reac.effects:
-                            effects.setdefault(i,0)
-                            effects[i]+=j
-                        txt=texter.reac_say(oinf, ogph,reac,cluster=clus,sem=semdata,eff=effects)
-                        if txt:
-                            self.add_balloon(txt,anchor= oact,source=ultim,show_name=1)
-            #elif 0 and evt.actor==self.active_player:
-                #if ultim in reactree.predecessors(evt):
-                ##reacs
-                    #print ''#reac'
-                #else:
-                    #for e in evt.events:
-                        #if not 'interp' in e.type:
-                            #continue
-                        #act=e.parent.actor
-                        #nact=self.cast.get_info(act)
-                        ##print c, c.item, c.kwargs['agreement']
-                        #ag=TextMaker(self.data).agreement_reaction(nact,e.kwargs['agreement'])
-                        #if ag[0]=='"':
-                            #anchor=act
-                            #disp=1
-                        #else:
-                            #anchor='Narrator'
-                            #disp=0
-                        #self.add_balloon(ag,anchor= anchor,show_name=disp,source=ultim)
-
-            for c in batch_evts:
-                if 'add' in c.type and c.item.type in ('link','node') :
-                    #print 'inbatch add',c.item,c.data#,self.canvas.active_graph
-                    #print 'with children',[z.data for z in c.current_children()]
-                    if c.data==self.canvas.active_graph  and c.state>=1 :
-                        target=c.item
-                        if 'reac' in c.parent.type and c.parent.is_discovery:
-                            if database['edit_mode']:
-                                self.canvas_emote(c,'Discovery!',ultim)
-                        #print 'match719==Adding', target,'|',c.data, c.state, self.canvas.handler.label(target)
-                #if 0 and 'interp' in c.type and c.actor==self.active_player:
-                    #act=c.parent.actor
-                    #nact=self.cast.get_info(act)
-                    ##print c, c.item, c.kwargs['agreement']
-                    #ag=TextMaker(self.data).agreement_reaction(nact,c.kwargs['agreement'])
-                    #if ag[0]=='"':
-                        #anchor=act
-                        #disp=1
-                    #else:
-                        #anchor='Narrator'
-                        #disp=0
-                    #self.add_balloon(ag,anchor= anchor,show_name=disp,source=ultim)
-
-                if 'change' in c.type :
-                    target=c.item
-                    if target.type=='node' and 'truth' in c.kwargs:
-                        if database['edit_mode']:
-                            print 'Match: Truth change', target, c.data, c.infos
-                            self.canvas_emote(c,'Truth changed!',ultim)
-
-                    if target.type=='node' and  c.kwargs.get('claimed',False):
-                        for eff in self.canvas.icon[target].effects.values():
-                            anim=lambda e=eff:e.set_anim('blink',len=800)
-                            #TODO: previously add_phase
-                            user.ui.add_visual( anim)
-            for t,val in evt.effects.iteritems():
-                act=t[0]
-                if hasattr(val,'keys'):
-                    val=val.values()[0]
-                res=t[1]
-                if t[1]=='prox':
-                    res='emp'
-
-                if val<0:
-                    color=graphic_chart['text_color_negative']
-                    val=str(rftoint(val))
-                else :
-                    color=graphic_chart['text_color_positive']
-                    val='+'+str(rftoint(val))
-
-                self.cast.view.icon[act].call_emote(res.capitalize()+val,color=color)
-            self.test_scripts(evt)
-            self.renew_barycenter(move='empty')
+            self.received_batch(evt)
 
         #if 'decl' in sgn and evt.state=='2' and evt.item.type=='link':
             #newtruth=self.ruleset.logical_change()
@@ -776,6 +604,191 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             cevt=QueueEvt(nevt,self.data)
             user.evt.do(cevt)
 
+    def prepared_batch(self,playerbatch):
+        '''Once a batch has been prepared by its actor,
+        add reactions from other actors.'''
+        reactree=self.data.reactree
+
+        #print 'Received batch', playerbatch, playerbatch.events, playerbatch.root_events
+        #playerbatch=BatchEvt([evt],actor=evt.actor, affects=self)
+        self.batchs[self.turn].append(playerbatch)
+        batchs={}
+        if True in ['decl' in e.type for e in playerbatch.events]:
+            reactree.add_node(playerbatch)
+            for actor in self.cast.actors:
+                if actor != playerbatch.actor  :
+
+                    batch=BatchEvt([],actor=actor, affects=playerbatch.affects() )
+                    interpret_batch=BatchEvt([],actor=playerbatch.actor, affects=playerbatch.affects() )
+                    recevts=[e for e in playerbatch.rec_events if 'claim' in e.type]
+                    sub= [s for e in recevts for s in e.subclaims]
+                    for e in recevts :
+                        if e in sub:
+                            continue
+                        #if not 'claim' in e.type:
+                        #if True in [i in evt.type for i in ('interpret' , 'react', 'politeness' )]:
+                            #do not react to reactions!
+                            #continue
+                        reac=ReactEvt(e.source,actor,e,**e.decl.kwargs) #transmit claimed truth to React
+                        #user.evt.do(reac,self,2)
+                        batch.states.node[1]['children_states'][reac]=2
+                        batch.states.node[1]['priority'][reac]=2
+                        batch.add_event(reac)
+                        interp=InterpretEvt(e.source,interpret_batch.actor,reac)
+                        #user.evt.do(interp,self,2)
+                        interpret_batch.states.node[1]['children_states'][interp]=2
+                        interpret_batch.states.node[1]['priority'][interp]=1
+                        interpret_batch.add_event(interp)
+
+                        reactree.add_edge(playerbatch,batch)
+                        reactree.add_edge(batch,interpret_batch)
+
+                        reactree.add_edge(e,reac) #In principle dispensable through reac.parent
+                        reactree.add_edge(reac,interp)
+                    #if reac.do(1,self):
+                        #user.evt.pass_event(reac,self.cast,True) #TODO: hackish to use cast as caller
+                        #self.batchs[self.turn][-1].add_event(reac)
+                    #interp=InterpretEvt(evt.source,evt,actor,reac)
+                    #actorbatch.add_event(interp)
+                    #print 'reac/interp',id(batch),id(interpret_batch)
+                    playerbatch.states.node[2]['children_states'][batch]=2
+                    playerbatch.states.node[2]['priority'][batch]=2
+                    playerbatch.states.node[2]['children_states'][interpret_batch]=2
+                    playerbatch.states.node[2]['priority'][interpret_batch]=1
+                    batchs[actor]=[batch,interpret_batch]
+        if batchs or not playerbatch in reactree.nodes() or len(self.cast.actors)==1:
+            #Don't run the batch before everybody has reacted to it
+            user.evt.do(playerbatch,self,2)
+            #for actor in self.actors:
+                 #[user.evt.do(b,self,2)  for b in batchs.get(actor,[]) ]
+
+    def received_batch(self,evt):
+        '''Once a batch has been executed, make:
+            - speech balloons.
+            - visual effects.'''
+        batch_evts=evt.rec_events
+        reactree= self.data.reactree
+        ultim=evt #Ultimate source of the batch
+        while ultim in reactree.nodes() and reactree.predecessors(ultim):
+            ultim= reactree.predecessors(ultim)[0]
+
+        #TEXT
+        if ultim==evt:
+            #Initial claim = explicit part
+            texter=TextMaker(self.data)
+            actor=evt.actor
+            ainf=self.cast.get_info(actor)
+            gph=self.data.actorsubgraphs[actor][actor]
+            clusters,semdata,txts=texter.batch_declaration(ainf,gph,evt)
+            for clus,txt in zip(clusters,txts):
+                self.add_balloon(txt,anchor= actor,source=ultim,show_name=1)
+                for reac in reactree.successors(evt):
+                    oact=reac.actor
+                    oinf=self.cast.get_info(oact)
+                    ogph=self.data.actorsubgraphs[oact][oact]
+                    effects={}
+                    effects.update(evt.effects)
+                    for i,j in reac.effects:
+                        effects.setdefault(i,0)
+                        effects[i]+=j
+                    txt=texter.reac_say(oinf, ogph,reac,cluster=clus,sem=semdata,eff=effects)
+                    if txt:
+                        self.add_balloon(txt,anchor= oact,source=ultim,show_name=1)
+        #elif 0 and evt.actor==self.active_player:
+            #if ultim in reactree.predecessors(evt):
+            ##reacs
+                #print ''#reac'
+            #else:
+                #for e in evt.events:
+                    #if not 'interp' in e.type:
+                        #continue
+                    #act=e.parent.actor
+                    #nact=self.cast.get_info(act)
+                    ##print c, c.item, c.kwargs['agreement']
+                    #ag=TextMaker(self.data).agreement_reaction(nact,e.kwargs['agreement'])
+                    #if ag[0]=='"':
+                        #anchor=act
+                        #disp=1
+                    #else:
+                        #anchor='Narrator'
+                        #disp=0
+                    #self.add_balloon(ag,anchor= anchor,show_name=disp,source=ultim)
+
+        for c in batch_evts:
+            if 'add' in c.type and c.item.type in ('link','node') :
+                #print 'inbatch add',c.item,c.data#,self.canvas.active_graph
+                #print 'with children',[z.data for z in c.current_children()]
+                if c.data==self.canvas.active_graph  and c.state>=1 :
+                    target=c.item
+                    if 'reac' in c.parent.type and c.parent.is_discovery:
+                        if database['edit_mode']:
+                            self.canvas_emote(c,'Discovery!',ultim)
+                    #print 'match719==Adding', target,'|',c.data, c.state, self.canvas.handler.label(target)
+            #if 0 and 'interp' in c.type and c.actor==self.active_player:
+                #act=c.parent.actor
+                #nact=self.cast.get_info(act)
+                ##print c, c.item, c.kwargs['agreement']
+                #ag=TextMaker(self.data).agreement_reaction(nact,c.kwargs['agreement'])
+                #if ag[0]=='"':
+                    #anchor=act
+                    #disp=1
+                #else:
+                    #anchor='Narrator'
+                    #disp=0
+                #self.add_balloon(ag,anchor= anchor,show_name=disp,source=ultim)
+
+            if 'change' in c.type :
+                target=c.item
+                if target.type=='node' and 'truth' in c.kwargs:
+                    if database['edit_mode']:
+                        print 'Match: Truth change', target, c.data, c.infos
+                        self.canvas_emote(c,'Truth changed!',ultim)
+
+                if target.type=='node' and  c.kwargs.get('claimed',False):
+                    for eff in self.canvas.icon[target].effects.values():
+                        anim=lambda e=eff:e.set_anim('blink',len=ANIM_LEN['medlong'])
+                        user.ui.add_visual( anim)
+        for t,val in evt.effects.iteritems():
+            act=t[0]
+            if hasattr(val,'keys'):
+                val=val.values()[0]
+            res=t[1]
+            if t[1]=='prox':
+                res='emp'
+
+            if val<0:
+                color=graphic_chart['text_color_negative']
+                val=str(rftoint(val))
+            else :
+                color=graphic_chart['text_color_positive']
+                val='+'+str(rftoint(val))
+
+            self.cast.view.icon[act].call_emote(res.capitalize()+val,color=color)
+        self.test_scripts(evt)
+        self.renew_barycenter(move='empty')
+
+        #Look for scripts called by claims
+        #+Center on last item claimed (maybe not such a good idea)
+        center_on=None
+        for c in batch_evts:
+            if not ('claim' in c.type and c.state==2):
+                continue
+            claim=c
+            if claim.item.type=='node':
+                center_on=claim.item
+
+            items=[claim.item]
+            if hasattr(claim.item,'parents'):
+                items+=claim.item.parents
+            for item in items:
+                for call in self.canvas.get_info(item,'calls'):
+                    if call.event_check(claim,item,self):
+                        #print 'Calling:',call.val, item, item.name
+                        self.call_scripts(call.val,src=evt)
+                        #for sc in self.get_scripts(call=call.val):
+
+        if center_on:
+            self.canvas.handler.center_on(center_on)
 
     def make_speech_act(self,act,source,target):
         print 'MakeSpeechAct', act, 'from', source,'to', target

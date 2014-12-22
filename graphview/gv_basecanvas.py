@@ -318,8 +318,8 @@ class BaseCanvasView(View):
             state= states[self.data.get_layer(item)]
             icon=self.icon[item]
             if state=='hidden':
-                self.group.remove(icon)
-                self.animated.remove(icon)
+                icon.rem_from_group(self.group)
+                icon.rem_from_group(self.animated)
             elif state in icon.state_list:
                 icon.set_state(state)
             else:

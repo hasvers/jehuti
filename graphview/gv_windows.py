@@ -519,8 +519,14 @@ class SpeechBalloon(DecoratedWindow):
     def closing_event(self):
         self.set_command('queue','exit')
         self.exe_command('queue')
-        self.set_anim('disappear',len=200,affects=[self])
+        self.set_anim('disappear',len=ANIM_LEN['short'],affects=[self])
 
     def react(self,evt):
-        if evt.type=='anim_stop':
+        if evt.type=='anim_stop' and evt.args[0].anim=='disappear':
             self.interface.close_balloon(self)
+            #profiler.disable()
+            #prolog('eventlog.dat')
+            #print 'profilend', pg.time.get_ticks()
+        #if evt.type=='anim_start' and evt.args[0].anim=='appear':
+            #print 'profilstart', pg.time.get_ticks()
+            #profiler.enable()

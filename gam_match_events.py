@@ -720,7 +720,7 @@ class ExploreEvt(MatchEvent):
             #Hide enemy's explorer beacon
             icon.rem_from_group(match.canvas.tools)
         else:
-            icon.set_anim('appear',len=550)
+            icon.set_anim('appear',len=ANIM_LEN['med'])
         pos= kwargs.get('pos',self.kwargs.get('pos',None))
         if pos==None:
             pos = match.canvas.handler.mousepos()

@@ -250,7 +250,7 @@ class CastPlayer(CastHandler):
             if not database['demo_mode']:
                 struct +=( ('Speech act',lambda e=actor: self.signal('speechact',e,affects=self.data)), )
             else:
-                if not self.parent.phase_queue:
+                if not self.parent.stack:
                     struct +=( ('Analyze',lambda e=actor: self.analyze(self.parent.active_player,e)), )
             #for evt in self.parent.queue: #TODO: FTA repair
                 #if evt.actor==self.parent.active_player and evt.effects:

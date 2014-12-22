@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from gam_script_base import *
+from gam_script import *
 from gam_match_events import*
 
 
@@ -184,7 +184,7 @@ class MatchScriptEffect(SceneScriptEffect):
                 if batch is None:
                     self.add_child(evt,{1:0,2:1},priority=1)
                 else:
-                    if not True in [c.duplicate_of(evt) for c in batch.rec_events()]:
+                    if not True in [c.duplicate_of(evt) for c in batch.rec_events]:
                         batch.add_event(evt)
                         evt.parent=batch
                         batch.add_child(evt,{1:0,2:1},priority=1)
@@ -202,7 +202,7 @@ class MatchScriptEffect(SceneScriptEffect):
                 #TODO:BREAK? despite there being an identical addevt in claim
                 self.add_sim_child(cevt,priority=1)
             else:
-                if not True in [c.duplicate_of(evt) for c in batch.rec_events()]:
+                if not True in [c.duplicate_of(evt) for c in batch.rec_events]:
                     batch.add_event(evt)
             return True
         return SceneScriptEffect.prep_do(self,scene,**kwargs)

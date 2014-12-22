@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from gam_script import *
+from gam_phase import *
 from gam_cast import *
 from gam_setting import *
 

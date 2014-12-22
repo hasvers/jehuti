@@ -1,4 +1,4 @@
-from gv_uibasics import *
+from gv_ui_complete import *
 from gv_canvasicons import *
 from gv_graph import *
 
@@ -61,7 +61,12 @@ class Canvas():
 
     def abspos(self,icon):
         #NB: contrary to windows, here pos contains the CENTER
-        return self.pos[icon.item]+array(icon.rect.topleft)-icon.rect.center
+        if not icon:
+            return array((0,0))
+        if icon.item in self.pos:
+            return self.pos[icon.item]+array(icon.rect.topleft)-icon.rect.center
+        else:
+            return icon.rect.topleft
 
     def set_handler(self,handler):
         self.handler=handler
@@ -319,7 +324,8 @@ class Canvas():
 
         if 'move' in evt.type:
             self.icon[evt.item].set_pos(evt.graph.pos[evt.item])
-            self.icon_update(evt.item)
+            #self.icon_update(evt.item)
+            self.icon[evt.item].update()
             self.dirty=True
         if 'change_infos' in evt.type:
             if array( [i in evt.infos for i in ('val','genre') ]).any():
@@ -396,6 +402,7 @@ class Canvas():
     def icon_update(self,target):
         icon=self.icon[target]
         icon.create(self.group,'all')
+        icon.update()
         self.assess_itemstate(target)
 
     def get_info(self,item,info=None,**kwargs):
@@ -429,6 +436,8 @@ class Canvas():
         return glist
 
     def update(self,*args):
+        if user.evt.moving:
+            return False
         self.surface.fill(COLORKEY)
         self.static_surface.fill((0,0,0,0) )
         if self.handler :
@@ -683,7 +692,11 @@ class CanvasHandler(UI_Widget):
             #print hover, self.label(hover)
             self.signal('hover',hover,label=self.label(hover),affects=(self,hover.item))
             if self.label(hover):
-                user.set_mouseover(self.label(hover))
+                if hover.item.type=='node':
+                    mopos=array(self.abspos(hover)) + (hover.rect.w*3/4,0)
+                else:
+                    mopos=None
+                user.set_mouseover(self.label(hover),pos=mopos)
                 info=self.canvas.active_graph.get_info(hover.item)
                 if not info:
                     info= self.label(hover)
@@ -709,10 +722,10 @@ class CanvasHandler(UI_Widget):
         return False
 
     def mousepos(self,child=None):
-        return tuple(array(UI_Widget.mousepos(self,child))+array(self.offset))
+        return tuple(array(UI_Widget.mousepos(self,child)))#+array(self.offset))
 
-    def viewpos(self,icon=None):
-        return tuple(array(self.abspos())+array(self.offset))
+    def abspos(self,icon=None):
+        return tuple(array(self.canvas.abspos(icon))-array(self.offset))
 
     def drop(self):
         user.state ='idle'

@@ -427,13 +427,13 @@ class MatchUI(BasicUI,SceneUI):
             game=self.game_ui.game
             sm=self.save_state
             struct+=('Save', lambda s=sm,d=game.gamestate.name:user.ui.save_menu('save',s,default=d)),
-        if database['demo_mode']:
-            struct+=('Help',self.demo_help),
-            if self.soundmaster.mute:
-                fix='on'
-            else:
-                fix='off'
-            struct+=('Switch audio '+fix,self.audio_switch),
+        #if database['demo_mode']:
+            #struct+=('Help',self.demo_help),
+            #if self.soundmaster.mute:
+                #fix='on'
+            #else:
+                #fix='off'
+            #struct+=('Switch audio '+fix,self.audio_switch),
         if not self.editor_ui:
             struct+=(
                 ('Exit',self.return_to_title),)
@@ -489,25 +489,6 @@ class MatchUI(BasicUI,SceneUI):
             self.show('dialbox')
             self.window['dialbox'].refresh()
 
-    def demo_help(self):
-        txt=text_bank['demo_help']
-        self.parse_text(txt)
-
-    def parse_text(self,text):
-        txt=deepcopy(text)
-        while txt:
-            t=txt.pop(0)
-            if hasattr(t,'keys'):
-                keys=t.pop('choice')
-                struct=()
-                for i in keys:
-                    if not i in t:
-                        continue
-                    j=t[i]
-                    newt=j+txt
-                    struct+=(i,lambda n=newt:self.parse_text(n) ),
-                #return self.match.add_phase(FuncWrapper(lambda s=struct:self.float_menu(s,pos='center',draggable=0) ))
-            self.match.add_balloon(t,anchor=None)
 
 
 

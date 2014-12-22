@@ -435,13 +435,14 @@ class GamePlayer(GameHandler):
             if not user.paused:
                 struct=()
                 try:
-                    if user.ui.scene.phase_queue:
+                    if user.ui.scene.stack:
                         call=None
-                        for j in user.ui.scene.phase_queue:
+                        for j in user.ui.scene.stack:
                             if 'call' in j.type:
                                 call=j
+                                break
                         if call:
-                            struct+=('Skip',call.run),
+                            struct+=('Skip',user.ui.scene.skip_to(call)),
                 except:
                     pass
                 sm=self.save_state

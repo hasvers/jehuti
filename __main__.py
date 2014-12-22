@@ -57,17 +57,6 @@ def toggle_fullscreen():
         screen = pg.display.set_mode(user.screen.get_rect().size)
     return screen
 
-def prolog(fname):
-    stats=[[i.code ,i.totaltime,i.inlinetime,i.callcount,i.reccallcount] for i in profiler.getstats()]
-    stats=sorted(stats,key=lambda e:e[2],reverse=1)
-
-    with fopen(fname,'w') as prolog:
-        for i in stats:
-            if not i:
-                continue
-            st=' '.join([str(z) for z in  i])
-            prolog.write(st+'\n')
-
 def execute(e):
     print '>>', e
     exec(e)
@@ -188,10 +177,10 @@ def main():
                     screen.blit(img,(36,22) )
                 user.add_video_frame(None,True)
                 #user.add_video_frame(None,not sfml_mode)#Do not enhance with ImageMagick if sfml mode
-        clock.tick(140)
-
-        if database['edit_mode']:
-            pg.display.set_caption(database['title']+'  %d fps' % clock.get_fps())
+        if not user.profile_mode:
+            clock.tick(140)
+            if database['edit_mode']:
+                pg.display.set_caption(database['title']+'  %d fps' % clock.get_fps())
 
 
 '''    except :
@@ -202,11 +191,10 @@ finally :
     return 0
     '''
 
-#cProfile.run('main()',None,1)
-
 #profiler.runcall(main)
-main()
 #prolog('prolog.dat')
+main()
+
 if user.recording:
     user.trigger_video()
 print 'Quitting...',[pgmixer.Channel(x).get_busy() for x in range(pgmixer.get_num_channels() )]

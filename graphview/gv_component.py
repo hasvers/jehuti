@@ -7,7 +7,7 @@
 
 from gv_data import *
 
-from gv_uibasics import *
+from gv_ui_complete import *
 
 class View(UI_Widget):
 

@@ -197,7 +197,6 @@ class AIPlayer(object):
             #de-ident the following to have all actions in one batch
             batch=cevt.batch
             #print 'adding phase', batch, id(batch), cevt
-            #print 'to', match.phase_queue
             self.queue.append(lambda b=batch:user.evt.do(b,2))
         match.add_phase(FuncWrapper(self.next_action) )
             #match.next_phase()

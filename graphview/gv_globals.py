@@ -23,6 +23,15 @@ pgmixer.init(44100)
 colorconverter=matcolors.ColorConverter()
 profiler=cProfile.Profile()
 
+def prolog(fname):
+    stats=[[i.code ,i.totaltime,i.inlinetime,i.callcount,i.reccallcount] for i in profiler.getstats()]
+    stats=sorted(stats,key=lambda e:e[2],reverse=1)
+    with fopen(fname,'w') as prolog:
+        for i in stats:
+            if not i:
+                continue
+            st=' '.join([str(z) for z in  i])
+            prolog.write(st+'\n')
 
 class Clipboard(object):
     def copy(self,txt):

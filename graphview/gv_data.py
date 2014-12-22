@@ -52,15 +52,17 @@ class Data(object):
     def filename(self):
         return self.name+database[self.datatype+'_ext']
 
-    def kill(self):
+    def kill(self,recursive=False):
         if self.parent:
             try:
                 self.parent.children.remove(self)
             except:
                 pass
         for c in self.children:
-            if c.parent==self: #should I kill them too?
+            if c.parent==self:
                 c.parent=None
+                if recursive:
+                    c.kill(recursive)
         self.renew()
 
     def get_info(self,item,info_type=None,**kwargs):
