@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from graphview import fonts,database
+from graphview import FONTLIB,database
 
 
-#fonts["base"]='OliJo-Bold.ttf',database['font_default_size']
-#fonts["base"]='rimouski sb.ttf',database['font_default_size']+1
-#fonts["base"]='Cabin-SemiBold.ttf',database['font_default_size']
-fonts["dialogue"]='Eirik Raude.ttf',database['font_default_size']+3
-fonts["title"]='Cabin-Bold.ttf',database['font_default_size']+5
-fonts["emote"]='Cabin-Bold.ttf',database['font_emote_size']
+#FONTLIB["base"]='OliJo-Bold.ttf',database['font_default_size']
+#FONTLIB["base"]='rimouski sb.ttf',database['font_default_size']+1
+#FONTLIB["base"]='Cabin-SemiBold.ttf',database['font_default_size']
+FONTLIB["dialogue"]='Eirik Raude.ttf',database['font_default_size']+3
+FONTLIB["title"]='Cabin-Bold.ttf',database['font_default_size']+5
+FONTLIB["emote"]='Cabin-Bold.ttf',database['font_emote_size']
 
-fonts["charaname"]='Eirik Raude.ttf',database['font_default_size']+10
-#fonts["charaname"]='Neuton-Extrabold.ttf',database['font_default_size']+4
+FONTLIB["charaname"]='Eirik Raude.ttf',database['font_default_size']+10
+#FONTLIB["charaname"]='Neuton-Extrabold.ttf',database['font_default_size']+4

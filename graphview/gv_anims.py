@@ -101,20 +101,34 @@ class Animation(TimedEvent):
             self.genre=genre
             self.args=args
             self.opts=kwargs
+        def __repr__(self):
+            return 'Step {} {}'.format(self.genre,self.args)
 
     def schedule(self,**kwargs):
-        anim=self.anim
+        anim=kwargs.get('anim',self.anim)
         refpos=kwargs.get('pos',kwargs.get('ref',None ))
-        if not refpos is None:
+
+        if refpos is None:
+            if hasattr(self.item.parent,'pos') and self.item in self.item.parent.pos:
+                refpos=self.item.parent.pos[self.item]
+            else:
+                refpos=self.item.rect.center
+        else:
             refpos=array(refpos)
-        if not kwargs.get('append',False):
-            self.steps=[ self.Step('start')]
-        steps=[]
+
+        self.steps={0: [self.Step('start')]}
+
+        if 'steps' in kwargs:
+            #Allows to pass a previous list of steps
+            steps=list(kwargs['steps'])
+        else:
+            steps=[]
+
         if hasattr(anim,'__iter__'):
             steps+=anim
         else:
-            time=kwargs.get('time',pg.time.get_ticks())
-            time+=kwargs.get('delay',0)
+            #time=kwargs.get('time',pg.time.get_ticks())
+            time=kwargs.get('delay',0)
             if anim=='hide':
                 steps+=[(time,kwargs.get('len',0),self.Step('hide') )]
             elif anim=='appear':
@@ -154,9 +168,10 @@ class Animation(TimedEvent):
             elif anim=='emote_jump':
                 length=float(kwargs.get('len',2500))
                 amp=kwargs.get('amp',-20)
-                self.schedule('jump',len=length/2,amp=amp)
-                self.schedule('appear',len=length/4,append=True)
-                self.schedule('disappear',len=length/4+1,delay=3*length/4,append=True)
+                tmpstep=self.schedule(anim='jump',len=length/2,amp=amp,pos=refpos,hold=True)
+                tmpstep+=self.schedule(anim='appear',len=length/4,hold=True)
+                remlen=length-length/2-length/4 #integer division problems
+                self.schedule(anim='disappear',len=remlen,delay=3*length/4,steps=tmpstep)
             elif 'oscil' in anim:
                 length=kwargs.get('len',800)
                 amp=kwargs.get('amp',.1)
@@ -177,26 +192,50 @@ class Animation(TimedEvent):
                 steps+=[(time,length,st)]
             else:
                 print 'ERROR: Unrecognized animation key:',anim
-        steps.append( (0,0,self.Step("stop") ))
 
-        if refpos is None:
-            if hasattr(self.item.parent,'pos') and self.item in self.item.parent.pos:
-                refpos=self.item.parent.pos[self.item]
+        if kwargs.get('hold',False):
+            #Don't finish scheduling just yet, instead pass step list to caller
+            return steps
+
+        steps.append( (length+1,0,self.Step("stop") ))
+        states=[1]
+        times=[0]
+        state=1
+        time=0
+        starting={}
+        ending={}
+        durs=[]
+        for step in steps:
+            e=step[2]
+            stime=step[0]
+            e.duration=step[1]
+            starting[e]=stime
+            ending[e]=stime+e.duration
+            durs.append(e.duration)
+            if stime>time:
+                durs=[stime-time for d in durs]
+                time=stime
+                state+=1
+                states.append(state)
+                times.append(time)
+        for i in range(len(states)):
+            s=states[i]
+            if i>0:
+                pred=states[i-1]
             else:
-                refpos=self.item.rect.center
-        for s,step in enumerate(steps):
-            self.add_state(s+1,pred=s)
-            stat=self.states.node[s+1]
-            stat['time']=step[0]
-            stat['duration']=step[1]
-            self.steps.append(step[2] )
-            step=step[2]
-            if step.genre=='move' or step.genre=='osc':
-                #Follow trajectory
-                if step.args[0] is None:
-                    step.args= (refpos, )+step.args[1:]
-                if step.genre=='move':
-                    refpos+=array(step.args[-1])
+                pred=0
+            self.add_state(states[i],pred=pred)
+            self.steps.setdefault(s,[])
+            for e in starting:
+                if starting[e]<=times[i]<=ending[e]:
+                    self.steps[s].append(e)
+            stat=self.states.node[s]
+            stat['time']=times[i]
+            if i<len(states)-1:
+                stat['duration']=times[i+1]-times[i]
+            else:
+                stat['duration']=0
+            stat['started']=None #Time at which node is stated
 
     def prepare(self,edge,*args,**kwargs):
         if edge==(0,1):
@@ -215,68 +254,68 @@ class Animation(TimedEvent):
 
     def run(self,state,**kwargs):
         time=kwargs.get('time',None)
-        step=self.steps[state]
-        if step is None or step.genre=='start':
-            self.item.set_state('anim',True)
-            return True
-        if step.genre=='stop':
-            self.item.rm_state('anim')
-            return False
-
         todo=[]
-        t=step.args
-        t1=self.states.node[state]['started']
-        if t1 is None:
-            t1=self.states.node[state]['started']=time
-        t2=self.states.node[state]['duration']
-        tfrac=(float(time)-t1)/t2 #time fraction
+        for step in self.steps[state]:
+            if step is None or step.genre=='start':
+                self.item.set_state('anim',True)
+                return True
+            if step.genre=='stop':
+                self.item.rm_state('anim')
+                return False
 
-        if tfrac<0 or tfrac>1.:
-            return False
-        tfrac=self.easing(self.opts.get('interpol','quad'),tfrac)
+            t=step.args
+            t1=self.states.node[state]['started']
+            if t1 is None:
+                t1=self.states.node[state]['started']=time
+            t2=step.duration
+            tfrac=(float(time)-t1)/t2 #time fraction
 
-        if step.genre=='hide':
-            todo.append( (0.,0.,0.,0.) )
-        elif step.genre=='color':
-            todo.append( [i+float(j-i)*tfrac for i,j in zip(*t)] )
-        elif step.genre=='move':
-            ref=array(t[0])
-            td=[]
-            for i,j in zip(*t[1:]):
-                frac=i+float(j-i)*tfrac
-                if isinstance(i,float) or isinstance(j,float):
-                    frac*=self.item.rect.size[len(td)]
-                td.append(int(frac))
-            todo.append( ref+ td )
-        elif step.genre=='osc':
-            ref=array(t[0])
-            td=[]
-            if t[1][0]=='sin' or t[1][0]=='rot':
-                amp,puls,angle=t[1][1:]
-                if isinstance(amp,float):
-                    amp*=self.item.rect.h#sum(self.rect.size*array(sin(angle),cos(angle) ))
+            if tfrac<0 or tfrac>1.:
+                return False
+            tfrac=self.easing(self.opts.get('interpol','quad'),tfrac)
 
-                if t[1][0]=='rot':
-                    angle=tfrac*puls*t2
-                    val=amp
-                else:
-                    val= amp*sin(puls*time-t1)
-                td=array((int(val*sin(angle)),int(val*cos(angle))))
-            todo.append( ref+ td )
-        elif step.genre=='roll_in':
-            #rect=self.item.image.get_rect()
-            #self.item.image.fill( (0,0,0,0) )
-            #self.item.image.blit(t[0],(-rect.w*tfrac,0) )
-            pass
-        elif step.genre=='blur_in':
-            #rect=self.item.image.get_rect()
-            #self.item.image.fill( (0,0,0,0) )
-            #self.item.image.blit(t[0],(-rect.w*tfrac,0) )
-            self.item.set_state('blur')
-            dft=graphic_chart['default_blur_mode']
-            self.item.blur_mode=(rint(dft[0]*(1-tfrac)), )+tuple(dft[1:])
-            if tfrac>.95:
-                self.item.rm_state('blur')
+            if step.genre=='hide':
+                todo.append( (0.,0.,0.,0.) )
+            elif step.genre=='color':
+                todo.append( [i+float(j-i)*tfrac for i,j in zip(*t)] )
+            elif step.genre=='move':
+                ref=array(t[0])
+                td=[]
+                for i,j in zip(*t[1:]):
+                    frac=i+float(j-i)*tfrac
+                    if isinstance(i,float) or isinstance(j,float):
+                        frac*=self.item.rect.size[len(td)]
+                    td.append(int(frac))
+                todo.append( ref+ td )
+            elif step.genre=='osc':
+                ref=array(t[0])
+                td=[]
+                if t[1][0]=='sin' or t[1][0]=='rot':
+                    amp,puls,angle=t[1][1:]
+                    if isinstance(amp,float):
+                        amp*=self.item.rect.h#sum(self.rect.size*array(sin(angle),cos(angle) ))
+
+                    if t[1][0]=='rot':
+                        angle=tfrac*puls*t2
+                        val=amp
+                    else:
+                        val= amp*sin(puls*time-t1)
+                    td=array((int(val*sin(angle)),int(val*cos(angle))))
+                todo.append( ref+ td )
+            elif step.genre=='roll_in':
+                #rect=self.item.image.get_rect()
+                #self.item.image.fill( (0,0,0,0) )
+                #self.item.image.blit(t[0],(-rect.w*tfrac,0) )
+                pass
+            elif step.genre=='blur_in':
+                #rect=self.item.image.get_rect()
+                #self.item.image.fill( (0,0,0,0) )
+                #self.item.image.blit(t[0],(-rect.w*tfrac,0) )
+                self.item.set_state('blur')
+                dft=graphic_chart['default_blur_mode']
+                self.item.blur_mode=(rint(dft[0]*(1-tfrac)), )+tuple(dft[1:])
+                if tfrac>.95:
+                    self.item.rm_state('blur')
         if hasattr(self.item,'alpha'):
             albase=self.item.alpha/255.
         else:

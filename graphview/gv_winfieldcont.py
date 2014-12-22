@@ -413,6 +413,8 @@ class FieldContainer(UI_Widget):
         if isinstance(field,basestring):
             if field == 'input':
                 field=InputField(self,**kwargs)
+            elif field=='icon':
+                field=IconField(self,**kwargs)
             elif field=='array':
                 field=ArrayInputField(self,**kwargs)
             elif field =='text' :

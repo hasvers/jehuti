@@ -172,7 +172,7 @@ def main():
                 screen.blit(user.screen,(0,0))
             if user.recording:
                 if  pg.time.get_ticks() / 250 % 2:
-                    img=pgu_writen('Rec',fonts["base"],(255,255,255) )
+                    img=pgu_writen('Rec',FONTLIB["base"],(255,255,255) )
                     pg.draw.circle(screen, (255, 0, 0), (24, 32), 10, 0)
                     screen.blit(img,(36,22) )
                 user.add_video_frame(None,True)

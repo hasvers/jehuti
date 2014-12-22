@@ -610,8 +610,7 @@ class LayerMenu(DragWindow):
         self.namefield={}
         self.hidefield={}
         self.editfield={}
-        self.upfield={}
-        self.downfield={}
+        self.delfield={}
 
     def make_dependencies(self):
         self.interface.depend.add_dep(self,self.handler)
@@ -624,7 +623,7 @@ class LayerMenu(DragWindow):
         self.add('text',val=self.title,pos=(v,0),width=100,height=30,colspan=2)
         self.add('text',val='Close',pos=(v,2),width=50,selectable=True,
             output_method=lambda e=self.name:self.interface.hide(e))
-        for l in self.data.layers:
+        for l in self.data.layers[::-1]:
             info=self.data.get_info(l)
             v+=1
             if l==self.handler.active_layer:
@@ -642,9 +641,15 @@ class LayerMenu(DragWindow):
             self.make_hidefield(l)
             self.editfield[l]= self.add('text',val='Edit', selectable=1,
                 output_method=lambda e=l:self.handler.signal('edit',e), pos=(v,4))
+            self.delfield[l]= self.add('text',val='Delete', selectable=1,
+                output_method=lambda e=l:self.handler.rem_layer(e), pos=(v,5))
         v+=1
         self.add('text',val='Add',selectable=True, pos=(v,0),
             output_method=self.handler.add_layer )
+        self.add('text',val='Up',selectable=True, pos=(v,2),
+            output_method=self.handler.layer_up )
+        self.add('text',val='Down',selectable=True, pos=(v,3),
+            output_method=self.handler.layer_down )
 
     def make_hidefield(self,l):
         field= self.hidefield[l]

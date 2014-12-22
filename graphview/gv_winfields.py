@@ -32,6 +32,8 @@ class WindowField(UI_Item):
                 self.typecast = j
             if i =='output_method' :
                 self.bind_command(j,self.val)
+            if i == 'tip':
+                self.status_tip=j
         self.image=pg.surface.Surface((self.width,self.height))
         self.image.set_colorkey(COLORKEY)
         self.image.fill(COLORKEY)
@@ -64,7 +66,7 @@ class WindowField(UI_Item):
             pass
 
     def output(self,method=None,vals=None ):
-        if vals==None :
+        if vals is None :
             try :
                 vals=self.val,
             except:
@@ -138,6 +140,42 @@ class WindowField(UI_Item):
     def kill(self,*args):
         self.unbind_command(None,True)
         UI_Item.kill(self,*args)
+
+
+class IconField(WindowField):
+
+    def __init__(self,parent,**kwargs):
+        WindowField.__init__(self,parent,**kwargs)
+        self.images['idle']=img=ICONLIB[self.val]
+        img=img.copy()
+        gv_effects.glow(img)
+        self.images['hover']=img
+        self.set_state('idle')
+        self._minsize=self._maxsize=self.images['idle'].get_rect().size
+
+    def redraw(self):
+        self.images['idle']=img=ICONLIB[self.val]
+        img=img.copy()
+        gv_effects.glow(img)
+        self.images['hover']=img
+        try:
+            self.parent.dirty=1
+        except:
+            pass
+
+
+    #def color_mod(self,state,*args):
+        #if state=='hover':
+            #return (1.8,1.8,.8,1)
+        #return (1,1,1,1)
+
+
+    def event(self,event,**kwargs):
+        if event.type == pg.MOUSEBUTTONDOWN:
+            if event.button ==1 :
+                self.parent.exe_command(self)
+                return True
+        return False
 
 
 class TextField(WindowField):
@@ -276,7 +314,7 @@ class TextField(WindowField):
     def font(self):
         if self._font:
             return  self._font
-        return fonts["base"]
+        return FONTLIB["base"]
 
     @font.setter
     def font(self,val):
@@ -493,7 +531,7 @@ class TextField(WindowField):
                 height=0
 
         self.linehei.append(height)
-        if   not self.fixsize or self.fixsize=='h' :
+        if  not self.fixsize or self.fixsize=='h' :
             self.height=sum(self.linehei)+dbpad[1]
         return
 

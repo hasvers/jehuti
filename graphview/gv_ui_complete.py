@@ -35,6 +35,7 @@ def '''+i+'''(self,val):
         self.set=None
         UI_Item.__init__(self,**kwargs)
         self.emotes={} #current living emotes and their positions
+        self.hotspot={} #Anchor for bubbles and emotes
         #self.image_sets={}
         for i, j in kwargs.iteritems():
             if hasattr(self,i):
@@ -236,7 +237,7 @@ class Emote(UI_Icon):
     color=(255,255,255,255)
     def __init__(self,contents,*args, **kwargs):
         self.type='emote'
-        self.font=fonts["emote"]
+        self.font=FONTLIB["emote"]
         UI_Icon.__init__(self,**kwargs)
         self.set='idle'
         if not hasattr(contents,'__iter__'):

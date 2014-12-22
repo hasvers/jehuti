@@ -402,7 +402,7 @@ class DragField(WindowField):
         self.image.blit(self.bg,(0,0))
         self.image.blit(self.cursor.image,self.cursor.rect.topleft)
         if self.showval:
-            self.image.blit(pgu_writen(str(self.val),fonts["base"],graphic_chart['text_color_label']),(0,0))
+            self.image.blit(pgu_writen(str(self.val),FONTLIB["base"],graphic_chart['text_color_label']),(0,0))
         self.images['idle']=self.image
 
 
@@ -444,7 +444,7 @@ class DragField(WindowField):
             self.image.blit(self.bg,(0,0))
             self.image.blit(self.cursor.image,self.cursor.rect.topleft)
             if self.showval:
-                self.image.blit(pgu_writen(str(self.val),fonts["base"],graphic_chart['text_color_label']),(0,0))
+                self.image.blit(pgu_writen(str(self.val),FONTLIB["base"],graphic_chart['text_color_label']),(0,0))
             self.images['idle']=self.image
 
             return True

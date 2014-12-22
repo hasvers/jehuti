@@ -78,7 +78,7 @@ class StartMenuUI(MenuUI):
             )
         struct+=('Exit','text',{'output_method':lambda: pgevent.post(pgevent.Event(pg.QUIT)),
             'selectable':True}),
-        window=FloatMenu(self.screen,self,(128,10),struct=struct,font=fonts["title"],drag=False)
+        window=FloatMenu(self.screen,self,(128,10),struct=struct,font=FONTLIB["title"],drag=False)
         window.update()
         window.rect.center=self.screen.get_rect().center
 

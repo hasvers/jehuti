@@ -408,7 +408,7 @@ class MatchCanvasPlayer(MatchCanvasHandler):
         if 'add' in evt.type and evt.data == self.canvas.active_graph:
             #print 'appear',id(evt), evt.data.name, evt,'\n'
             item=evt.item
-            self.canvas.icon[item].set_anim('appear',len=ANIM_LEN['med'],easing='quad')
+            self.canvas.icon[item].set_anim('appear',len=ANIM_LEN['medlong'],easing='quad')
 
         if  'add' in evt.type or 'change' in evt.type and True in [x in evt.infos for x in ('logic','val')]:
             owner=evt.data.owner

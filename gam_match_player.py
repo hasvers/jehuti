@@ -787,8 +787,8 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                         self.call_scripts(call.val,src=evt)
                         #for sc in self.get_scripts(call=call.val):
 
-        if center_on:
-            self.canvas.handler.center_on(center_on)
+        #if center_on:
+            #self.canvas.handler.center_on(center_on)
 
     def make_speech_act(self,act,source,target):
         print 'MakeSpeechAct', act, 'from', source,'to', target
@@ -809,6 +809,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
         self.signal('clear_queue')
 
     def perform_queue(self):
+        '''Perform the whole queue.'''
         batches=[]
         for evt in self.queue:
             #print evt,evt.wrapper
@@ -818,14 +819,24 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                 batches.append(evt.wrapper.batch)
 
         for batch in batches:
-            dif=self.time_left- self.time_cost
-            if dif <0 :
-                rude=PolitenessEvt(batch,self.active_player,dif,type='overtime')
-                batch.add_event(rude)
-                user.evt.data.bind( (batch,rude) )
-            user.evt.do(batch, self,1)
+            self.perform_batch(batch)
 
         self.canvas.handler.unselect()
         self.signal('perform_queue')
-        #self.renew_barycenter()
 
+    def perform_single(self,evt):
+        '''Perform a queued event out of order, taking it out of its batch'''
+        if not evt in self.queue:
+            raise Exception("Cannot perform unqueued event",evt)
+        evt.wrapper.rem_batch()
+        evt.wrapper.set_batch(None,self)
+        self.perform_batch(evt.wrapper.batch)
+
+    def perform_batch(self,batch):
+        '''Subfunction: perform a batch.'''
+        dif=self.time_left- self.time_cost
+        if dif <0 :
+            rude=PolitenessEvt(batch,self.active_player,dif,type='overtime')
+            batch.add_event(rude)
+            user.evt.data.bind( (batch,rude) )
+        user.evt.do(batch, self,1)

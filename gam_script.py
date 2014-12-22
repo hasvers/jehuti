@@ -169,7 +169,7 @@ class Script(TimedEvent):
             if i>0:
                 pred=states[i-1]
             else:
-                pred=None
+                pred=0
             self.add_state(states[i],pred=pred)
             stat=self.states.node[states[i]]
             stat['waiting']=0

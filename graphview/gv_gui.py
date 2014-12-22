@@ -148,7 +148,7 @@ class BasicUI(UI_Widget):
         w,h=graphic_chart['dialbox_size']
         rect=self.screen.get_rect()
         ball=SpeechBalloon(self,(w,h),maxsize=array(self.rect.size)*.5,fixsize=0,**kwargs)
-        ball.add('text',val=txt,wrap=True,maxlines=None,font=fonts["dialogue"])
+        ball.add('text',val=txt,wrap=True,maxlines=None,font=FONTLIB["dialogue"])
         brect=ball.rect
         w,h=brect.size
         bs=self.balloons.setdefault(anchor,[])
@@ -532,6 +532,7 @@ class BasicUI(UI_Widget):
 
     def general_menu(self,event=None):
         struct=()
+        print self.stack,self.undo_stack
         if self.stack:
             text=self.stack[-1].desc
             struct+=('Undo '+text,lambda e=None: user.evt.undo(e)  ),

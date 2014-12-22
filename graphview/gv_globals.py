@@ -59,12 +59,19 @@ else :
     Canvasflag=0
 
 def resource_path(relative):
+    '''OS-agnostic version of relative path.'''
     if hasattr(sys, "_MEIPASS"):
         return os.path.join(sys._MEIPASS, relative)
     return os.path.join(relative)
 
-def olistdir(path):
-    return sorted([i for i in os.listdir( os.path.normpath(resource_path(path) )) if i[0]!='~' ])
+def olistdir(path,ext=None):
+    '''OS-agnostic directory listing, restricted to files with extension ext.'''
+    if ext:
+        if isinstance(ext,basestring):
+            ext=[ext]
+        ext=[e if e[0]=='.' else '.'+e for e in ext]
+    return sorted([i for i in os.listdir( os.path.normpath(resource_path(path) )) if i[0]!='~'
+        and (not ext or True  in [i.endswith(e) for e in ext]) ])
 
 def image_load(path):
     return pg.image.load(os.path.normpath(resource_path(path)) )
@@ -129,8 +136,8 @@ for i, j in tuple(database.iteritems()):
 
 
 from gv_fonts import FontMaster
-fonts=FontMaster(database,resource_path)
-basefont= fonts["base"]
+FONTLIB=FontMaster(database,resource_path)
+basefont= FONTLIB["base"]
 
 for fname in database['modules']:
     confload(fname)
@@ -199,15 +206,19 @@ def pgu_writen(text,font,color,border=1):
         return pg.surface.Surface((w,h)+array((-4,0)),pg.SRCALPHA)
     s=pg.surface.Surface((w,h),pg.SRCALPHA)
     # Render the text in black, at various offsets to fake a border
-    pos = array((1,1))
-    tmp = font.render(text,1,(0,0,0))
-    dirs = [(-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)]
-    for dx,dy in dirs:
-        s.blit(tmp,(pos[0]+dx*border,pos[1]+dy*border))
-    # Now render the text properly, in the proper color
+    if border:
+        pos = array((1,1))*border
+        tmp = font.render(text,1,(0,0,0))
+        dirs = [(-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)]
+        for dx,dy in dirs:
+            s.blit(tmp,(pos[0]+dx*border,pos[1]+dy*border))
+        # Now render the text properly, in the proper color
+    else:
+        pos=(0,0)
     tmp = font.render(text,1,color)
     s.blit(tmp,pos)
     return s
+
 
 def rint(nb):
     return int(round(nb))

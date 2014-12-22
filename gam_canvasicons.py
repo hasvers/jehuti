@@ -171,7 +171,7 @@ class MatchNodeIcon(NodeIcon):
                     txt.blit(txt1,(0,0),None, pg.BLEND_RGBA_MIN)
                     txt.blit(txt2,(array(txt1.get_size())-txt2.get_size())/2)
                 except:
-                    txt=pgu_writen(info['genre'][:2]+str(nsum),fonts["base"],graphic_chart['text_color_label'])
+                    txt=pgu_writen(info['genre'][:2]+str(nsum),FONTLIB["base"],graphic_chart['text_color_label'])
                 surf.blit(txt,(array(size)-txt.get_size())/2)
 
         return surf#px.make_surface()

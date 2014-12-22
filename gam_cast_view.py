@@ -338,7 +338,7 @@ class CastView(View):
         infos.update(actor.dft)
         infos.update(self.handler.get_info(actor))
         txt=infos['name']
-        hudtxt=Emote([txt],font=fonts["charaname"])
+        hudtxt=Emote([txt],font=FONTLIB["charaname"])
         hudtxt.actor=actor
         face=ResIcon(self,actor,'face')
         terr=ResIcon(self,actor,'terr')

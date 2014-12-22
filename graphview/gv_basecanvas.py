@@ -15,7 +15,8 @@ class BaseCanvasLayer(DataItem):
         'pos':{},
         'bound':None, #source of data for items in layer
         'parent':None, #parent layer
-        'children':[] #children layers
+        'children':[], #children layers
+        'blend_mode':None #Can be Add, Multiply or Normal
         }
     states=('idle','hidden','ghost','blur')
 
@@ -92,7 +93,6 @@ class BaseCanvasIcon(UI_Icon):
     sound=True
     draggable=True
     bounded=0 #limited to borders of canvas
-    hotspot={} #Anchor for bubbles and emotes
 
     def __init__(self,canvas,item):
         self.item=item
@@ -282,7 +282,6 @@ class BaseCanvasView(View):
         self.dirty=1
 
     def upd_layer(self,l=None):
-
         if l is None:
             for i in self.data.layers:
                 self.upd_layer(i)
@@ -862,6 +861,8 @@ class BaseCanvasHandler(Handler):
 
     def remove (self,item,layers,**kwargs):
         #remove
+        if not hasattr(layers,'__iter__'):
+            layers=[layers]
         view=self.view
         allayers=[l for l in self.layers if l.contains(item)]
         if set(allayers).issubset(set(layers) ):
@@ -928,11 +929,31 @@ class BaseCanvasEditor(BaseCanvasHandler):
             self.depend.add_dep(self,layer)
         return user.evt.do(AddEvt(layer,self.data,**kwargs))
 
+    def rem_layer(self,layer,**kwargs):
+        if not layer in self.data.layers:
+            return 0
+        remevt=AddEvt(layer,self.data,inverted=True,update=True,assess=True,**kwargs)
+        for s in layer.items:
+            self.remove(s,layer)
+        user.evt.do(remevt)
+        self.depend.rem_dep(self,layer)
+
     def bgmenu(self,*args,**kwargs):
         struct=()
         if not user.ui.view['layermenu'] :
             struct+=('Edit layers',lambda t=self: self.signal('layermenu',t) ),
         return struct
+
+    def layer_up(self,layer=None):
+        if layer is None:
+            layer = self.active_layer
+        llen=len(self.layers)
+        self.set_layer(layer,min(self.layers.index(layer)+1,llen) ,activate=False)
+
+    def layer_down(self,layer=None):
+        if layer is None:
+            layer = self.active_layer
+        self.set_layer(layer,max(self.layers.index(layer)-1,0) ,activate=False)
 
     def keymap(self,event,**kwargs):
         handled=False
@@ -944,10 +965,10 @@ class BaseCanvasEditor(BaseCanvasHandler):
         if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():
             if event.key==pg.K_PAGEUP:
                 llen=len(self.layers)
-                self.set_layer(self.active_layer,min(self.layers.index(self.active_layer)+1,llen) ,activate=False)
+                self.layer_up(self.active_layer)
                 handled=True
             elif event.key==pg.K_PAGEDOWN:
-                self.set_layer(self.active_layer,max(self.layers.index(self.active_layer)-1,0) ,activate=False)
+                self.layer_down(self.active_layer)
                 handled=True
 
         if event.key in (pg.K_UP,pg.K_DOWN,pg.K_LEFT,pg.K_RIGHT):

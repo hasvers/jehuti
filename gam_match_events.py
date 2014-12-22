@@ -174,26 +174,38 @@ class QueueEvt(MatchEvent):
         if not self.newbatch: #look for valid batch in match queue
             for evt in match.queue:
                 if evt.wrapper!=self and hasattr(evt.wrapper,'batch') and evt.wrapper.batch.actor==self.evt.actor:
-                    self.batch=evt=evt.wrapper.batch
+                    self.set_batch(evt.wrapper.batch)
+                    return True
         if not self.batch:
-            self.batch=evt=BatchEvt([],actor=self.evt.actor, affects=(match.data))
+            self.set_batch(None,match)
+            return True
         #self.states.node[2]['children_states'][evt]=1
         #self.states.node[1]['children_states'][evt]=0
         #self.states.node[0]['children_states'][evt]=0
 
         #user.evt.data.bind( (self,evt), {(self,evt):[(2,1),(1,0) ],(evt,self):[(1,2),(0,1) ] })
         #The version above is a double-bind, but now batch is the master so
-        user.evt.data.bind( (self,evt), {(evt,self):[ (0,1) ] })
-        evt.states.node[1]['children_states'][self]=2
-        evt.states.node[1]['priority'][self]=1
+
         #self.states.node[2]['priority'][evt]=-1
 
     def prep_uninit(self,*args,**kwargs):
+        self.rem_batch()
+
+    def rem_batch(self):
+        #In case I want to sever it from a batch
         evt=self.batch
         user.evt.data.unbind( (self,evt), {(evt,self):[ (0,1) ] })
         del evt.states.node[1]['children_states'][self]
         del evt.states.node[1]['priority'][self]
         self.batch=None
+
+    def set_batch(self,evt=None,match=None):
+        if evt is None:
+            evt=BatchEvt([],actor=self.evt.actor, affects=(match.data))
+        user.evt.data.bind( (self,evt), {(evt,self):[ (0,1) ] })
+        evt.states.node[1]['children_states'][self]=2
+        evt.states.node[1]['priority'][self]=1
+        self.batch=evt
 
 
 class NewReactEvt(MatchEvent):
@@ -692,12 +704,15 @@ class ConcedeEvt(MatchEvent):
 class ExploreEvt(MatchEvent):
     desc ='Explore'
     radius=None
+    dft={'actor':None,
+        'pos':None}
 
     def __init__(self,source,actor,cost=MatchRuleset.pondermin,**kwargs):
         MatchEvent.__init__(self,source,**kwargs)
         self.type='explore_evt'
         self.cost =cost
         self.actor=actor
+        self.pos=kwargs.get('pos',None)
 
 
     def __repr__(self):
@@ -705,7 +720,7 @@ class ExploreEvt(MatchEvent):
 
     def duplicate_of(self,evt):
         if self.type==evt.type and self.actor==evt.actor:
-            if self.kwargs.get('pos',None)==evt.kwargs.get('pos',None):
+            if self.pos==evt.pos:
                 return True
         return False
 
@@ -721,7 +736,7 @@ class ExploreEvt(MatchEvent):
             icon.rem_from_group(match.canvas.tools)
         else:
             icon.set_anim('appear',len=ANIM_LEN['med'])
-        pos= kwargs.get('pos',self.kwargs.get('pos',None))
+        pos= kwargs.get('pos',self.pos)
         if pos==None:
             pos = match.canvas.handler.mousepos()
         match.canvas.add(self,pos=pos,icon=icon)

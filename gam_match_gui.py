@@ -545,8 +545,10 @@ class TurnBox(Window):
         self.actor=self.add('text',pos=(0,1))
         self.timetxt=self.add('text',val='Time left:',pos=(1,0))
         self.time_left=self.add('gauge',val=1.,pos=(1,1),w=90)
-        self.perf=self.add('text',val='Perform',pos=(2,0),selectable=True,output_method=lambda :self.signal('perform_queue') )
-        self.finish=self.add('text',val='Finish',pos=(2,1),selectable=True,output_method=self.finish )
+        self.perf=self.add('text',val='Perform',pos=(2,0),selectable=True,
+            output_method=lambda :self.signal('perform_queue'),tip='Perform all actions.' )
+        self.finish=self.add('text',val='Finish',pos=(2,1),selectable=True,
+            output_method=self.finish ,tip='End turn.')
         self.refresh()
 
     def finish(self):
@@ -620,27 +622,46 @@ class ActionList(Window):
 
 
     def refresh(self):
+        self.clear()
         queue=self.parent.match.queue
-        l=[]
         if not queue:
             self.interface.hide(self.name)
             return False
+        v=0
+        self.namefield={}
+        self.okfield={}
+        self.cancelfield={}
         for evt in queue :
-            l.append((evt.desc ,(self.evt_click,evt) ) )#+': '+str(rftoint(evt.cost))
-        if not self.list:
-            self.list=self.add('list',val=l,active=True)
-        else :
-            self.list.set_list(l)
-        self.update()
-        return l
+            #Locate if click on name
+            if hasattr(evt,'item'):
+                tgt=evt.item
+            else:
+                tgt=evt.pos
+            meth=lambda t=tgt:self.parent.match.canvas.handler.center_on(t)
+            self.namefield[evt]=self.add('text',val=evt.desc, pos=(v,1),
+                selectable=1,output_method=meth)
+            self.add('blank',width=30, pos=(v,2))
+            #Perform
+            pmeth=lambda ee=evt:self.parent.match.perform_single(ee)
+            self.okfield[evt]= self.add('icon',val='ok',selectable=1,
+                 output_method=pmeth,pos=(v,3))
+            #Cancel
+            cmeth=lambda ee=evt:user.evt.undo(ee.wrapper)
+            self.cancelfield[evt]= self.add('icon',val='cancel', selectable=1,
+                output_method=cmeth, pos=(v,4))
 
-    def evt_click(self,evt):
-        struct=()
-        struct+=('Perform',self.parent.match.perform_queue ),
-        struct+=('Locate',lambda t=evt.item:self.parent.match.canvas.handler.center_on(t) ),
-        struct+=('Cancel',lambda e=evt:user.evt.undo(e.wrapper)),
-        self.list.unselect()
-        return self.parent.float_menu(struct,oneshot=1)
+            v+=1
+        return True
+
+
+    #def evt_click(self,evt):
+        #OBSOLETE
+        #struct=()
+        #struct+=('Perform',self.parent.match.perform_queue ),
+        #struct+=('Locate', ),
+        #struct+=('Cancel',lambda e=evt:user.evt.undo(e.wrapper)),
+        #self.list.unselect()
+        #return self.parent.float_menu(struct,oneshot=1)
 
 
 class GraphMenu(DragWindow):

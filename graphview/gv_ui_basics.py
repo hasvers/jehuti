@@ -1,4 +1,4 @@
-from gv_globals import *
+from gv_resources import *
 from gv_threadevents import *
 import gv_effects
 
