@@ -97,7 +97,7 @@ class BasicUI(UI_Widget):
         window=FloatMenu(self.screen,self,graphic_chart['float_base_size'],
             struct=struct,**kwargs)
         window.set_command('exit',lambda : self.close(window))
-        window.set_anim('appear',len=ANIM_LEN['instant'])
+        window.set_anim('grow_in',len=ANIM_LEN['instant'])
         for c in window.children:
             c.set_anim('appear',len=ANIM_LEN['short'])
         return  self.float_core(window,'floatmenu',**kwargs)

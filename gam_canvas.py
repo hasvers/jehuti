@@ -409,10 +409,10 @@ class MatchCanvasPlayer(MatchCanvasHandler):
             #print 'appear',id(evt), evt.data.name, evt,'\n'
             item=evt.item
             icon=self.canvas.icon[item]
-            #if item.type=='link':
-                #icon.set_anim('appear_in',len=ANIM_LEN['medlong'],direction=icon.angle/360*2*pi)
-            #else:
-            icon.set_anim('appear',len=ANIM_LEN['medlong'])
+            if item.type=='link':
+                icon.set_anim('appear',len=ANIM_LEN['medlong'])#,direction=icon.angle/360*2*pi)
+            else:
+                icon.set_anim('grow_in',len=ANIM_LEN['medlong'],anchor='center')
 
         if  'add' in evt.type or 'change' in evt.type and True in [x in evt.infos for x in ('logic','val')]:
             owner=evt.data.owner

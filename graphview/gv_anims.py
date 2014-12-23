@@ -31,6 +31,7 @@ class AnimationHandler(object):
         #self.time+=1
         self.done=[] #TODO: think of frequency for cleaning
         self.time=pg.time.get_ticks()
+        torun={}
         for anim in tuple(self.stack):
             if anim.states.node[0]['started'] is None:
                 anim.states.node[0]['started']=self.time
@@ -50,13 +51,17 @@ class AnimationHandler(object):
                     self.done.append(anim)
                     ready=False
                     break
-            if ready and not anim.run(st,time=self.time) and not anim.states.successors(st):
+            steps=anim.run(st,time=self.time)
+            if hasattr(steps,'__iter__'):
+                torun.setdefault(anim.item,[]).append(( steps,anim.states.node[st]['started'],anim.opts))
+            if ready and not steps and not anim.states.successors(st):
                 self.stack.remove(anim)
                 self.done.append(anim)
                 #anim.item.current_anim.remove(anim)
                 for affected in anim.affects:
                     if hasattr(affected,'react'):
                         affected.react(Event(anim,type='anim_stop'))
+        self.combine_anims(torun)
 
     def clear(self):
         self.stack=[]
@@ -77,6 +82,187 @@ class AnimationHandler(object):
         for affected in anim.affects:
             if hasattr(affected,'react'):
                 affected.react(Event(anim,type='anim_start'))
+
+    def easing(self,typ,frac):
+        t=frac
+        b,c,d=0.,1.,1. #for old expression of functions
+        if typ=='quad':
+            return easing.easeInOutQuad(t)
+        if typ=='bounce':
+            return easing.bounceEaseOut(t)
+        return frac
+
+    def combine_anims(self,torun):
+        '''Run animation steps from various animations together
+        when they apply to the same item.'''
+
+        for item in torun:
+            steps=[(s,started,opts) for (collec,started,opts) in torun[item]
+                for s in collec ]
+            self.combine_steps(item,steps)
+
+    def combine_steps(self,item,steps):
+        todo=[] #Additive effects
+        overrides=[] #Effects that change the image itself
+        time=self.time
+
+        #If the animations create a different image stored in the item
+        if 'anim' in item.images:
+            item.images['anim']
+
+
+        for elem in steps:
+            step,t1,animopts=elem
+
+            if step.opts.get('override',None):
+                overrides.append(step)
+                continue
+
+            #Prepare common arguments and easing
+            t=step.args
+            t2=step.duration
+            if t2:
+                tfrac=(float(time)-t1)/t2 #time fraction
+            else:
+                tfrac=0
+
+            if tfrac<0 or tfrac>1.:
+                continue
+            tfrac=self.easing(animopts.get('interpol','quad'),tfrac)
+
+            #Effect by genre
+            if step.genre=='hide':
+                todo.append( (0.,0.,0.,0.) )
+            elif step.genre=='sound':
+                if not step.done:
+                    user.ui.soundmaster.play(t[0],t[1])
+                    step.done=True
+            elif step.genre=='color':
+                todo.append( [i+float(j-i)*tfrac for i,j in zip(*t)] )
+            elif step.genre=='move':
+                ref=array(t[0])
+                td=[]
+                for i,j in zip(*t[1:]):
+                    frac=i+float(j-i)*tfrac
+                    if isinstance(i,float) or isinstance(j,float):
+                        frac*=item.rect.size[len(td)]
+                    td.append(int(frac))
+                todo.append( ref+ td )
+            elif step.genre=='osc':
+                ref=array(t[0])
+                td=[]
+                if t[1][0]=='sin' or t[1][0]=='rot':
+                    amp,puls,angle=t[1][1:]
+                    if isinstance(amp,float):
+                        amp*=item.rect.h#sum(self.rect.size*array(sin(angle),cos(angle) ))
+
+                    if t[1][0]=='rot':
+                        angle=tfrac*puls*t2
+                        val=amp
+                    else:
+                        val= amp*sin(puls*time-t1)
+                    td=array((int(val*sin(angle)),int(val*cos(angle))))
+                todo.append( ref+ td )
+            elif step.genre=='blur_in':
+                item.set_state('blur')
+                dft=graphic_chart['default_blur_mode']
+                item.blur_mode=(rint(dft[0]*(1-tfrac)), )+tuple(dft[1:])
+                if tfrac>.95:
+                    item.rm_state('blur')
+
+        #Colormod and movement
+        if hasattr(item,'alpha'):
+            albase=item.alpha/255.
+        else:
+            albase=1.
+        anim_mod=array((1.,1.,1.,albase))
+        for t in todo:
+            #if item.special_anim(t):
+                #continue
+            try:
+                if len(t)==4:
+                    # Color
+                    anim_mod*=array(t,dtype=float)
+                elif len(t)==2:
+                    #Movement
+                    if hasattr(item.parent,'pos'):
+                        item.parent.pos[item]=array(t)
+                    else:
+                        item.rect.center=array(t)
+            except:
+                pass
+
+        #Repaint item
+        item.set_anim_mod(anim_mod)
+        item.set_state('anim',True,recursive=True,invisible=True)
+
+        #Overrides (combinations may break)
+        for step in overrides:
+            #compute tfrac again (sad boilerplate is sad)
+            t=step.args
+            t2=step.duration
+            if t2:
+                tfrac=(float(time)-t1)/t2 #time fraction
+            else:
+                tfrac=0
+            if tfrac<0 or tfrac>1.:
+                continue
+            tfrac=self.easing(animopts.get('interpol','quad'),tfrac)
+            if animopts.get('inverted',False):
+                tfrac=1.-tfrac
+            #Effects
+            if step.genre=='roll_in':
+                rect=item.image.get_rect()
+                img=item.image.copy()
+                if not item.per_pixel_alpha:
+                    img.set_alpha(255)
+                    item.image.fill( COLORKEY )
+                else:
+                    item.image.fill( (0,0,0,0) )
+                drc=step.args[0]
+                item.image.blit(img,(rect.w*(tfrac-1)*cos(drc),-rect.h*(tfrac-1)*sin(drc)) )
+                item.images['anim']=item.image
+            elif step.genre=='grow_in':
+                rect=item.image.get_rect()
+                img=item.image.copy()
+                if not item.per_pixel_alpha:
+                    #alp=img.get_alpha()
+                    item.image.set_alpha(255)
+                    img.set_alpha(255)
+                    item.image.fill( COLORKEY )
+                else:
+                    #alp=None
+                    item.image.fill( (0,0,0,0) )
+                img=pg.transform.scale(img, (tfrac*array(rect.size)).astype('int') )
+                anchor=step.args[0]
+                if anchor=='center':
+                    pos=array(rect.center)-img.get_rect().center
+                elif not isinstance(anchor,basestring):
+                    pos=anchor
+                else:
+                    pos=(0,0)
+                item.image.blit(img,pos )
+                item.images['anim']=item.image
+                #if tfrac>.25 and alp:
+                    #item.image.set_alpha(alp)
+            elif step.genre=='appear_in':
+                #TODO: Incomplete
+                rec=item.image.get_rect()
+                drc=step.args[0]
+                axis=array((cos(drc),-sin(drc)))
+                stop=rec.center+axis * max(rec.size)/2
+                start=rec.center+axis * max(rec.size)*(-1./2+tfrac)
+                if max(stop-start)<2:
+                    continue
+                if item.per_pixel_alpha:
+                    print item
+                    gradients.draw_gradient(item.image ,start,stop,
+                     (255,255,255,255),(255,255,255,0),mode=pg.BLEND_MULT )
+                else:
+                    gradients.draw_gradient(item.image ,start,stop,COLORKEY,COLORKEY)
+                item.images['anim']=item.image
+        if hasattr(item.parent,'dirty'):
+            item.parent.dirty=1
 
 class Animation(TimedEvent):
     perpetual=False
@@ -178,7 +364,8 @@ class Animation(TimedEvent):
                 tmpstep+=self.schedule(anim='appear',len=length/4,hold=True)
                 tmpstep+=self.schedule(anim='sound',len=1,val='jump',hold=True)
                 remlen=length-length/2-length/4 #integer division problems
-                return self.schedule(anim='disappear',len=remlen,delay=3*length/4,steps=tmpstep)
+                return self.schedule(anim='disappear',len=remlen,delay=3*length/4,
+                    steps=tmpstep,stop_at=length)
             elif 'oscil' in anim:
                 length=kwargs.get('len',800)
                 amp=kwargs.get('amp',.1)
@@ -192,6 +379,13 @@ class Animation(TimedEvent):
             elif anim=='roll_in':
                 length=kwargs.get('len',1200)
                 st=self.Step('roll_in',kwargs.get('direction',0),override=True )
+            elif anim=='grow_in':
+                length=kwargs.get('len',1200)
+                st=self.Step('grow_in',kwargs.get('anchor','topleft'),override=True )
+                steps+=[(time,length,st)]
+            elif anim=='shrink_out':
+                length=kwargs.get('len',1200)
+                st=self.Step('grow_in',kwargs.get('anchor','topleft'),inverted=True,override=True )
                 steps+=[(time,length,st)]
             elif anim=='appear_in':
                 print('TODO: Animation appear_in not working yet')
@@ -209,7 +403,7 @@ class Animation(TimedEvent):
             #Don't finish scheduling just yet, instead pass step list to caller
             return steps
 
-        steps.append( (length+1,0,self.Step("stop") ))
+        steps.append( (kwargs.get('stop_at',length+1),0,self.Step("stop") ))
         states=[1]
         times=[0]
         state=1
@@ -256,164 +450,34 @@ class Animation(TimedEvent):
                 self.item.set_anim_mod((0,0,0,0))
         return TimedEvent.prepare(self,edge,*args,**kwargs)
 
-    def easing(self,typ,frac):
-        t=frac
-        b,c,d=0.,1.,1.
-        if typ=='quad':
-            return easing.easeInOutQuad(t,b,c,d)
-        return frac
-
-
     def run(self,state,**kwargs):
+        '''Simply returns the list of steps to execute and
+        record states when they start.'''
         time=kwargs.get('time',None)
-        todo=[] #Additive effects
-        overrides=[] #Effects that change the image itself
+        if time is None:
+            time=pg.time.get_ticks()
 
         #If the animations create a different image stored in the item
         if 'anim' in self.item.images:
             del self.item.images['anim']
 
         for step in self.steps[state]:
-
             #Abnormal steps
             if step is None or step.genre=='start':
+                #print 'start', time, self
                 self.item.set_state('anim',True)
                 return True
             if step.genre=='stop':
+                #print 'stop', time,self
                 self.item.rm_state('anim')
                 return False
 
-            if step.opts.get('override',None):
-                overrides.append(step)
-                continue
-
-            #Prepare common arguments and easing
-            t=step.args
+            #TODO: put this out of the loop
             t1=self.states.node[state]['started']
             if t1 is None:
                 t1=self.states.node[state]['started']=time
-            t2=step.duration
-            if t2:
-                tfrac=(float(time)-t1)/t2 #time fraction
-            else:
-                tfrac=0
 
-            if tfrac<0 or tfrac>1.:
-                continue
-            tfrac=self.easing(self.opts.get('interpol','quad'),tfrac)
-
-            #Effect by genre
-            if step.genre=='hide':
-                todo.append( (0.,0.,0.,0.) )
-            elif step.genre=='sound':
-                if not step.done:
-                    user.ui.soundmaster.play(t[0],t[1])
-                    step.done=True
-            elif step.genre=='color':
-                todo.append( [i+float(j-i)*tfrac for i,j in zip(*t)] )
-            elif step.genre=='move':
-                ref=array(t[0])
-                td=[]
-                for i,j in zip(*t[1:]):
-                    frac=i+float(j-i)*tfrac
-                    if isinstance(i,float) or isinstance(j,float):
-                        frac*=self.item.rect.size[len(td)]
-                    td.append(int(frac))
-                todo.append( ref+ td )
-            elif step.genre=='osc':
-                ref=array(t[0])
-                td=[]
-                if t[1][0]=='sin' or t[1][0]=='rot':
-                    amp,puls,angle=t[1][1:]
-                    if isinstance(amp,float):
-                        amp*=self.item.rect.h#sum(self.rect.size*array(sin(angle),cos(angle) ))
-
-                    if t[1][0]=='rot':
-                        angle=tfrac*puls*t2
-                        val=amp
-                    else:
-                        val= amp*sin(puls*time-t1)
-                    td=array((int(val*sin(angle)),int(val*cos(angle))))
-                todo.append( ref+ td )
-            elif step.genre=='blur_in':
-                self.item.set_state('blur')
-                dft=graphic_chart['default_blur_mode']
-                self.item.blur_mode=(rint(dft[0]*(1-tfrac)), )+tuple(dft[1:])
-                if tfrac>.95:
-                    self.item.rm_state('blur')
-
-        #Colormod and movement
-        if hasattr(self.item,'alpha'):
-            albase=self.item.alpha/255.
-        else:
-            albase=1.
-        anim_mod=array((1.,1.,1.,albase))
-        for t in todo:
-            #if self.item.special_anim(t):
-                #continue
-            try:
-                if len(t)==4:
-                    # Color
-                    anim_mod*=array(t,dtype=float)
-                elif len(t)==2:
-                    #Movement
-                    if hasattr(self.item.parent,'pos'):
-                        self.item.parent.pos[self.item]=array(t)
-                    else:
-                        self.item.rect.center=array(t)
-            except:
-                pass
-
-        #Repaint item
-        self.item.set_anim_mod(anim_mod)
-        self.item.set_state('anim',True,recursive=True,invisible=True)
-
-        #Overrides (combinations may break)
-        for step in overrides:
-            #compute tfrac again (sad boilerplate is sad)
-            t=step.args
-            t1=self.states.node[state]['started']
-            if t1 is None:
-                t1=self.states.node[state]['started']=time
-            t2=step.duration
-            if t2:
-                tfrac=(float(time)-t1)/t2 #time fraction
-            else:
-                tfrac=0
-            if tfrac<0 or tfrac>1.:
-                continue
-            tfrac=self.easing(self.opts.get('interpol','quad'),tfrac)
-
-            #Effects
-            if step.genre=='roll_in':
-                rect=self.item.image.get_rect()
-                img=self.item.image.copy()
-                if not self.item.per_pixel_alpha:
-                    img.set_alpha(255)
-                    self.item.image.fill( COLORKEY )
-                else:
-                    self.item.image.fill( (0,0,0,0) )
-                drc=step.args[0]
-                self.item.image.blit(img,(rect.w*(tfrac-1)*cos(drc),-rect.h*(tfrac-1)*sin(drc)) )
-                self.item.images['anim']=self.item.image
-            elif step.genre=='appear_in':
-                rec=self.item.image.get_rect()
-                drc=step.args[0]
-                axis=array((cos(drc),-sin(drc)))
-                stop=rec.center+axis * max(rec.size)/2
-                start=rec.center+axis * max(rec.size)*(-1./2+tfrac)
-                if max(stop-start)<2:
-                    continue
-                if self.item.per_pixel_alpha:
-                    print self.item
-                    gradients.draw_gradient(self.item.image ,start,stop,
-                     (255,255,255,255),(255,255,255,0),mode=pg.BLEND_MULT )
-                else:
-                    gradients.draw_gradient(self.item.image ,start,stop,COLORKEY,COLORKEY)
-                self.item.images['anim']=self.item.image
-        if hasattr(self.item.parent,'dirty'):
-            self.item.parent.dirty=1
-        return True
+        return self.steps[state]
 
 
 class Anim_Item(UI_Item):
