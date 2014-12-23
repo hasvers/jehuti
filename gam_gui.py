@@ -309,6 +309,7 @@ class GameUI(BasicUI):
         else:
             first=self.game.data.first
         self.goto(first)
+        self.launched=True
 
     def dataload(self,item):
         fname='{}{}'.format(database[item.genre+'_path'],item.data)

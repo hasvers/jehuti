@@ -7,8 +7,10 @@ from gv_audio import *
 
 class BasicUI(UI_Widget):
     name='basicUI'
+
     def __init__(self,screen,**kwargs):
         self.bg=kwargs.pop('bg',None)
+        self.launched=False #switch to true when the UI is fully operational
         template=kwargs.pop('template',ergonomy)
         if not hasattr(self,'soundmaster'):
             self.soundmaster = kwargs.pop('soundmaster',BasicSM(self))
@@ -49,6 +51,7 @@ class BasicUI(UI_Widget):
         self.stack=user.evt.stack
         self.undo_stack=user.evt.undo_stack
         self.make_dependencies()
+        self.launched=True
 
     def make_dependencies(self):
         self.depend.clear()

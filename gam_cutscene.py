@@ -392,6 +392,7 @@ class CutsceneUI(BasicUI,SceneUI):
     def launch(self):
         self.make_dependencies()
         self.scene.start_scene()
+        self.launched=True
 
     @property
     def components(self):

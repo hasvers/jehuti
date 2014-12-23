@@ -258,6 +258,29 @@ class MatchNodeIcon(NodeIcon):
         self.add_child(em)
         em.add_to_group(self.parent.tools)
 
+    def set_state(self,state,*args,**kwargs):
+        if NodeIcon.set_state(self,state,*args,**kwargs):
+            self.state_change()
+            return True
+        return False
+
+    def state_change(self):
+        pass
+        #BAD IDEA: Impossible to hover over the effects
+        #if not self.is_hovering:
+            #for em in self.effects.values():
+                #em.rem_from_group(self.parent.group)
+        #else:
+            #for em in self.effects.values():
+                #em.add_to_group(self.parent.group)
+        #if self.effects:
+            #self.parent.dirty=1
+
+    def rm_state(self,state,*args,**kwargs):
+        if NodeIcon.rm_state(self,state,*args,**kwargs):
+            self.state_change()
+            return True
+        return False
 
 
 def load_icon(typ,**kwargs):

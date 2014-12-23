@@ -249,17 +249,34 @@ class AnimationHandler(object):
                 #TODO: Incomplete
                 rec=item.image.get_rect()
                 drc=step.args[0]
-                axis=array((cos(drc),-sin(drc)))
-                stop=rec.center+axis * max(rec.size)/2
-                start=rec.center+axis * max(rec.size)*(-1./2+tfrac)
+                if item.per_pixel_alpha:
+                    axis=array((cos(drc),-sin(drc)))
+                    stop=rec.center+axis * max(rec.size)/2
+                    start=rec.center+axis * max(rec.size)*(-1./2+tfrac)
+                else:
+                    drc=rint(drc/pi *2 ) #0,1,2,3
+                    if drc==0:
+                        start,stop=(0,0),(tfrac*rec.w,rec.h)
+                    elif drc==1:
+                        start,stop=(0,rec.h*(1-tfrac)),(rec.w,rec.h*tfrac)
+                    elif drc==2:
+                        start,stop=(rec.w*(1-tfrac),rec.h),(tfrac*rec.w,rec.h)
+                    elif drc==3:
+                        start,stop=(0,0),(rec.w,tfrac*rec.h)
+                    start=array(start)
                 if max(stop-start)<2:
                     continue
                 if item.per_pixel_alpha:
-                    print item
                     gradients.draw_gradient(item.image ,start,stop,
                      (255,255,255,255),(255,255,255,0),mode=pg.BLEND_MULT )
                 else:
-                    gradients.draw_gradient(item.image ,start,stop,COLORKEY,COLORKEY)
+                    rect=pg.rect.Rect(start,stop)
+                    img=item.image.copy()
+                    item.image.set_alpha(255)
+                    img.set_alpha(255)
+                    item.image.fill( COLORKEY )
+                    item.image.blit(img,rect,rect )
+
                 item.images['anim']=item.image
         if hasattr(item.parent,'dirty'):
             item.parent.dirty=1

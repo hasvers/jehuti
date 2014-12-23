@@ -196,8 +196,9 @@ class Window(FieldContainer):
         if not hasattr(struct,'__iter__'):
             struct=struct()
         self.parent.float_menu(struct,ephemeral=False)
-        #print anchor
-        #me.rect.topleft = anchor.rect.bottomleft
+        print anchor
+        self.parent.window['floatmenu'].rect.topleft = anchor.rect.midbottom
+        self.parent.window['floatmenu'].draggable=False
 
     def resize(self,(w,h),*args,**kwargs):
         oldsize=self.size

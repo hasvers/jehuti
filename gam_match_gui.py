@@ -347,6 +347,7 @@ class MatchUI(BasicUI,SceneUI):
     def launch(self):
         self.make_dependencies()
         self.match.start_match()
+        self.launched=True
         #self.subgraph_view()
     @property
     def components(self):
@@ -614,11 +615,18 @@ class ActionList(Window):
             self.interface.hide(self.name)
         elif 'queue' in sgn:
             n=self.name
-            w=self.refresh()
+            w=self.parent.match.queue
             if not self.interface.view[n] and w :
                 self.interface.show(n)
+                self.set_anim('appear',len=ANIM_LEN['short'])
             if self.interface.view[n] and not w:
-                self.interface.hide(n)
+                if self.interface.launched:
+                    self.set_anim('disappear',len=ANIM_LEN['short'],affects=[self])
+                else:
+                    self.interface.hide(n)
+        if 'anim_stop' == sgn:
+            if evt.args[0].anim=='disappear':
+                self.interface.hide(self.name)
 
 
     def refresh(self):

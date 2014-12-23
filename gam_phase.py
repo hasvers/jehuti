@@ -4,8 +4,13 @@ from gam_match_script import *
 
 
 class PhaseHandler(object):
-    '''Interface of EventCommander that deals with timed events
-    and scripts.'''
+    '''Interface of local EventCommander that deals with timed events
+    and scripts.
+        Attributes:
+            time: internal time
+            timeline: when has which state of which script been started
+            calls: graph of calls between scripts
+            '''
 
 
     time=0 #internal time
@@ -51,11 +56,13 @@ class PhaseHandler(object):
         self.calls.add_edge(caller,called)
 
     def freeze(self):
+        '''While frozen, the handler does not advance.'''
         self.frozen=1
     def unfreeze(self):
         self.frozen=0
 
     def clear_phase(self):
+        '''Bring all scripts back to starting point.'''
         cleared=[]
         #for d in self.done:
             #print d,d.item,d.effects
@@ -68,6 +75,9 @@ class PhaseHandler(object):
 
 
     def parse_text(self,txt):
+        '''Balloon text parser for separating into balloons and
+        dealing with multiple choice questions.'''
+        #Yet to do: automatically cut according to text length.
         parsed=[]
         if isinstance(txt,list) or isinstance(txt,tuple):
             #if input provided as a sequence, join the parsed texts
@@ -149,12 +159,8 @@ class PhaseHandler(object):
         user.ui.make_balloon(txt,**kwargs)
 
 
-    def add_threadevt(self,tdevt):
-        '''Obsolete!'''
-        print 'Obsolete use of add_threadevt by',debug.caller_name()
-        self.add_phase(tdevt)
-
     def add_phase(self,phase):
+        '''Add a script or script-like entity to the list and schedule it.'''
         #print '++ Adding',phase, debug.caller_name()
         if not phase in self.stack and not phase in self.done:
             self.stack.append(phase)
@@ -163,8 +169,17 @@ class PhaseHandler(object):
             #print phase.states.node[1]
             self.timeline.setdefault(self.time,set([])).add((phase,phase.state) )
 
+    def skip_to(self,phase):
+        '''Drop everything that is running and run phase.
+        May still be glitchy.'''
+        self.evt.moving[:]=[]
+        self.done+=self.stack
+        self.stack[:]=[]
+
 
     def next_phase(self,**kwargs):
+        '''Force going to the next phase even if there is a blocking event
+        (e.g. waiting for player input or interaction).'''
         #print 'Next phase', debug.caller_name(), [(s,s.state) for s in self.stack]
         kwargs['pass_block']=True
         for e in self.stack:
@@ -176,6 +191,10 @@ class PhaseHandler(object):
         #self.evt.paused=True
 
     def advance_phase(self,**kwargs):
+        '''Advance all currently running scripts.
+        Keywords:
+            pass_block=False: by de fault, do not pass blocking events.
+        '''
         if user.paused or self.frozen:
             return 0
         thread_blocked=[]

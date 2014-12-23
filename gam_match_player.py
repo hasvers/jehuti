@@ -521,30 +521,35 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                 elif sarg[0]!=self.active_player:
                     self.toggle_subgraph(sarg[0])
             if self.canvas in evt.affects():
+                #Select node or link
                 if not 'unselect' in sgn and sarg[0] :
+                    #Possible claim
                     item = sarg[0].item
-                    if database['demo_mode']:
-                        #prevent selecting node alone
-                        if item.type=='node':
-                            cand=[]
-                            for l in self.canvas.active_graph.links[item]:
-                                oth=[n for n in l.parents if n!= item][0]
-                                if  self.canvas.get_info(oth,'claimed'):
-                                    cand.append((self.canvas.get_info(oth,'lastmention'),l))
-                            if cand:
-                                cand=sorted(cand,key=lambda e:e[0])[-1]
-                                item=cand[1]
                     if  self.canvas.get_info(item,'claimed'):
                         return False
                     if self.time_left<0 and not database['allow_overtime']:
                         user.set_mouseover('No time',ephemeral=1,color='r')
                         self.parent.soundmaster.play('cancel')
                         return False
+
+                    #In case the game rules require to claim multiple items together
+                    otherclaims=list(self.ruleset.claim_together(item,self))
+                    for o in tuple(otherclaims):
+                        if item in o.required:
+                            #If another claimer (e.g. link) will contain item claim
+                            otherclaims.append(item)
+                            otherclaims.remove(o)
+                            item=o
+
                     evt.add_state(2,pred=1)
                     nevt = ClaimEvt(sgn, self.active_player,item)
-                    cevt=QueueEvt(nevt,self.data)
-                    cevt.cues[0]="destroy"
-                    user.evt.data.bind( ( evt,cevt) )
+                    qevt=QueueEvt(nevt,self.data)
+                    qevt.cues[0]="destroy"
+                    user.evt.data.bind( ( evt,qevt) )
+                    for o in otherclaims:
+                        nevt = ClaimEvt(sgn, self.active_player,o)
+                        oevt=QueueEvt(nevt,self.data)
+                        user.evt.data.bind( ( qevt,oevt) )
                     return True
 
         if 'ponder' in sgn:

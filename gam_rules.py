@@ -119,7 +119,6 @@ class MatchRuleset(LogicRuleset):
         return base
 
 
-
 #Match setting creation
 
     def actor_should_know(self,actor,item):
@@ -264,6 +263,45 @@ class MatchRuleset(LogicRuleset):
 # Actions
 
 
+    def claim_together(self,item,match,**kwargs):
+        '''Rules for which items should automatically be claimed together
+        with item. Possible choices include:
+            - links together with node
+                - all of them
+                - only those that agree, else none
+                - preferably those that agree
+                - the last mentioned'''
+
+        option=kwargs.get('option',
+            ['none','all','only_agree','pref_agree','last'][-1])
+        if option=='none':
+            return []
+        canvas=match.canvas
+        prev_cand=kwargs.get('prev_cand', set())  #for recursive cases
+        cand=[]
+        if item.type=='node':
+            for l in canvas.active_graph.links[item]:
+                oth=[n for n in l.parents if n!= item][0]
+                if canvas.get_info(oth,'claimed'):
+                    cand.append(l)
+
+            if 'agree' in option:
+                itruth=canvas.get_info(item,'truth')
+                agree=[l for l in cand if l.type=='link' and
+                        self.logic.link_effect_from_target(itruth,
+                            canvas.get_info(l,'logic')) ]
+                if 'only' in option or agree:
+                    cand=agree
+        if option=='last':
+            #Last candidate only
+            cand=sorted(cand,key=lambda e:canvas.get_info(e,'lastmention'))[-1:]
+        #Recursive
+        cand=set(cand)
+        if cand==prev_cand:
+            return cand
+        kwargs['prev_cand']=cand
+        cand=set([z for c in cand if c!=item for z in self.claim_together(item,match,**kwargs) ])
+        return prev_cand.union(cand)
 
     def claim_cost(self,item,item_infos,actor_infos):
         #Speech time cost for a claim

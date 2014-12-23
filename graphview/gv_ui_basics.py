@@ -532,6 +532,12 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
 
 
     def set_anim(self,anim,**kwargs):
+        try:
+            user.ui.anim.add_anim
+        except:
+            #Tried to set an animation before the gui was set up
+            return False
+
         for c in [self]+self.children:
             if not 'anim' in c.modimg:
                 c.modimg+='anim',
