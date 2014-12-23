@@ -812,15 +812,11 @@ class MatchPlayer(MatchHandler,PhaseHandler):
         '''Perform the whole queue.'''
         batches=[]
         for evt in self.queue:
-            #print evt,evt.wrapper
-            #user.evt.do(evt.wrapper, self,2)
-
             if not evt.wrapper.batch in batches:
                 batches.append(evt.wrapper.batch)
 
         for batch in batches:
             self.perform_batch(batch)
-
         self.canvas.handler.unselect()
         self.signal('perform_queue')
 

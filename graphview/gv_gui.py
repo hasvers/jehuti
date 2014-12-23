@@ -596,7 +596,8 @@ class BasicSM(SoundMaster):
         if 'loading' in sgn and evt.state==1:
             self.play('load')
         elif 'sound' in evt.kwargs :
-            self.play(evt.kwargs['sound'])
+            if evt.kwargs['sound'] !='anim':
+                self.play(evt.kwargs['sound'])
         elif 'return' in sgn:
             user.music.stop()
         return True

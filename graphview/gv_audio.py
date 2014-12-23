@@ -1,8 +1,23 @@
 # -*- coding: utf-8 -*-
 from gv_globals import *
+from gv_resources import ResourceLibrary
 import sfml
 from multiprocessing import Process
 #import scikits.audiolab as al #for array manipulation
+
+
+class AudioLibrary(ResourceLibrary):
+    '''Temporarily, only stocks the path to sounds.
+    In the future, may stock the sounds themselves'''
+    def load_defs(self,fname):
+        for line in fopen(database['basepath']+fname):
+            l=line.split()
+            if len(l)>1:
+                self.buffer[l[0]]=l[1]
+
+
+sound_bank=AudioLibrary()
+sound_bank.load_defs('sound_bank.ini')
 
 class MixerSubstitute(object):
     '''Alternative to pygame's mixer in which the outgoing
@@ -181,13 +196,15 @@ class SoundMaster(object):
         SoundMaster.SMid+=1
         if channel>pg.mixer.get_num_channels():
             raise Exception('Not enough audio channels')
+
     def play(self,snd,vol=None, **kwargs):
         if self.mute:
             return
         if not snd in sound_bank:
             return False
         kwargs.setdefault('volume',self.defaultvol)
-        self.mixer.play_sound(database['sound_path']+'{}.wav'.format(snd), **kwargs)
+        #self.mixer.play_sound(database['sound_path']+'{}.wav'.format(snd), **kwargs)
+        self.mixer.play_sound(database['sound_path']+sound_bank[snd], **kwargs)
         return
         #PURE PYGAME IMPLEMENTATION
         #loop=kwargs.get('loop',0)
@@ -305,3 +322,4 @@ class MusicMaster(object):
             else:
                 self.mixer.permanent.play()
             self.mute=0
+

@@ -3,7 +3,7 @@ from gv_globals import *
 
 class ResourceLibrary(object):
     '''Base class for objects that handle loading and caching
-    of external resources (for now graphics, in the future sound too)'''
+    of external resources (graphics,sound).'''
 
     typ=None #Type of resource that has a well defined path in database
     folder='' #Subfolder specific to this library within folder for resource type
@@ -38,6 +38,10 @@ class ResourceLibrary(object):
                 if name == n.split('.')[0]: #drop extension
                     return self.buffer[n]
         raise Exception('Resource not found: {}'.format(name))
+
+    def __contains__(self,name):
+        return name in self.buffer
+
 
 class IconLibrary(ResourceLibrary):
 

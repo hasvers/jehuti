@@ -379,64 +379,73 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
                 key=itemgetter(1),reverse=1)[0]
             self.base_image=self.images[state]
 
-        if self.per_pixel_alpha:
-            try:
-                image=self.base_image.convert_alpha()
-            except:
-                image=self.images['idle'].convert_alpha()
-        else:
-            try:
-                surf=self.base_image
-            except:
-                surf=self.images['idle']
-            image=pgsurface.Surface(surf.get_rect().size,pg.SRCALPHA)
-            image.blit(surf,(0,0))
 
         mod=array((1.,1.,1.,1.))
+        grayed=False
         for i in self.modimg:
             if self.states[i]:
                 j=self.color_mod(i)
                 if j=='grayed':
-                    image=convert_to_greyscale(image)
+                    grayed=True
                 else:
                     mod *= array(j)
 
-        if not self.per_pixel_alpha:
-            useflag=pg.BLEND_MULT
-            modalp=mod[3]
-            mod=mod[:3]
-        else:
-            useflag=pg.BLEND_RGBA_MULT
-
-        if not (mod==tuple(1. for i in mod ) ).all():
-            excess=tuple(max(0.,i-1.) for i in mod)
-            if excess!=(0,0,0,0):
-                img=image.copy()
-                img.fill(tuple(min(255,int(i*255)) for i in excess),None,useflag)
-            else :
-                img = None
-            image.fill(tuple(min(255,int(i*255)) for i in mod),None,useflag)
-            if img:
-                image.blit(img,(0,0),None,pg.BLEND_RGB_ADD)
-
-        if not self.per_pixel_alpha:
-            surf=surf.convert()
-            surf.fill(COLORKEY)
-            surf.blit(image,(0,0))
-            image=surf
-            image.set_colorkey(COLORKEY)
-            if self.alpha:
-                basalp=self.alpha
+        #Create a new surface only if something has changed
+        if grayed or not (mod==tuple(1. for i in mod ) ).all():
+            if self.per_pixel_alpha:
+                try:
+                    image=self.base_image.convert_alpha()
+                except:
+                    image=self.images['idle'].convert_alpha()
             else:
-                basalp=255
-            image.set_alpha(rint(modalp*basalp),pg.RLEACCEL)
+                try:
+                    surf=self.base_image
+                except:
+                    surf=self.images['idle']
+                image=pgsurface.Surface(surf.get_rect().size,pg.SRCALPHA)
+                image.blit(surf,(0,0))
+            if grayed:
+                image=convert_to_greyscale(image)
 
-            #try:
-                #if self.alpha and not self.states['anim']:
-                    #image.set_alpha(self.alpha,pg.RLEACCEL)
-            #except:
-                #pass
+            #Separate the mod into alpha and color if necessary
+            if not self.per_pixel_alpha:
+                useflag=pg.BLEND_MULT
+                modalp=mod[3]
+                mod=mod[:3]
+            else:
+                useflag=pg.BLEND_RGBA_MULT
 
+            #RGB/RGBA component
+            if not (mod==tuple(1. for i in mod ) ).all():
+                excess=tuple(max(0.,i-1.) for i in mod)
+                if excess!=(0,0,0,0):
+                    img=image.copy()
+                    img.fill(tuple(min(255,int(i*255)) for i in excess),None,useflag)
+                else :
+                    img = None
+                image.fill(tuple(min(255,int(i*255)) for i in mod),None,useflag)
+                if img:
+                    image.blit(img,(0,0),None,pg.BLEND_RGB_ADD)
+
+            #Surface alpha
+            if not self.per_pixel_alpha and modalp!=1:
+                surf=surf.convert()
+                surf.fill(COLORKEY)
+                surf.blit(image,(0,0))
+                image=surf
+                image.set_colorkey(COLORKEY)
+                if self.alpha:
+                    basalp=self.alpha
+                else:
+                    basalp=255
+                image.set_alpha(rint(modalp*basalp),pg.RLEACCEL)
+        else:
+            try:
+                image=self.base_image.copy()
+            except:
+                image=self.images['idle'].copy()
+            if  not self.per_pixel_alpha and self.alpha:
+                image.set_alpha(self.alpha,pg.RLEACCEL)
         if self.states.get('blur',None):
             gv_effects.make_blur(image,self.blur_mode)
         self.image=image

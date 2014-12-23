@@ -101,6 +101,7 @@ class Animation(TimedEvent):
             self.genre=genre
             self.args=args
             self.opts=kwargs
+            self.done=False #only useful for sounds and other punctual events
         def __repr__(self):
             return 'Step {} {}'.format(self.genre,self.args)
 
@@ -165,13 +166,19 @@ class Animation(TimedEvent):
                 amp=kwargs.get('amp',.4)
                 st=self.Step('move',refpos,(0,0),(0,amp))
                 steps+=[(time,length,st)]
+            elif anim=='sound':
+                length=kwargs.get('len',1200)
+                vol=kwargs.get('vol',None) #volume
+                val=kwargs.get('val',None) #sound name
+                steps+=[(time,length,self.Step('sound',val,vol))]
             elif anim=='emote_jump':
                 length=float(kwargs.get('len',2500))
                 amp=kwargs.get('amp',-20)
                 tmpstep=self.schedule(anim='jump',len=length/2,amp=amp,pos=refpos,hold=True)
                 tmpstep+=self.schedule(anim='appear',len=length/4,hold=True)
+                tmpstep+=self.schedule(anim='sound',len=1,val='jump',hold=True)
                 remlen=length-length/2-length/4 #integer division problems
-                self.schedule(anim='disappear',len=remlen,delay=3*length/4,steps=tmpstep)
+                return self.schedule(anim='disappear',len=remlen,delay=3*length/4,steps=tmpstep)
             elif 'oscil' in anim:
                 length=kwargs.get('len',800)
                 amp=kwargs.get('amp',.1)
@@ -184,14 +191,19 @@ class Animation(TimedEvent):
                 steps +=[ (time,length,st1) ,(time+length,1,st2) ]
             elif anim=='roll_in':
                 length=kwargs.get('len',1200)
-                st=self.Step('roll_in',self.item.image,kwargs.get('direction','right') )
+                st=self.Step('roll_in',kwargs.get('direction',0),override=True )
+                steps+=[(time,length,st)]
+            elif anim=='appear_in':
+                print('TODO: Animation appear_in not working yet')
+                length=kwargs.get('len',1200)
+                st=self.Step('appear_in',kwargs.get('direction',0),override=True )
                 steps+=[(time,length,st)]
             elif anim=='blur_in':
                 length=kwargs.get('len',1200)
                 st=self.Step('blur_in' )
                 steps+=[(time,length,st)]
             else:
-                print 'ERROR: Unrecognized animation key:',anim
+                raise Exception( 'ERROR: Unrecognized animation key:',anim)
 
         if kwargs.get('hold',False):
             #Don't finish scheduling just yet, instead pass step list to caller
@@ -227,7 +239,7 @@ class Animation(TimedEvent):
             self.add_state(states[i],pred=pred)
             self.steps.setdefault(s,[])
             for e in starting:
-                if starting[e]<=times[i]<=ending[e]:
+                if starting[e]<=times[i] and (ending[e]==starting[e] or times[i]<ending[e]):
                     self.steps[s].append(e)
             stat=self.states.node[s]
             stat['time']=times[i]
@@ -254,8 +266,16 @@ class Animation(TimedEvent):
 
     def run(self,state,**kwargs):
         time=kwargs.get('time',None)
-        todo=[]
+        todo=[] #Additive effects
+        overrides=[] #Effects that change the image itself
+
+        #If the animations create a different image stored in the item
+        if 'anim' in self.item.images:
+            del self.item.images['anim']
+
         for step in self.steps[state]:
+
+            #Abnormal steps
             if step is None or step.genre=='start':
                 self.item.set_state('anim',True)
                 return True
@@ -263,19 +283,32 @@ class Animation(TimedEvent):
                 self.item.rm_state('anim')
                 return False
 
+            if step.opts.get('override',None):
+                overrides.append(step)
+                continue
+
+            #Prepare common arguments and easing
             t=step.args
             t1=self.states.node[state]['started']
             if t1 is None:
                 t1=self.states.node[state]['started']=time
             t2=step.duration
-            tfrac=(float(time)-t1)/t2 #time fraction
+            if t2:
+                tfrac=(float(time)-t1)/t2 #time fraction
+            else:
+                tfrac=0
 
             if tfrac<0 or tfrac>1.:
-                return False
+                continue
             tfrac=self.easing(self.opts.get('interpol','quad'),tfrac)
 
+            #Effect by genre
             if step.genre=='hide':
                 todo.append( (0.,0.,0.,0.) )
+            elif step.genre=='sound':
+                if not step.done:
+                    user.ui.soundmaster.play(t[0],t[1])
+                    step.done=True
             elif step.genre=='color':
                 todo.append( [i+float(j-i)*tfrac for i,j in zip(*t)] )
             elif step.genre=='move':
@@ -302,20 +335,14 @@ class Animation(TimedEvent):
                         val= amp*sin(puls*time-t1)
                     td=array((int(val*sin(angle)),int(val*cos(angle))))
                 todo.append( ref+ td )
-            elif step.genre=='roll_in':
-                #rect=self.item.image.get_rect()
-                #self.item.image.fill( (0,0,0,0) )
-                #self.item.image.blit(t[0],(-rect.w*tfrac,0) )
-                pass
             elif step.genre=='blur_in':
-                #rect=self.item.image.get_rect()
-                #self.item.image.fill( (0,0,0,0) )
-                #self.item.image.blit(t[0],(-rect.w*tfrac,0) )
                 self.item.set_state('blur')
                 dft=graphic_chart['default_blur_mode']
                 self.item.blur_mode=(rint(dft[0]*(1-tfrac)), )+tuple(dft[1:])
                 if tfrac>.95:
                     self.item.rm_state('blur')
+
+        #Colormod and movement
         if hasattr(self.item,'alpha'):
             albase=self.item.alpha/255.
         else:
@@ -337,9 +364,53 @@ class Animation(TimedEvent):
             except:
                 pass
 
+        #Repaint item
         self.item.set_anim_mod(anim_mod)
-        self.item.set_state('anim',True,recursive=True)
+        self.item.set_state('anim',True,recursive=True,invisible=True)
 
+        #Overrides (combinations may break)
+        for step in overrides:
+            #compute tfrac again (sad boilerplate is sad)
+            t=step.args
+            t1=self.states.node[state]['started']
+            if t1 is None:
+                t1=self.states.node[state]['started']=time
+            t2=step.duration
+            if t2:
+                tfrac=(float(time)-t1)/t2 #time fraction
+            else:
+                tfrac=0
+            if tfrac<0 or tfrac>1.:
+                continue
+            tfrac=self.easing(self.opts.get('interpol','quad'),tfrac)
+
+            #Effects
+            if step.genre=='roll_in':
+                rect=self.item.image.get_rect()
+                img=self.item.image.copy()
+                if not self.item.per_pixel_alpha:
+                    img.set_alpha(255)
+                    self.item.image.fill( COLORKEY )
+                else:
+                    self.item.image.fill( (0,0,0,0) )
+                drc=step.args[0]
+                self.item.image.blit(img,(rect.w*(tfrac-1)*cos(drc),-rect.h*(tfrac-1)*sin(drc)) )
+                self.item.images['anim']=self.item.image
+            elif step.genre=='appear_in':
+                rec=self.item.image.get_rect()
+                drc=step.args[0]
+                axis=array((cos(drc),-sin(drc)))
+                stop=rec.center+axis * max(rec.size)/2
+                start=rec.center+axis * max(rec.size)*(-1./2+tfrac)
+                if max(stop-start)<2:
+                    continue
+                if self.item.per_pixel_alpha:
+                    print self.item
+                    gradients.draw_gradient(self.item.image ,start,stop,
+                     (255,255,255,255),(255,255,255,0),mode=pg.BLEND_MULT )
+                else:
+                    gradients.draw_gradient(self.item.image ,start,stop,COLORKEY,COLORKEY)
+                self.item.images['anim']=self.item.image
         if hasattr(self.item.parent,'dirty'):
             self.item.parent.dirty=1
         return True

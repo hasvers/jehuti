@@ -279,13 +279,6 @@ class LinkIcon(CanvasIcon):
     def color_mod(self,state):
         return graphic_chart.get('link_'+state+'_color_mod',CanvasIcon.color_mod(self,state))
 
-    #def mutate(self):  ### OBSOLETE SINCE I USE link_base_color_mod
-        #if CanvasIcon.mutate(self):
-            #if not self.is_ghost :
-                #self.image.set_alpha(graphic_chart['link_alpha'])
-            #return True
-        #return False
-
     def create(self,group=None,infosource=None):
 
 

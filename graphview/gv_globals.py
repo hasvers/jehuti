@@ -97,8 +97,6 @@ database['basepath']=os.path.normpath(resource_path(database['basepath']))
 graphic_chart={}
 ergonomy={}
 sound_bank={}
-evtyp={'sound_bank':"pgmixer.Sound( 'SRC/snd/###' )"}
-
 
 def confload(fname): #Very nasty way of loading the .ini
     if fname!='database':
@@ -112,20 +110,22 @@ def confload(fname): #Very nasty way of loading the .ini
     pats=re.findall("\[.*?\]=",text)
     for p in pats:
         text=text.replace(p,fname+p)
-    if fname in evtyp:
-        for line in text.split('\n'):
-            ls=line.split('=',1)
-            if len(ls)>1:
-                try:
-                    text=text.replace(line,ls[0]+'={}'.format(evtyp[fname].replace(
-                        'SRC/',database['basepath']).replace('###',ls[1])))
-                except:
-                    text=text.replace(line,ls[0]+'={}'.format(evtyp[fname].replace(
-                        'SRC/',database['srcpath']).replace('###',ls[1])))
-
     exec(text)
     f.close()
     return entry
+    #if fname in evtyp:
+        #for line in text.split('\n'):
+            #ls=line.split('=',1)
+            #if len(ls)>1:
+                #try:
+                    #text=text.replace(line,ls[0]+'={}'.format(evtyp[fname].replace(
+                        #'SRC/',database['basepath']).replace('###',ls[1])))
+                #except:
+                    #text=text.replace(line,ls[0]+'={}'.format(evtyp[fname].replace(
+                        #'SRC/',database['srcpath']).replace('###',ls[1])))
+    #exec(text)
+    #f.close()
+    #return entry
 
 database=confload('database')
 basepath=database['basepath']
