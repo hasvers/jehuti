@@ -28,7 +28,7 @@ class TextBase(object):
         name=declaration.capitalize()
         ninfo={
             'desc':desc,
-            'quotes':[ConvQuote(declaration)],
+            #'quotes':[ConvQuote(declaration)],
             'name':name
             }
         return ninfo
@@ -272,8 +272,8 @@ class TextMaker(object):
         for e in batch.rec_events:
             if 'reac' in e.type and sem.get(e.item,{}).get('clusteranchor') in  cluster.nodes() :
                 item=e.item
-                for q in graph.get_info(item,'quotes'):
-                    if q.cond =='Reac':
+                for q in graph.get_info(item,'scripts'):
+                    if q.effects[0].typ=='Quote' and q.cond =='Reac':
                         if item.type=='link' or item.type=='node' and self.logic.truth_check(
                             e.parent.decl.kwargs['truth'],q.truth):
                             txt+=q.val
@@ -451,8 +451,8 @@ class TextMaker(object):
 
     def link_say(self,actor,item,ninfo1,ninfo2,graph,**kwargs):
         info=graph.get_info(item)
-        for q in graph.get_info(item,'quotes'):
-            if q.cond=='Default':
+        for q in graph.get_info(item,'scripts'):
+            if q.effects[0].typ=='Quote' and q.cond=='Default':
                 return q.val
         print 'Missing link text', item, actor
         return '...'
@@ -546,11 +546,14 @@ class TextMaker(object):
             mode_marked=1
         else:
             mode='S'
-        quotes=info.get('quotes',[])
+        quotes=info.get('scripts',[])
 
         candidates=[]
         for q in quotes:
-            txt= q.val
+            if not q.effects[0].typ=='Quote':
+                continue
+            q=q.effects[0]
+            txt= q.text
             corr=[0,0] #truth/mode
             if '{' in txt:
                 #REGEXP
@@ -631,4 +634,7 @@ class TextMaker(object):
         return text
 
 
-
+    def quotify(self,txt):
+        for v in text_bank['templateverbs']:
+            txt=txt.replace(' {} '.format(v),' {'+v+'} ')
+        return txt

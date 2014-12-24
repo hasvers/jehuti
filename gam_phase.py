@@ -161,6 +161,8 @@ class PhaseHandler(object):
 
     def add_phase(self,phase):
         '''Add a script or script-like entity to the list and schedule it.'''
+        if phase is None:
+            return False
         #print '++ Adding',phase, debug.caller_name()
         if not phase in self.stack and not phase in self.done:
             self.stack.append(phase)

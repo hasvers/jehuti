@@ -196,7 +196,6 @@ class Window(FieldContainer):
         if not hasattr(struct,'__iter__'):
             struct=struct()
         self.parent.float_menu(struct,ephemeral=False)
-        print anchor
         self.parent.window['floatmenu'].rect.topleft = anchor.rect.midbottom
         self.parent.window['floatmenu'].draggable=False
 

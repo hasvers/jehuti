@@ -49,8 +49,8 @@ class MatchData(Data):
             del self.actorgraph[actor]
 
     def all_scripts(self):
-        return set(self.scripts+ list(fl for j in self.actorgraph.values()
-            for k,l in j.infos.iteritems() for fl in l.get('cflags',() ) if isinstance(fl,CFlag)))
+        return set(self.scripts)#+ list(fl for j in self.actorgraph.values()
+           # for k,l in j.infos.iteritems() for fl in l.get('cflags',() ) if isinstance(fl,CFlag)))
 
     def klassmake(self,klass,*args):
         #print klass, args
@@ -170,6 +170,7 @@ class MatchHandler(SceneHandler):
         #if self.setting.view.bg: #TODO: Think this through someday
             #self.canvas.handler.bg=self.setting.view.bg
 
+        self.textmaker=TextMaker(self.data)
 
     @property
     def components(self):
@@ -314,3 +315,14 @@ class MatchEditor(MatchHandler,SceneEditor):
             struct+=('Renew subgraph',lambda e=act: self.renew_graph(act.owner)),
 
         return struct
+
+    def make_quote(self,item):
+        info=self.canvas.get_info(item)
+        name=info['name']
+        name=self.textmaker.quotify(name)
+        #quote=ConvNodeScript(truth='+',cond='Alone')
+        quote=ConvNodeScript(truth='all',cond='Default')
+        eff=MatchScriptEffect(typ='AutoText')
+        eff.text=name
+        quote.effects.append(eff)
+        self.canvas.change_infos(item,scripts=[quote],update=True)

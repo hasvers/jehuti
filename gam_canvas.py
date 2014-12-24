@@ -103,7 +103,7 @@ class LogicCanvasEditor(CanvasEditor,LogicCanvasHandler):
             logic = target.typ_area(array(self.mousepos())-array(target.rect.center))
             struct +=( ('Add link',lambda: self.start_linkgrabber(target,logic)),
             ('Delete node',lambda: self.rem_node(target.node)),
-            ('Fast quote',lambda: self.make_quote(target.node))
+            ('Fast quote',lambda: self.parent.handler.make_quote(target.node))
             )
             return struct
         return CanvasEditor.maingraph_menu(self,target,typ,event)
@@ -233,13 +233,6 @@ class LogicCanvasEditor(CanvasEditor,LogicCanvasHandler):
                 return True
         return False
 
-    def make_quote(self,item):
-        info=self.canvas.get_info(item)
-        name=info['name']
-        for v in text_bank['templateverbs']:
-            name=name.replace(' {} '.format(v),' {'+v+'} ')
-        quote=ConvNodeTest(value=name[0].lower()+name[1:],truth='+',cond='Alone')
-        self.canvas.change_infos(item,quotes=[quote],update=True)
 
     def label(self,item):
         try:
@@ -250,7 +243,10 @@ class LogicCanvasEditor(CanvasEditor,LogicCanvasHandler):
             item=item.item
         infos = self.canvas.get_info(item)
         if item.type=='node':
-            return  'N{}: {} - {}'.format(item.ID,infos['name'],infos['desc']) #+ ' T:'+str(infos.get('terr',0))#+ ': '+ infos['desc']
+            desc='N{}: {}'.format(item.ID,infos['name']) #+ ' T:'+str(infos.get('terr',0))#+ ': '+ infos['desc']
+            if infos['cflags']:
+                desc +=' {}'.format(infos['cflags'])
+            return  desc
         elif item.type=='link':
             return  str([i.ID for i in item.parents])+infos['pattern'] #+ ': '+ infos['desc']
 

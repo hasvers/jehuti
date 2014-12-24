@@ -31,7 +31,6 @@ class MatchPlayer(MatchHandler,PhaseHandler):
         self.queue=[] #Events not yet executed and added to the list
         self.start_queue=['wait'] #Starter events
 
-
         self.time_cost=0.
 
         PhaseHandler.__init__(self)
@@ -113,14 +112,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
         cv=self.convgraph
         #cv.transparent=True
         actors=self.cast.actors
-        #for n in cv.nodes:
-            #for act in actors:
-                #fl=self.data.actorgraph[act].get_info(n,'cflags')
-                #if fl and 'Starter' in fl :
-                    #evt = ClaimEvt('Starter', act,n)
-                    #self.start_queue.append(evt)
-                    #user.evt.do(evt,self,2,ephemeral=True,handle=self)
-                    #cf make_beliefs
+
 
     def clear_conv(self):
         #return 0
@@ -224,6 +216,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             for actor in self.actors:
                 abatch[actor]=BatchEvt(actor=actor,affects=(self.canvas.active_graph,self.data))
 
+            self.add_phase(self.make_start_script() )
             for e in self.start_queue:
                 if e=='wait':
                     continue
@@ -255,6 +248,29 @@ class MatchPlayer(MatchHandler,PhaseHandler):
         self.test_scripts('start')
         self.renew_barycenter(move=1,glide=0)
         self.is_reloading=False
+
+    def make_start_script(self):
+        '''Loop over nodes and links with flags that warrant initial events,
+        and put everything into a script (easier to reverse and to track).'''
+        script=None
+        for act in self.actors:
+            for item in (item for n,ls in
+                            self.data.actorgraph[act].links.iteritems()
+                            for item in [n]+ls):
+                eff=None
+                flags=[f.val for f in self.data.actorgraph[act].get_info(item,'cflags')]
+                if 'Starter' in flags:
+                    eff = MatchScriptEffect(**{'typ':'Action','target':item,
+                        'actor':act,'evt':'claim','info':'cost:0'})
+                elif 'Include' in flags:
+                    eff = MatchScriptEffect(**{'typ':'Graph','target':item,
+                        'owner':act,'subject':act,'evt':'add','info':''})
+                if eff:
+                    if not script:
+                        script=Script()
+                    script.effects.append(eff)
+        return script
+
 
     def set_player(self,actor,nosignal=False,viewpoint=False,calc_time=True):
         subs=self.data.actorsubgraphs
@@ -680,44 +696,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
         #TEXT
         if ultim==evt:
             #Initial claim = explicit part
-            texter=TextMaker(self.data)
-            actor=evt.actor
-            ainf=self.cast.get_info(actor)
-            gph=self.data.actorsubgraphs[actor][actor]
-            clusters,semdata,txts=texter.batch_declaration(ainf,gph,evt)
-            for clus,txt in zip(clusters,txts):
-                self.add_balloon(txt,anchor= actor,source=ultim,show_name=1)
-                for reac in reactree.successors(evt):
-                    oact=reac.actor
-                    oinf=self.cast.get_info(oact)
-                    ogph=self.data.actorsubgraphs[oact][oact]
-                    effects={}
-                    effects.update(evt.effects)
-                    for i,j in reac.effects:
-                        effects.setdefault(i,0)
-                        effects[i]+=j
-                    txt=texter.reac_say(oinf, ogph,reac,cluster=clus,sem=semdata,eff=effects)
-                    if txt:
-                        self.add_balloon(txt,anchor= oact,source=ultim,show_name=1)
-        #elif 0 and evt.actor==self.active_player:
-            #if ultim in reactree.predecessors(evt):
-            ##reacs
-                #print ''#reac'
-            #else:
-                #for e in evt.events:
-                    #if not 'interp' in e.type:
-                        #continue
-                    #act=e.parent.actor
-                    #nact=self.cast.get_info(act)
-                    ##print c, c.item, c.kwargs['agreement']
-                    #ag=TextMaker(self.data).agreement_reaction(nact,e.kwargs['agreement'])
-                    #if ag[0]=='"':
-                        #anchor=act
-                        #disp=1
-                    #else:
-                        #anchor='Narrator'
-                        #disp=0
-                    #self.add_balloon(ag,anchor= anchor,show_name=disp,source=ultim)
+            self.auto_text(evt)
 
         for c in batch_evts:
             if 'add' in c.type and c.item.type in ('link','node') :
@@ -729,18 +708,6 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                         if database['edit_mode']:
                             self.canvas_emote(c,'Discovery!',ultim)
                     #print 'match719==Adding', target,'|',c.data, c.state, self.canvas.handler.label(target)
-            #if 0 and 'interp' in c.type and c.actor==self.active_player:
-                #act=c.parent.actor
-                #nact=self.cast.get_info(act)
-                ##print c, c.item, c.kwargs['agreement']
-                #ag=TextMaker(self.data).agreement_reaction(nact,c.kwargs['agreement'])
-                #if ag[0]=='"':
-                    #anchor=act
-                    #disp=1
-                #else:
-                    #anchor='Narrator'
-                    #disp=0
-                #self.add_balloon(ag,anchor= anchor,show_name=disp,source=ultim)
 
             if 'change' in c.type :
                 target=c.item
@@ -772,24 +739,26 @@ class MatchPlayer(MatchHandler,PhaseHandler):
         self.test_scripts(evt)
         self.renew_barycenter(move='empty')
 
-        #Look for scripts called by claims
+        #Look for scripts triggered by claims
+
         #+Center on last item claimed (maybe not such a good idea)
-        center_on=None
+        #center_on=None
         for c in batch_evts:
             if not ('claim' in c.type and c.state==2):
                 continue
             claim=c
-            if claim.item.type=='node':
-                center_on=claim.item
+            #if claim.item.type=='node':
+                #center_on=claim.item
 
             items=[claim.item]
             if hasattr(claim.item,'parents'):
                 items+=claim.item.parents
             for item in items:
-                for call in self.canvas.get_info(item,'calls'):
-                    if call.event_check(claim,item,self):
+                for call in self.canvas.get_info(item,'scripts'):
+                    if call.test_cond(self,claim):
+                        self.add_phase(call)
                         #print 'Calling:',call.val, item, item.name
-                        self.call_scripts(call.val,src=evt)
+                        #self.call_scripts(call.val,src=evt)
                         #for sc in self.get_scripts(call=call.val):
 
         #if center_on:
@@ -841,3 +810,26 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             batch.add_event(rude)
             user.evt.data.bind( (batch,rude) )
         user.evt.do(batch, self,1)
+
+    def auto_text(self,evt):
+        #TODO: Remake this
+        return False
+        texter=self.textmaker#TextMaker(self.data)
+        actor=evt.actor
+        ainf=self.cast.get_info(actor)
+        gph=self.data.actorsubgraphs[actor][actor]
+        clusters,semdata,txts=texter.batch_declaration(ainf,gph,evt)
+        for clus,txt in zip(clusters,txts):
+            self.add_balloon(txt,anchor= actor,source=evt,show_name=1)
+            for reac in reactree.successors(evt):
+                oact=reac.actor
+                oinf=self.cast.get_info(oact)
+                ogph=self.data.actorsubgraphs[oact][oact]
+                effects={}
+                effects.update(evt.effects)
+                for i,j in reac.effects:
+                    effects.setdefault(i,0)
+                    effects[i]+=j
+                txt=texter.reac_say(oinf, ogph,reac,cluster=clus,sem=semdata,eff=effects)
+                if txt:
+                    self.add_balloon(txt,anchor= oact,source=evt,show_name=1)

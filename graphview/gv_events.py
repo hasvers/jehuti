@@ -21,6 +21,12 @@ class Signal(DataBit):
         return test+ self.type+' '+str(self.args) +' '+str(self.kwargs)
 
 class EventCommander(object):
+    '''
+    Public functions are:
+        -do
+        -undo
+        -pass_event
+    '''
 
     def __init__(self,user):
         self.data=EventGraph()
@@ -156,6 +162,8 @@ class EventCommander(object):
 
 
     def evt_do(self,evt,state=None,*args,**kwargs): #Only forward
+        '''Called by self.do, runs alon path forward to a given state,
+        if specified, or goes to next state.'''
         #print '> evt_do', evt.type,id(evt),evt.state,state,debug.caller_name()
         if state!= None :
             if state != evt.state:
@@ -188,6 +196,7 @@ class EventCommander(object):
         return self.evt_goto(evt,state,*args,**kwargs)
 
     def evt_undo(self,evt,state=None,*args,**kwargs): #Only backward
+        '''Sams as evt_do, only backward.'''
         if state!= None:
             if evt.state != state: #undo all intermediary stages recursively
                 self.evt_goto( evt,evt.states.predecessors(evt.state)[0],*args,**kwargs )
@@ -203,6 +212,7 @@ class EventCommander(object):
         return self.evt_goto(evt,prec,*args,**kwargs)
 
     def go(self,evt,state,*args,**kwargs): #Like evt_do but both directions
+
         if evt.state==state and not evt.repeatable:
             return False
         #print '--go', evt.type,id(evt),evt.state,state,debug.caller_name()
@@ -226,11 +236,15 @@ class EventCommander(object):
         return True
 
     def run_stack(self):
+        '''Run all events stacked while commander was paused.'''
         #print 'Running stack', self.stacked
         [self.evt_goto(e,s,*a,**k) for e,s,a,k in self.stacked]
         self.stacked[:]=[]
 
-    def evt_goto(self,evt,state,*args,**kwargs): #Forward or backward
+    def evt_goto(self,evt,state,*args,**kwargs):
+        '''Core function, never to be called directly, that runs events,
+        changes their state, calls their children and bound events.'''
+
         if self.paused and not evt in self.moving and not (evt,state,args,kwargs) in self.stacked:
             self.stacked.append( (evt,state,args,kwargs))
             return False
@@ -312,6 +326,7 @@ class EventCommander(object):
                     evt.state=state
                     self.pass_event(evt,None,kwargs.get('ephemeral',False) )
                     if (evt,state) in self.data.calls.nodes() : #bound events
+                        #print 'yay',(evt,state),self.data.calls.succ[(evt,state)]
                         for e2,s2 in self.data.calls.neighbors( (evt,state) ):
                             if e2.state != s2:
                                 self.go(e2,s2,**kwargs)
@@ -660,7 +675,7 @@ class ChangeInfosEvt(Event):
         self.additive=kwargs.pop('additive',False)#For additive change of numeric informations
 
         #write attributes on item directly (instead of infos in a datastructure)
-        #used for simple items that cannot belong to multiple datastructures (e.g. scripts, quotes)
+        #used for simple items that cannot belong to multiple datastructures (e.g. scripts)
         self.itemwrite=kwargs.pop('itemwrite',False)
 
         #data is the data container, kwargs are the infos (and some signal-related metainfos)

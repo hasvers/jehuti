@@ -16,9 +16,9 @@ class MatchNodePanel(NodePanel):
         #('cflags','arrowsel','Inclusion',120,{'values':MatchGraph.Node.cflags}),
         ('desc','input','Description',190,{'height':140,'wrap':True}),
         ('cflags','inputlist','Flags',200,{'add':True,'menu':{'type':'cflags'}}),
-        ('quotes','inputlist','Quotes',200,{'add':True,'menu':{'type':'quotes'}}),
-        ('calls','inputlist','Script calls',200,{'add':True,'menu':{'type':'qcalls'}}),
-        ('effects','inputlist','Ethos',200,{'add':True,'menu':{'type':'ethos'}})
+        #('quotes','inputlist','Quotes',200,{'add':True,'menu':{'type':'quotes'}}),
+        ('scripts','inputlist','Scripts',200,{'add':True,'menu':{'type':'nscript'}}),
+        ('effects','inputlist','Ethos',200,{'add':True,'unique':True,'menu':{'type':'ethos'}})
 
     )
 
@@ -31,8 +31,9 @@ class MatchLinkPanel(LinkPanel):
         ('val','drag', 'Magnitude',80,{'minval':0.,'maxval':1.}),
         ('subt','drag', 'Subtlety',80,{'minval':0.,'maxval':1.}),
         ('desc','input','Description',120,{'height':200,'wrap':True}),
-        ('quotes','inputlist','Quotes',200,{'add':True,'menu':{'type':'lquotes'}}),
-        ('calls','inputlist','Script calls',200,{'add':True,'menu':{'type':'lqcalls'}}),
+        #('quotes','inputlist','Quotes',200,{'add':True,'menu':{'type':'lquotes'}}),
+        ('scripts','inputlist','Scripts',200,{'add':True,'menu':{'type':'lscript'}}),
+        ('cflags','inputlist','Flags',200,{'add':True,'unique':True,'menu':{'type':'cflags'}}),
     ]
 
     def make(self):
@@ -123,20 +124,12 @@ class MatchEditorUI(EditorUI,SceneUI):
             return self.ethos_effect_maker(output_method,**kwargs)
         elif typ=='cflags':
             return self.flag_maker(output_method,**kwargs)
-        elif typ=='quotes':
-            kwargs.setdefault('class',ConvNodeTest)
-            return self.convtest_maker(output_method,**kwargs)
-        elif typ=='qcalls':
-            kwargs.setdefault('script',True)
-            kwargs.setdefault('class',ConvNodeTest)
-            return self.convtest_maker(output_method,**kwargs)
-        elif typ=='lquotes':
-            kwargs.setdefault('class',ConvLinkTest)
-            return self.convtest_maker(output_method,**kwargs)
-        elif typ=='lqcalls':
-            kwargs.setdefault('script',True)
-            kwargs.setdefault('class',ConvLinkTest)
-            return self.convtest_maker(output_method,**kwargs)
+        elif typ=='nscript':
+            kwargs.setdefault('class',ConvNodeScript)
+            return self.item_script_maker(output_method,**kwargs)
+        elif typ=='lscript':
+            kwargs.setdefault('class',ConvLinkScript)
+            return self.item_script_maker(output_method,**kwargs)
         elif typ=='talent':
             return self.talent_maker(output_method,**kwargs)
         elif typ=='actreac':
@@ -159,7 +152,22 @@ class MatchEditorUI(EditorUI,SceneUI):
         kwargs.setdefault('title','Ethos effect:')
         self.maker_menu(flist,output_method,EthosEffect,**kwargs)
 
+    def item_script_maker(self,output_method,**kwargs):
+        klass=kwargs.pop('class',ConvNodeScript)
+        flist=(
+            ('name','input',{'legend':'Caoy','width':200}),)
+        for i in klass.dft:
+            if hasattr(klass,i+'s'):
+                flist+= (i,'arrowsel',{'values':getattr(klass,i+'s')} ),
+        flist+=(
+            ('logic','input',{'legend':'Logic','width':300}),
+            ('conds','inputlist',{'legend':'Add conds','width':200,'add':True,'menu':{'type':'scrcond'}}),
+            ('effects','inputlist',{'legend':'Effects','width':200,'add':True,'menu':{'type':'screffect'}}),
+            )
+        self.maker_menu(flist,output_method,klass,**kwargs)
+
     def convtest_maker(self,output_method,**kwargs):
+        #OBSOLETE (?)
         if kwargs.get('script',False):
             inopts={'width':200}
             kwargs.setdefault('title','Call script:')
@@ -171,20 +179,21 @@ class MatchEditorUI(EditorUI,SceneUI):
         for i in klass.dft:
             if hasattr(klass,i+'s'):
                 flist+= (i,'arrowsel',{'values':getattr(klass,i+'s')} ),
-        flist+=('val','input',inopts),
+        #flist+=('val','input',inopts),
         self.maker_menu(flist,output_method,klass,**kwargs)
 
     def flag_maker(self,output_method,**kwargs):
         ref=kwargs.pop('val',None)
         klass=CFlag
         if not isinstance(ref,klass):
-            caller=kwargs['caller']
-            ref=klass(caller.ref,caller.data)
+            #caller=kwargs['caller']
+            ref=klass()
+            #ref=klass(caller.ref,caller.data)
         flist=(
-            ('name','arrowsel',{'values':ref.defaults,'remake':True}),
-            ('iter','arrowsel',{'values':('always',0,1,2,3,4)}),
-            ('conds','inputlist',{'legend':'Conditions','width':200,'add':True,'menu':{'type':'scrcond'}}),
-            ('effects','inputlist',{'legend':'Effects','width':200,'add':True,'menu':{'type':'screffect'}}),
+            ('val','arrowsel',{'values':ref.defaults,'remake':True}),
+            #('iter','arrowsel',{'values':('always',0,1,2,3,4)}),
+            #('conds','inputlist',{'legend':'Conditions','width':200,'add':True,'menu':{'type':'scrcond'}}),
+            #('effects','inputlist',{'legend':'Effects','width':200,'add':True,'menu':{'type':'screffect'}}),
             )
         kwargs.setdefault('title','Conversation flag:')
         self.maker_menu(flist,output_method,klass,val=ref,**kwargs)

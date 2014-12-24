@@ -4,13 +4,44 @@ from gam_script import *
 from gam_match_events import*
 
 
-class CFlag(Script):
+class CFlag(DataBit):
+    '''A conversation flag is any tag that may be relevant to a node or link.'''
+    dft={'val':'Include',
+        'defaults':('Include','Exclude','Perceived','LinkOnly','Unlock','Locked','Starter')}
+
+    def __repr__(self):
+        return self.val
+
+    def __eq__(self,x):
+        if hasattr(x,'val'):
+            return self.__class__==x.__class__ and self.val==x.val
+        return self.val==x
+
+class OldestCFlag(object):
+    dft=('val',)
+    def __init__(self,value=None):
+        self.val=value
+    def __eq__(self,x):
+        return self.val==x
+    def __contains__(self,x):
+        return x in self.val
+    def __repr__(self):
+
+        return str(self.val)
+
+    def txt_export(self,keydic,txtdic,typdic,**kwargs):
+        if not id(self) in keydic:
+            keydic[id(self)]=len(keydic.keys() )
+            typdic.setdefault(self.__class__.__name__,[]).append(keydic[id(self)])
+        txt='#{}#\n ##class:{}\n "val":"{}"\n##\n'.format(keydic[id(self)],self.__class__.__name__,self.val)
+        txtdic[keydic[id(self)]]= txt
+
+class OldCFlag(Script):
     #A conversation flag is a simplified script attached to a node (possibly extensible to script attached to any item)
     dft={}
     dft.update(Script.dft)
     dft['name']='Custom'
     dft['iter']=1
-    dft['defaults']=('Custom','Include','Exclude','Perceived','LinkOnly','Unlock','Starter')
     def __init__(self,item,data,**kwargs):
         self.item=item
         self.data=data
@@ -101,6 +132,9 @@ class MatchScriptEffect(SceneScriptEffect):
         del templatelist['Scene']
         templatelist.update(
             {
+            'AutoText':(('text','input'),
+                ('info','input',{'legend':'Options:'}),
+                ),
             'Action':( ('actor','arrowsel',{'values':actors}),
                 ('target','extsel',{'val':nodes[0],'values':nodes +links,'selsource':match.canvas}),
                 ('evt','arrowsel',{'values':('claim','explore','declar')}),
@@ -134,7 +168,7 @@ class MatchScriptEffect(SceneScriptEffect):
         )
 
         if not actors:
-            templatelist={'Text':templatelist['Text']}
+            templatelist={'Text':templatelist['Text'],'AutoText':templatelist['AutoText']}
         elif not nodes:
             templatelist={'Text':templatelist['Text'],'Cast':templatelist['Cast']}
         return templatelist
@@ -165,6 +199,8 @@ class MatchScriptEffect(SceneScriptEffect):
             return base +': {} {}'.format(self.evt,self.info)
         if self.typ=='Canvas':
             return base +': {} {}'.format(self.evt,self.target)
+        if self.typ=='AutoText':
+            return base+': {}'.format(self.text)
         return SceneScriptEffect.__repr__(self)
 
     def prep_do(self,scene,**kwargs):
@@ -417,3 +453,28 @@ class MatchScriptCondition(SceneScriptCondition):
         if self.typ in  ('Graph', 'Cast'):
             return base +': {} {} {}'.format(self.target,self.info,self.cond)
         return SceneScriptCondition.__repr__(self)
+
+
+
+class ConvNodeScript(Script,ConvNodeTest):
+    '''Script started by a ConvNodeTest'''
+    dft={}
+    dft.update(Script.dft)
+    dft.update(ConvNodeTest.dft)
+    def test_cond(self,scene,evt=None):
+        return self.event_check(evt,self.item,scene) and MatchScript.test_cond(self,scene,evt)
+
+    def __repr__(self):
+        return 'NodeScr:'+self.name
+
+class ConvLinkScript(Script,ConvLinkTest):
+    '''Script started by a ConvLinkTest'''
+    dft={}
+    dft.update(Script.dft)
+    dft.update(ConvLinkTest.dft)
+    def test_cond(self,scene,evt=None):
+        return self.event_check(evt,self.item,scene) and MatchScript.test_cond(self,scene,evt)
+
+
+    def __repr__(self):
+        return 'LinkScr:'+self.name

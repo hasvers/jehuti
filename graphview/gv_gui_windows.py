@@ -67,7 +67,8 @@ class NodeList(Window):
     def make(self):
         self.clear()
         handler=self.handler
-        self.list= sorted(tuple ( [( handler.label(n),n) for n in handler.canvas.active_graph.nodes]),
+        self.list= sorted(tuple ( [( handler.label(n),n)
+            for n in handler.canvas.active_graph.nodes]),
             key=lambda e: e[1].ID )
         self.hide=self.add('text',val='Close',selectable=True,
             output_method=lambda:self.interface.hide(self.name ))
@@ -108,7 +109,7 @@ class EditorMenu(DragWindow):
     infosource = None
     itemwrite=False
     #write attributes on item directly (instead of infos in a datastructure)
-    #used for simple items that cannot belong to multiple datastructures (e.g. scripts, quotes)
+    #used for simple items that cannot belong to multiple datastructures (e.g. scripts)
     ephemeral=False #for editormenus that should not produce undoable changes
     scrollable='v'
 

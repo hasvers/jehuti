@@ -599,7 +599,8 @@ class Data(object):
 
 
 class DataBit(object):
-    #Urstructure of DataItem, cannot be the subject of information in a structure
+    '''Urstructure of DataItem, cannot be the subject of information in a datastructure
+    (i.e. is a pure value, never used as reference)'''
     dft={}
     nested_copy=1
     #If I make a copy of some object with this DataBit as one of its fields,
@@ -620,6 +621,14 @@ class DataBit(object):
                     j=shallow_nested(j)
                 setattr(self,i,j)
             self.default_infos[i]=getattr(self,i)
+
+    def equals(self,item):
+        if self.__class__ == item.__class__ and self.type ==item.type:
+            for d in self.dft:
+                if self.dft!=item.dft:
+                    return False
+            return True
+        return False
 
     def set_attr(self,i,j):
         #Useful if I want to override it (for instance have some change trigger another)

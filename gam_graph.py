@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from gam_import import *
+
 class EthosEffect(DataBit):
     eid=0
     dft={'name':'Effect',
@@ -28,35 +29,11 @@ class EthosEffect(DataBit):
         return self.name+': '+res+val+ ' ('+target+')'
 
 
-
-class ConvFlag(object):
-    dft=('val',)
-    def __init__(self,value=None):
-        self.val=value
-    def __eq__(self,x):
-        return self.val==x
-    def __contains__(self,x):
-        return x in self.val
-    def __repr__(self):
-
-        return str(self.val)
-
-    def txt_export(self,keydic,txtdic,typdic,**kwargs):
-        if not id(self) in keydic:
-            keydic[id(self)]=len(keydic.keys() )
-            typdic.setdefault(self.__class__.__name__,[]).append(keydic[id(self)])
-        txt='#{}#\n ##class:{}\n "val":"{}"\n##\n'.format(keydic[id(self)],self.__class__.__name__,self.val)
-        txtdic[keydic[id(self)]]= txt
-
-
 class ConvTest(DataBit):
-    dft=('cond','val')
-    val=None
+    '''Basic class for tests of conversation item state.'''
+
+    dft={'cond':'Default'}
     conds=('Default',)
-    def __init__(self,value='',cond='Default'):
-        self.type='convtest'
-        self.val=value
-        self.cond=cond
 
     def event_check(self,evt,item,match):
         if self.cond=='Default':
@@ -64,42 +41,42 @@ class ConvTest(DataBit):
         return False
 
 class ConvNodeTest(ConvTest):
-    dft=('cond','truth','val')
-    val=None
+    '''Basic class for tests of conversation node state.'''
+
+    dft={'cond':'Default','truth':'all'}
     conds=('Default','Once','Alone','Link','LinkS','LinkT','Reac')
     truths=('all','+','?','-')
-    def __init__(self,value='',cond='Default',truth='all'):
+    def __init__(self,**kwargs):
+        ConvTest.__init__(self,**kwargs)
         self.type='convnodetest'
-        self.val=value
         self.cond=cond
         self.truth=truth
 
     def __repr__(self):
-        return self.cond+';'+self.truth+': '+self.val
-    def __str__(self):
-        return self.cond+' '+self.truth+': '+self.val[:10]
+        return self.cond+' '+self.truth
 
     def event_check(self,evt,item,match):
         check=False
         cond=self.cond
-
         conds=( cond=='Default',
-            (cond=='Alone' and evt.item==item),
-            (cond=='Link' and evt.item.type=='link'),
-            (cond=='LinkS' and hasattr(evt.item,'parents') and evt.item.parents[0]==item),
-            (cond=='LinkT' and hasattr(evt.item,'parents') and evt.item.parents[1]==item),
-            #(cond=='Reac' and evt.item==item)
-        )
-        val=match.canvas.active_graph.get_info(item,'truth')
+            cond=='Reac' and evt=='Reac')
+        if hasattr(evt,'item'):
+            conds+=(
+                (cond=='Alone' and evt.item==item),
+                (cond=='Link' and evt.item.type=='link'), )
+            if hasattr(evt.item,'parents'):
+                conds +=(
+                    (cond=='LinkS' and  evt.item.parents[0]==item),
+                    (cond=='LinkT' and evt.item.parents[1]==item),)
         if True in conds :
             check =True
 
+        val=match.canvas.active_graph.get_info(item,'truth')
         if check and self.truth_check(val,match.ruleset):
             return True
         return False
 
     def truth_check(self,val,rules):
-
         truth=self.truth
         if truth=='all':
             return True
@@ -112,9 +89,12 @@ class ConvNodeTest(ConvTest):
         return False
 
 class ConvLinkTest(ConvTest):
+    '''Basic class for tests of conversation link state.'''
+
     conds=('Default','Reac','Claim','Contest')
     struths=('all','+','?','-'),
     ttruths=('all','+','?','-'),
+    dft={'cond':'Default','struth':'all','ttruth':'all'}
 
     def event_check(self,evt,item,match):
         cond=self.cond
@@ -129,16 +109,7 @@ class ConvLinkTest(ConvTest):
         return False
 
     def __repr__(self):
-        return self.cond+': '+self.val
-    def __str__(self):
-        return self.cond+': '+self.val[:10]
-
-#class ConvQuote(ConvTest):
-    #def __str__(self):
-        #return self.cond+' '+self.truth
-#class ConvScriptCall(ConvTest):
-    #pass
-
+        return '{} {} {}'.format(self.cond,self.struth,self.ttruth)
 
 class MatchNode(Graph.Node):
     klass_name='MatchGraph.Node'
@@ -148,11 +119,9 @@ class MatchNode(Graph.Node):
     dft['truth']=.5
     dft['bias']=0
     dft['claimed']=False
-    cflags=('Starter','Include','Exclude','Perceived','LinkOnly')
     dft['cflags']=[]
     dft['lastmention']=False
-    dft['quotes']=[]
-    dft['calls']=[]
+    dft['scripts']=[]
     dft['effects']=[]
 
 class MatchLink(Graph.Link):
@@ -162,8 +131,8 @@ class MatchLink(Graph.Link):
     dft['subt']=.3
     dft['val']=.2
     dft['claimed']=False
-    dft['quotes']=[]
-    dft['calls']=[]
+    dft['scripts']=[]
+    dft['cflags']=[]
     patterns=database['link_patterns']
     dft['pattern']=patterns[0]
 
@@ -179,15 +148,14 @@ class MatchSubgraph(Graph.Subgraph):
             ('truth',
             'bias',
             'desc',
-            'quotes',
-            'calls',
+            'scripts',
             'cflags',
             'terr'
             ),
         'link':
             ('desc',
-            'quotes',
-            'calls',
+            'scripts',
+            'cflags',
             ),
         }
     rule = 'none'
@@ -211,8 +179,8 @@ class MatchGraph(Graph):
             'val',
             'subt',
             'desc',
-            'quotes',
-            'calls',
+            'scripts',
+            'cflags',
             'effects'),
         'link':(
             'name',
@@ -220,8 +188,8 @@ class MatchGraph(Graph):
             'logic',
             'val',
             'desc',
-            'quotes',
-            'calls',
+            'scripts',
+            'cflags',
             'subt',),
 
         }

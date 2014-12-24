@@ -950,7 +950,7 @@ class FieldList(FieldContainer):
             c.kill()
         self.children=[]
         self.newfields=[]
-        self.termlist=[]
+        self.fieldlist=[]
         self.val=None
         self.selected=None
         self.valdict={}
@@ -962,7 +962,7 @@ class FieldList(FieldContainer):
             else :
                 pos=(j,0)
             tmp=self.add(TextField(self,val=str(i[0]),selectable=True),pos=pos)
-            self.termlist.append(tmp)
+            self.fieldlist.append(tmp)
             self.valdict[tmp]=i[1]
             if self.active_fields:
                 self.methdict[tmp]=i[-1]
@@ -974,7 +974,7 @@ class FieldList(FieldContainer):
 
     @property
     def vallist(self):
-        return [self.valdict[t] for t in self.termlist]
+        return [self.valdict[t] for t in self.fieldlist]
 
     def draw(self,*args):
         self.bg =pgsurface.Surface(self.rect.size,pg.SRCALPHA)
@@ -1012,6 +1012,7 @@ class InputList(FieldList):
     def __init__(self,parent,flist,**kwargs):
         self.opts=kwargs.pop('opts',{'type':'input'}) #multiple types allowed
         self.extensible=kwargs.pop('add',False)
+        self.unique=kwargs.pop('unique',False) #if new field==existing field, discard it
         self.sendall=kwargs.pop('sendall',True)
         self.clip=None
         FieldList.__init__(self,parent,flist,**kwargs)
@@ -1028,20 +1029,22 @@ class InputList(FieldList):
             self.parent.rem_from_queue(self)
             self.parent.set_command(self,(None,))
 
-    def event(self,*args,**kwargs):
-        if self.extensible and args[0].type==pg.MOUSEBUTTONDOWN and args[0].button==3:
+    def unselect(self):
+        FieldList.unselect(self)
+        self.val = None
+        self.dirty=1 #Why do I need this?
+
+    def event(self,event,*args,**kwargs):
+        if self.extensible and event.type==pg.MOUSEBUTTONUP and event.button==3:
             struct= ()
             if self.hovering and self.hovering.val != 'None':
+                if not self.unique:
+                    struct+=(
+                        ('Duplicate',lambda e=self.hovering: self.dupl_field(e) ),)
                 struct +=(
                     #('Insert',lambda e=self.hovering: self.insert_field(e) ),
-                    ('Duplicate',lambda e=self.hovering: self.dupl_field(e) ),
                     ('Delete',lambda e=self.hovering: self.remove_field(e) ) ,
                     ('Cut',lambda e=self.hovering: self.cut(e) ), )
-                if self.clip:
-                    struct+=(
-                     ('Paste',lambda e=self.termlist.index(self.hovering),c=self.clip: self.paste(c,e) ),
-                     )
-
             else:
                 if hasattr(self.opts['type'],'__iter__'):
                     for t in self.opts['type']:
@@ -1060,10 +1063,21 @@ class InputList(FieldList):
                     else:
                         func=lambda kw=kwargs: self.input_menu('None',**kw)
                     struct +=  ('Add',func),
+            if self.clip:
+                struct+=(
+                 ('Paste',lambda e=len(self.fieldlist),c=self.clip: self.paste(c,e) ),
+                 )
             user.ui.float_menu( struct,parent_window=self.parent )
             #self.input_menu('None')
             return True
-        return FieldList.event(self,*args,**kwargs)
+        if self.extensible and self.hovering and self.hovering.val != 'None':
+            if event.type==pg.KEYUP:
+                pos=self.fieldlist.index(self.hovering)
+                if event.key==pg.K_UP:
+                    return self.paste(self.hovering,e)
+                if event.key==pg.K_DOWN:
+                    return self.paste(self.hovering,e+1)
+        return FieldList.event(self,event,*args,**kwargs)
 
     def output(self,val=None):
         if not val :
@@ -1075,34 +1089,36 @@ class InputList(FieldList):
 
 
     def remove_field(self,field):
-        if field in self.termlist:
-            self.termlist.remove(field)
+        if field in self.fieldlist:
+            self.fieldlist.remove(field)
         for dic in (self.valdict, self.methdict):
             try:
                 del dic[field]
             except:
                 pass
-        flist= [(i.val,self.valdict[i]) for i in self.termlist  ]
+        flist= [(i.val,self.valdict[i]) for i in self.fieldlist  ]
         self.set_list(flist)
         self.output()
 
     def dupl_field(self,field):
         if not field in self.valdict:
             return False
-        flist= [(i.val,self.valdict[i]) for i in self.termlist  ]
+        flist= [(i.val,self.valdict[i]) for i in self.fieldlist  ]
         copy= shallow_nested(self.valdict[field],1)
-        flist.insert(self.termlist.index(field)+1,(field.val, copy))
+        flist.insert(self.fieldlist.index(field)+1,(field.val, copy))
         self.set_list(flist)
         self.output()
 
     def insert_field(self,key,field,idx):
         #if not field in self.valdict:
             #return False
-        flist= [(i.val,self.valdict[i]) for i in self.termlist  ]
-        #idx=self.termlist.index(field)
+        flist= [(i.val,self.valdict[i]) for i in self.fieldlist  ]
+        #idx=self.fieldlist.index(field)
+        if self.unique and True in [key==f[0] for f in flist]:
+            return False
         flist.insert(idx,(key,field  ))
         self.set_list(flist)
-        #self.input_menu(self.termlist[idx] )
+        #self.input_menu(self.fieldlist[idx] )
 
 
     def changevals(self,e,item,key):
@@ -1110,8 +1126,8 @@ class InputList(FieldList):
             meth=lambda e,k=key,s=item: self.valdict.update({s:(k,e) })
         else:
             meth=lambda e,s=item: self.valdict.update({s:e})
-        if not item in self.termlist:
-            self.termlist.append(item)
+        if not item in self.fieldlist:
+            self.fieldlist.append(item)
         meth(e)
         if self.sendall:
             ext=self.output
@@ -1123,7 +1139,10 @@ class InputList(FieldList):
         self.clip=e
 
     def paste(self,field,pos):
-        flist= [(i.val,self.valdict[i]) for i in self.termlist  if i!=field]
+        flist= [(i.val,self.valdict[i]) for i in self.fieldlist  if i!=field]
+        if self.unique and True in [field.val==f[0] for f in flist]:
+            #NB: written like this rather than with 'in' to allow overload of __eq__
+            return False
         flist.insert(pos,(field.val,self.valdict[field] ))
         self.clip=None
         self.set_list(flist)

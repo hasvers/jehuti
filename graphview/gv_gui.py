@@ -535,7 +535,7 @@ class BasicUI(UI_Widget):
 
     def general_menu(self,event=None):
         struct=()
-        print self.stack,self.undo_stack
+        #print self.stack,self.undo_stack
         if self.stack:
             text=self.stack[-1].desc
             struct+=('Undo '+text,lambda e=None: user.evt.undo(e)  ),
@@ -700,7 +700,9 @@ class EditorUI(BasicUI):
         kwargs.setdefault('askconfirm',True)
         window=EditorMenu(self,kwargs.pop('data',None),
             ref=eff, **kwargs)
-
+        for i,j in kwargs.iteritems():
+            if i =='on_exit':
+                window.set_command('exit',j)
         window.set_command(window.ok_field,(outme,(eff,)) )
         if 'parent_window' in kwargs:
             parent=kwargs['parent_window']
