@@ -183,13 +183,15 @@ class Window(FieldContainer):
                             i[0](*i[1])
 
     def add(self,field,**kwargs):
+        no_paint=kwargs.pop('no_paint',False) #Do not update graphics
         for i,j in kwargs.iteritems():
             if i=='output_method':
                 if j=='confirm' :
                     self.ask_confirm()
 
         field = FieldContainer.add(self,field,**kwargs)
-        self.paint()
+        if not no_paint:
+            self.paint()
         return field
 
     def drop_menu(self,anchor,struct,**kwargs):
@@ -391,8 +393,9 @@ class InputMenu(FloatMenu):
     def parse(self,struct):
         for i in range(len(struct)):
             line = struct[i]
-            self.add('text',val=line[0],pos=(i,0))
-            self.add('input',val=line[2],output_method=line[1],pos=(i,1))
+            self.add('text',val=line[0],pos=(i,0),no_paint=True)
+            self.add('input',val=line[2],output_method=line[1],pos=(i,1),no_paint=True)
+        self.dirty=1
 
 class DecoratedWindow(Window):
     decor_mrg=array([0,0,0,0])
@@ -423,6 +426,84 @@ class DecoratedWindow(Window):
         self.image.set_colorkey(COLORKEY)
         self.dirty=1
         self.draw()
+
+class RadialWindow(Window):
+    '''Special class with no background and radial disposition of fields.'''
+    angle=0
+    radius=50
+    per_pixel_alpha=1
+    mask=None
+
+    def paint(self):
+        self.dirty=1
+        self.draw() #draw is the fieldcontainer method
+        if self.mask==None:
+            self.mask=pg.mask.from_surface(self.image,20)
+
+    def compute_pos(self):
+        #For now, treats 2d table as 1d list and all elements equally.
+        #In the future, perhaps treat second dimension as radial distance
+        elemlist=[self.table[y][x] for y in self.table for x in self.table[y]]
+        rad=self.radius=min(self.width,self.height)/3
+        self.bg=self.image.copy()
+        self.bg.fill((0,0,0,0))
+        pg.draw.circle(self.bg,(0,0,255,55),self.active_rect.center,self.radius )
+        self.mask=None
+        dtheta=2.*pi/len(elemlist)
+        cen=array(self.active_rect.size)/2
+        angle=self.angle/180.*pi
+        for ie,e in enumerate(elemlist):
+            theta=dtheta*ie + angle
+            e.resize(e.minsize)
+            self.pos[e]=tuple((rad*array((cos(theta),-sin(theta)) )
+                +cen+e.rect.topleft-e.rect.center).astype('int'))
+        self.paint()
+
+    def rotate(self,ang,additive=True):
+        if additive:
+            self.angle+=ang
+        else:
+            self.angle=ang
+        self.compute_pos()
+
+class RadialMenu(RadialWindow):
+
+    def __init__(self,dragarea,*args,**kwargs):
+        struct=kwargs.pop('struct',None)
+        RadialWindow.__init__(self,*args,**kwargs)
+        if struct != None:
+            self.parse(struct)
+        self.created_at=pg.time.get_ticks()
+        user.focus_on(self)
+
+
+    def event(self,event,*args,**kwargs):
+        if (event.type== pg.MOUSEBUTTONDOWN):
+            #Close menu if you click on it and there is no reaction
+            #from the children (fields) and the menu was not created
+            #just now (to avoid responding to erroneous double clicks)
+            if not RadialWindow.event(self,event,*args,**kwargs):
+                if pg.time.get_ticks()-self.created_at>2*ergonomy['double_click_interval']:
+                    self.closing_event()
+                    return True
+            return False
+        if (event.type== pg.KEYDOWN):
+            if event.key in (pg.K_UP,pg.K_LEFT):
+                self.rotate(5)
+                return True
+            if event.key in (pg.K_DOWN,pg.K_RIGHT):
+                self.rotate(-5)
+                return True
+        return RadialWindow.event(self,event,*args,**kwargs)
+
+    def closing_event(self):
+        self.set_anim('disappear',len=ANIM_LEN['short'],affects=[self])
+
+    def react(self,evt):
+        if evt.type=='anim_stop' and evt.args[0].anim=='disappear':
+            if self.interface.window['floatmenu']==self:
+                self.interface.close('floatmenu')
+
 
 class SpeechBalloon(DecoratedWindow):
 

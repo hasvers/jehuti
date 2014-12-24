@@ -261,6 +261,6 @@ class Handler(object):
         self.signal('hover',item,label=self.label(item,'hover'),affects=(self,item))
         return 1
 
-    def unhover(self):
+    def unhover(self,**kwargs):
         self.signal('unhover')
         return 1

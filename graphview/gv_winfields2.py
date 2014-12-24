@@ -772,7 +772,7 @@ class ArrowList(MultiTextField,UI_Widget):
             self.group.draw(self.image)
         except:
             pass
-    def unhover(self):
+    def unhover(self,**kwargs):
         if UI_Widget.unhover(self):
             self.redraw()
             return True

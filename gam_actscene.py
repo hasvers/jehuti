@@ -130,8 +130,8 @@ class ActscenePlayer(ActsceneHandler,CutscenePlayer):
             return 1
         return 0
 
-    def unhover(self):
-        if ActsceneHandler.unhover(self):
+    def unhover(self,**kwargs):
+        if ActsceneHandler.unhover(self,**kwargs):
             user.kill_mouseover()
             return 1
         return 0

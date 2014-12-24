@@ -94,16 +94,32 @@ class BasicUI(UI_Widget):
 
         super(BasicUI,self).kill()
 
-    def float_menu(self,struct,**kwargs):
+    def float_menu_core(self,struct,**kwargs):
         kwargs.setdefault('ephemeral',False)
         kwargs.setdefault('oneshot',True)
-        window=FloatMenu(self.screen,self,graphic_chart['float_base_size'],
+        menuklass=kwargs.get('klass',None)
+        window=menuklass(self.screen,self,kwargs.pop('size',graphic_chart['float_base_size']),
             struct=struct,**kwargs)
         window.set_command('exit',lambda : self.close(window))
+        return  self.float_core(window,'floatmenu',**kwargs)
+
+    def float_menu(self,struct,**kwargs):
+        kwargs['klass']=FloatMenu
+        window=self.float_menu_core(struct,**kwargs)
         window.set_anim('grow_in',len=ANIM_LEN['instant'])
         for c in window.children:
             c.set_anim('appear',len=ANIM_LEN['short'])
-        return  self.float_core(window,'floatmenu',**kwargs)
+        return window
+
+    def float_radial(self,struct,**kwargs):
+        kwargs['klass']=RadialMenu
+        kwargs.setdefault('size',(240,240) )
+        window= self.float_menu_core(struct,**kwargs)
+        prevpos=self.pos[window]
+        decal=array(window.rect.topleft)-window.rect.center
+        self.pos[window]=window.rect.topleft=tuple(prevpos+decal)
+        window.set_anim('grow_in',len=ANIM_LEN['instant'],anchor='center')
+        return window
 
     def float_core(self,window,typ='floatmenu',**kwargs):
         if 'parent_window' in kwargs:
@@ -485,11 +501,21 @@ class BasicUI(UI_Widget):
             hovering=False
             for w in windowseq:
                 if w.rect.collidepoint(event.pos):
+                    pos=event.pos-array(w.rect.topleft)
+                    if hasattr(w,'mask') and not w.mask.get_at(pos):
+                        #for c in w.children:
+                            #tmp= c.event(event)
+                        #if tmp:
+                            #return tmp
+                        continue
                     hovering=True
                     self.hover(w)
                     tmp= w.event(event)
                     if tmp or not w.clickthrough:
                         return tmp
+                else:
+                    if w.is_hovering:
+                        self.unhover()
             if not hovering :
                 self.unhover()
             if event.type!=pg.MOUSEMOTION and user.focused_on and user.focused_on!=hovering:

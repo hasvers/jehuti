@@ -223,7 +223,7 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
     sound=False
     anim_mod=(1,1,1,1) #animated modifier
     per_pixel_alpha=1
-    blur_mode=graphic_chart['default_blur_mode'] #(margin, nb of repetitons,flag,total amplitude)
+    blur_mode=graphic_chart['default_blur_mode']
 
     #OPTIMIZATION: Clear modimg if necessary to improve runtime performance, however will cause storing many more pictures
     modimg=('base','hover','select','ghost')#states that translate as simple modifiers such as hover, select
@@ -447,7 +447,9 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
             if  not self.per_pixel_alpha and self.alpha:
                 image.set_alpha(self.alpha,pg.RLEACCEL)
         if self.states.get('blur',None):
-            gv_effects.make_blur(image,self.blur_mode)
+            blimg=image.copy()
+            gv_effects.blur(blimg,**self.blur_mode)
+            self.images['blur']=self.image=blimg
         self.image=image
         return self.image
 
@@ -497,6 +499,9 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
         self.states[state]=False
         if state in self.modimg or force_redraw:
             self.set_image(self.state)
+        if kwargs.get('recursive',False):
+            for c in self.children:
+                c.rm_state(state,**kwargs)
         if self.state == state :
             self.state='idle'
             for i,j in self.states.iteritems():
@@ -622,31 +627,33 @@ class UI_Widget(UI_Item):
         handled=False
         refpos=array(kwargs.pop('refpos',self.abspos('child',with_offset=False)))
         children=kwargs.pop('children',self.children)
-        hovering = False
         if event.type in (pg.MOUSEMOTION,pg.MOUSEBUTTONDOWN,pg.MOUSEBUTTONUP):
             pos = tuple( array(event.pos)-refpos )
             newhover=False
+            hovering=False
             for c in children[::-1] :
                 if c.rect.collidepoint(pos):
-                    hovering =True
-                    if self.hover(c) :
-                        newhover = c
-                    if c.event(event) :
-                        self.dirty=1
-                        return True
-                    break
-            if hovering ==False :
-                if self.hovering and self.hovering in children:
+                    hovering=True
+                    if (hasattr(c,'mask') and not c.mask.get_at(pos)):
+                        print 'MASK_TEST',c
+                    else:
+                        if c.event(event) :
+                            self.dirty=1
+                            return True
+                        if self.hover(c) :
+                            newhover = c
+                        break
+                elif c == self.hovering:
                     self.unhover()
             if  newhover:# or self.unhover() :
                 self.update()
+            if not hovering:
+                self.unhover()
 
         elif event.type==pg.KEYDOWN:
             if self.keymap(event):
                 handled= True
 
-        #if hovering:
-            #handled= True
         if handled:
             self.dirty=1
         return handled
@@ -717,9 +724,12 @@ class UI_Widget(UI_Item):
         else :
             return False
 
-    def unhover(self):
+    def unhover(self,recursive=True):
         if self.hovering :
-            self.hovering.rm_state('hover')
+            if hasattr(self.hovering,'unhover'):
+                self.hovering.unhover(recursive=recursive)
+            elif recursive:
+                self.hovering.rm_state('hover',recursive=True)
             self.hovering=None
             pg.mouse.set_cursor(*pg.cursors.arrow)
             self.dirty=1
@@ -727,14 +737,6 @@ class UI_Widget(UI_Item):
 
         else :
             return False
-
-    def rm_state(self,state):
-        if UI_Item.rm_state(self,state) :
-            if state =='hover':
-                for c in self.children :
-                    c.rm_state(state)
-            return True
-        return False
 
     def signal(self,signal,*args,**kwargs):
         kwargs.setdefault('affects',self)

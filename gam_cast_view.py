@@ -83,6 +83,9 @@ class ActorIcon(UI_Icon):
         height = graphic_chart['portrait_height']
         rect *= float(height)/rect[1]
         img=images['idle']=pg.transform.smoothscale(img,tuple(int(i) for i in rect))
+        hovimg=img.copy()
+        gv_effects.glow(hovimg,4,.55)
+        self.images['hover']=hovimg
         images['ghost']=img.copy()
         images['ghost'].set_alpha(graphic_chart['ghost_alpha'])
         for img in images.values():
@@ -101,6 +104,8 @@ class ActorIcon(UI_Icon):
     def color_mod(self,state):
         if state =='inactive':
             return 'grayed'
+        if state=='hover':
+            return (1,1,1,1)
         return graphic_chart.get('actor_'+state+'_color_mod',UI_Icon.color_mod(self,state))
         #return UI_Icon.color_mod(self,state)
 

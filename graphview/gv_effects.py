@@ -6,52 +6,25 @@ from scipy import signal, ndimage
 '''Visual effects.'''
 
 
-def glow(surface, sigma=8,mode='np'):
+def glow(surface, sigma=8,intens=.85,mode='np'):
+    newsurf=surface.copy()
+    blur(newsurf,sigma,intens)
+    surface.blit( newsurf,(0,0),None,pg.BLEND_ADD)
+
+
+def blur(surface, sigma=8,intens=1,mode='np'):
     """This function takes a pygame surface, converts it to a numpy array
     carries out gaussian blur, converts back then returns the pygame surface.
     """
-    # Convert to a NumPy array.
     np_array = pg.surfarray.array3d(surface)
-    #alpha = pg.surfarray.pixels_alpha(surface)
-    # Filter the image
     result = ndimage.filters.gaussian_filter(np_array,
                             sigma=(sigma, sigma, 0),
                             order=0,
                             mode='reflect'
                             )
-
-    #new_alpha = ndimage.filters.gaussian_filter(alpha, sigma=(sigma, sigma), order=0, mode='reflect')
-    # Convert back to a surface.
-    #surf = pg.surfarray.make_surface(result)#.convert_alpha()
-    #pg.surfarray.pixels_alpha(surf)[:] = new_alpha
-    surf=surface.copy()
-    #pg.surfarray.blit_array(surf,(result+np_array)/2)
-    pg.surfarray.blit_array(surf,(result*0.85).astype('int') )
-    #surf.fill((200,200,200,250), None, pg.BLEND_MULT)
+    pg.surfarray.blit_array(surface,(result*intens).astype('int') )
     del np_array
 
-    #del alpha
-    surface.blit( surf,(0,0),None,pg.BLEND_ADD)
-
-def blur(surface, sigma=8,mode='np'):
-    """This function takes a pygame surface, converts it to a numpy array
-    carries out gaussian blur, converts back then returns the pygame surface.
-    """
-    # Convert to a NumPy array.
-    np_array = pg.surfarray.array3d(surface)
-    alpha = pg.surfarray.pixels_alpha(surface)
-    # Filter the image
-    result = ndimage.filters.gaussian_filter(np_array,
-                            sigma=(sigma, sigma, 0),
-                            order=0,
-                            mode='reflect'
-                            )
-
-    #new_alpha = ndimage.filters.gaussian_filter(alpha, sigma=(sigma, sigma), order=0, mode='reflect')
-    # Convert back to a surface.
-    surf = pg.surfarray.make_surface(result).convert_alpha()
-    pg.surfarray.pixels_alpha(surf)[:] = new_alpha
-    return surf
 
 def blur_pil(img):
     '''Blurring function using PIL (slower)'''
@@ -114,6 +87,7 @@ def aboriginize(img):
 
 
 def make_blur(img,blur_mode=None,use_pil=None):
+    #OBSOLETE
     if use_pil is None:
         use_pil=False
         #use_pil=user.use_pil
@@ -142,7 +116,7 @@ def make_blur(img,blur_mode=None,use_pil=None):
     if blur_mode is None:
         blur_mode=graphic_chart['default_blur_mode']
         #(margin, nb of repetitons,flag,total amplitude)
-    mrg,nrep,flag,amplitude=blur_mode
+    mrg,nrep,flag,amplitude=[ blur_mode[i] for i in ['margin','repet','flag','amp']]
     if flag=='add':
         flag=pg.BLEND_ADD
     if flag=='mult':

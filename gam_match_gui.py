@@ -464,7 +464,11 @@ class MatchUI(BasicUI,SceneUI):
         for l in self.layers :
             struct+=tuple(l.menu(event))
         if struct:
-            self.float_menu(struct,oneshot=True)
+            #if 'target' in kwargs:
+                #tgt=kwargs['target']
+                #pos=self.abspos(tgt)+array(tgt.rect.size)/2
+                #kwargs['pos']=pos
+            self.float_menu(struct,oneshot=True)#,**kwargs)
 
     def keymap(self,event):
         if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():

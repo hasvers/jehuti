@@ -228,7 +228,8 @@ class FieldContainer(UI_Widget):
 #        test.set_alpha(180)
 #        screen.blit(test,(0,0))
 #        test.blit(self.image,(0,0))
-        if not self.parent or not hasattr(self.parent,'alpha') : # if not further alpha blitting
+        if not self.per_pixel_alpha and ( not self.parent or
+                not hasattr(self.parent,'alpha')) : # if not further alpha blitting
             #self.image=self.image.convert_alpha()
             self.image=self.image.convert()
             self.image.set_colorkey(COLORKEY)
@@ -363,7 +364,8 @@ class FieldContainer(UI_Widget):
                 continue
             else :
                 gnr='text'
-            field=self.add(gnr,val=line[0],output_method=line[1],selectable=True)
+            field=self.add(gnr,val=line[0],output_method=line[1],
+                selectable=True,no_paint=True)
             if gnr =='text' and len(line)>2:
                 field.status_tip=line[2]
         self.update()
@@ -390,9 +392,9 @@ class FieldContainer(UI_Widget):
                 elif typ=='text':
                     val=attr
             if 'legend' in opts:
-                self.add('text',val=opts['legend'])
+                self.add('text',val=opts['legend'],no_paint=True)
 
-            tmp=self.add(typ,val=val,**opts)
+            tmp=self.add(typ,val=val,no_paint=True,**opts)
             if 'bind' in opts: #Is this redundant with output_method?
                 tmp.bind_command(opts['bind'])
             if 'tip' in opts:
@@ -410,6 +412,7 @@ class FieldContainer(UI_Widget):
     def add(self,field,**kwargs):
         if field in self.children :
             return False
+        kwargs.pop('no_paint',False) #Option for windows:do not update graphics
         if isinstance(field,basestring):
             if field == 'input':
                 field=InputField(self,**kwargs)
@@ -531,8 +534,6 @@ class FieldContainer(UI_Widget):
         self.children.append(field)
 
         self.group.add(field)
-#        field.rect=field.image.get_rect()
-#        self.compute_pos()
         self.newfields.append(field)
         return field
 

@@ -714,8 +714,8 @@ class CanvasHandler(UI_Widget):
             return True
         return False
 
-    def unhover(self):
-        if UI_Widget.unhover(self):
+    def unhover(self,**kwargs):
+        if UI_Widget.unhover(self,**kwargs):
             self.signal('unhover',affects=(self))
             user.kill_mouseover()
             return True
@@ -1187,6 +1187,10 @@ class CanvasEditor(CanvasHandler):
         if not menu:
             menu=self.menu(**kwargs)
         if menu:
+            if 'target' in kwargs:
+                tgt=kwargs['target']
+                pos=self.abspos(tgt)+array(tgt.rect.size)/2
+                kwargs['pos']=pos
             user.ui.float_menu(menu,oneshot=True,**kwargs)
 
     def right_click(self,target,event=None):

@@ -368,8 +368,6 @@ class MatchCanvasPlayer(MatchCanvasHandler):
         bgmenu=()
         return bgmenu
 
-
-
     def select(self,target,*args,**kwargs):
 
         for e in self.events:

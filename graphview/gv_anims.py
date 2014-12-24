@@ -2,6 +2,7 @@
 from gv_ui_basics import *
 from gv_events import TimedEvent,Event
 import easing
+import PyIgnition as ignition
 
 
 ANIM_LEN={'instant':120,
@@ -129,6 +130,8 @@ class AnimationHandler(object):
             if tfrac<0 or tfrac>1.:
                 continue
             tfrac=self.easing(animopts.get('interpol','quad'),tfrac)
+            if step.opts.get('inverted',False):
+                tfrac=1.-tfrac
 
             #Effect by genre
             if step.genre=='hide':
@@ -163,12 +166,6 @@ class AnimationHandler(object):
                         val= amp*sin(puls*time-t1)
                     td=array((int(val*sin(angle)),int(val*cos(angle))))
                 todo.append( ref+ td )
-            elif step.genre=='blur_in':
-                item.set_state('blur')
-                dft=graphic_chart['default_blur_mode']
-                item.blur_mode=(rint(dft[0]*(1-tfrac)), )+tuple(dft[1:])
-                if tfrac>.95:
-                    item.rm_state('blur')
 
         #Colormod and movement
         if hasattr(item,'alpha'):
@@ -208,7 +205,7 @@ class AnimationHandler(object):
             if tfrac<0 or tfrac>1.:
                 continue
             tfrac=self.easing(animopts.get('interpol','quad'),tfrac)
-            if animopts.get('inverted',False):
+            if step.opts.get('inverted',False):
                 tfrac=1.-tfrac
             #Effects
             if step.genre=='roll_in':
@@ -268,7 +265,7 @@ class AnimationHandler(object):
                     continue
                 if item.per_pixel_alpha:
                     gradients.draw_gradient(item.image ,start,stop,
-                     (255,255,255,255),(255,255,255,0),mode=pg.BLEND_MULT )
+                     (255,255,255,255),(255,255,255,0),mode=pg.BLEND_RGBA_MULT )
                 else:
                     rect=pg.rect.Rect(start,stop)
                     img=item.image.copy()
@@ -276,8 +273,19 @@ class AnimationHandler(object):
                     img.set_alpha(255)
                     item.image.fill( COLORKEY )
                     item.image.blit(img,rect,rect )
-
                 item.images['anim']=item.image
+            elif step.genre=='xfade_in':
+                img=step.args[0]
+                alp=rint(255 *(1.-tfrac))
+                if item.per_pixel_alpha:
+                    img=img.convert_alpha()
+                    img.fill((255,255,255,alp), None,pg.BLEND_RGBA_MULT)
+                else:
+                    item.image.set_alpha(255)
+                    img.set_alpha(alp )
+                item.image.blit(img,(0,0) )
+                item.images['anim']=item.image
+
         if hasattr(item.parent,'dirty'):
             item.parent.dirty=1
 
@@ -409,9 +417,14 @@ class Animation(TimedEvent):
                 length=kwargs.get('len',1200)
                 st=self.Step('appear_in',kwargs.get('direction',0),override=True )
                 steps+=[(time,length,st)]
-            elif anim=='blur_in':
+            elif 'blur' in anim:
                 length=kwargs.get('len',1200)
-                st=self.Step('blur_in' )
+                img=self.item.image.copy()
+                gv_effects.blur(img,**self.item.blur_mode)
+                inv=False
+                if 'out' in anim:
+                    inv=True
+                st=self.Step('xfade_in',img,override=True,inverted=inv)
                 steps+=[(time,length,st)]
             else:
                 raise Exception( 'ERROR: Unrecognized animation key:',anim)
@@ -501,5 +514,27 @@ class Anim_Item(UI_Item):
     '''Subclass of UI_Item that contains graphical items attached to
 some item for the duration of an animation (e.g. particles)'''
 
-    def __init__(self):
-        pass
+
+
+class Particle_Item(UI_Item):
+    dft={
+        'source':'',
+        'force':''
+        }
+    def __init__(self,size):
+        UI_Item.__init__(self)
+        self.effect = ignition.ParticleEffect(self.image, (0, 0), size)
+
+    def prepare(self):
+
+        self.gravity = self.effect.CreateVortexGravity(pos = (400, 300),
+            strength = 1.0, strengthrandrange = 0.0)
+        self.source = self.effect.CreateSource(pos = (0, 0), initspeed = 5.0,
+            initdirectionrandrange = 0.5, particlesperframe = 1,
+            particlelife = 50, drawtype = PyIgnition.DRAWTYPE_LINE,
+            length = 5.0, radius = 5.0)
+
+    def run(self):
+        self.image.fill((0, 0, 0, 0))
+        self.effect.Update()
+        self.effect.Redraw()
