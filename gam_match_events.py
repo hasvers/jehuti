@@ -758,11 +758,11 @@ class ExploreEvt(MatchEvent):
         added=[]
         for n in [n for n in nodes if not n in linkp and not sub.contains(n)]+links :
             if n.type=='node':
-                if True in [f.name in ('Exclude','LinkOnly') and f.test_cond(match)
+                if True in [f.val in ('Exclude','LinkOnly') and f.test_cond(match)
                             for f in actg.get_info(n,'cflags')]:
                     continue
             else:
-                if True in [f.name in ('Exclude',) and f.test_cond(match) and not
+                if True in [f.val in ('Exclude',) and f.test_cond(match) and not
                         sub.contains(p) for p in n.parents for f in actg.get_info(p,'cflags')]:
                     continue
             if not match.ruleset.discovery_proba(actinf,n,self.cost):
@@ -895,8 +895,8 @@ class BatchEvt(MatchEvent):
 
 
     def duplicate_of(self,evt):
-        if not False in [True in [s.duplicate_of(s2) for s2 in evt.events() ]
-                for s in self.events()]:
+        if not False in [True in [s.duplicate_of(s2) for s2 in evt.events ]
+                for s in self.events]:
             return True
         return False
 

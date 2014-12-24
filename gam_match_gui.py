@@ -190,7 +190,8 @@ class MatchEditorUI(EditorUI,SceneUI):
             ref=klass()
             #ref=klass(caller.ref,caller.data)
         flist=(
-            ('val','arrowsel',{'values':ref.defaults,'remake':True}),
+            ('val','arrowsel',{'values':ref.defaults,'add':True}),
+            ('info','input',{}),
             #('iter','arrowsel',{'values':('always',0,1,2,3,4)}),
             #('conds','inputlist',{'legend':'Conditions','width':200,'add':True,'menu':{'type':'scrcond'}}),
             #('effects','inputlist',{'legend':'Effects','width':200,'add':True,'menu':{'type':'screffect'}}),

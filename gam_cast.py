@@ -227,7 +227,7 @@ class CastPlayer(CastHandler):
                 icon.set_state('inactive')
             else:
                 icon.set_state('idle')
-                icon.set_state('disabled')
+                #icon.set_state('disabled')
             icon.rect.bottom=self.view.parent.rect.bottom
             self.hud_update(act)
 

@@ -16,11 +16,15 @@ class StatusBar(Window):
         self.clear()
         if menu:
             for i,j in menu:
-                txt=self.add('dropmenu',val=(i,j),selectable=True,pos=(0,0),bgcolor=graphic_chart['menu_button_bgcolor'])
+                txt=self.add('dropmenu',val=(i,j),selectable=True,pos=(0,0),
+                    bgcolor=graphic_chart['menu_button_bgcolor'],
+                    width=64)
                 txt.fixsize=True
+
             #self.add('text',val='|',pos=(0,1), width=20,fixsize=True)
+        self.add('blank',width=16,pos=(0,1))
         self.status=TextField(self)#,w=self.active_rect.w,h=self.active_rect.h,fixsize=True)
-        self.add(self.status,pos=(0,1))
+        self.add(self.status,pos=(0,2))
     def update(self):
         if user.status != self.status.val :
             self.status.set_val(user.status)

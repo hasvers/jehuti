@@ -263,6 +263,7 @@ class MultiTextField(TextField):
             if i in ('h','hei','height') :
                 self.height=j
                 self._maxsize[1]=j
+        self.extensible=kwargs.pop('add',False) #Admits adding new values
         if 'val' in kwargs and not kwargs['val'] in values:
             kwargs['val']=self.val
         #nkwargs.pop('val')
@@ -309,6 +310,19 @@ class MultiTextField(TextField):
             self.output()
             return True
         return False
+
+    def add_val(self,val):
+        if val in self.values:
+            return False
+        self.val=val
+        self.values.append(val)
+        self.redraw()
+
+    def new_val(self):
+        user.ui.input_menu('input', self.add_val,val=self.val)
+
+    def set_command(self,*args,**kwargs):
+        print args,kwargs
 
     def set_val(self,val,*args,**kwargs):
         if val in self.values:
@@ -631,32 +645,46 @@ class ScrollBar(DragField):
 
 
 
-class ArrowItem(UI_Icon):
+class WindowIcon(UI_Icon):
     mutable=True
     size=(1,1)
     fixsize=True
-    def __init__(self,parent,method,**kwargs):
-        super(ArrowItem, self).__init__(**kwargs)
+    def __init__(self,parent,val,method,**kwargs):
+        super(WindowIcon, self).__init__(**kwargs)
         self.parent=parent
         self.method=method
+        self.val=val
 
     def make_surface(self,size,mod,*args,**kwargs):
-        return image_load(database['image_path']+graphic_chart['arrow_img'])
+        return ICONLIB[self.val]
 
     def create(self,*args,**kwargs):
-        super(ArrowItem, self).create(*args,**kwargs)
+        super(WindowIcon, self).create(*args,**kwargs)
+        img=self.images['idle']
+        img=img.copy()
+        gv_effects.glow(img)
+        self.images['hover']=img
+        #self.set_state('idle')
         self.size=self.width,self.height=self.rect.size
 
     def event(self,event,*args,**kwargs):
         if event.type==pg.MOUSEBUTTONDOWN and event.button==1:
             self.method()
             return True
-        return super(ArrowItem, self).event(event,*args,**kwargs)
+        return super(WindowIcon, self).event(event,*args,**kwargs)
 
     def color_mod(self,state,*args):
-        if state=='hover':
-            return (1.8,1.8,.8,1)
+        #if state=='hover':
+            #return (1.8,1.8,.8,1)
         return (1,1,1,1)
+
+class ArrowWindowIcon(WindowIcon):
+    def __init__(self,parent,method,**kwargs):
+        super(ArrowWindowIcon, self).__init__(parent,None,method,**kwargs)
+
+    def make_surface(self,size,mod,*args,**kwargs):
+        return image_load(database['image_path']+graphic_chart['arrow_img'])
+
 
 
 class ListSelField(MultiTextField):
@@ -694,22 +722,26 @@ class ArrowList(MultiTextField,UI_Widget):
         self.multiseld=[]
         self.hovering=None
         self.group=pgsprite.Group()
-        a1= ArrowItem(self,self.prev_val,set=1,mirrorx=True)
-        a2=ArrowItem(self,self.next_val,set=1)
+        a1= ArrowWindowIcon(self,self.prev_val,set=1,mirrorx=True)
+        a2=ArrowWindowIcon(self,self.next_val,set=1)
 
         MultiTextField.__init__(self,parent,values,**kwargs)
+
         self.children=[a1,a2]
+        if self.extensible:
+            plus=WindowIcon(self,'plus',self.new_val)
+            self.children.append(plus)
         for c in self.children:
             c.create(self.group)
             c.mutate()
-        self.pos[a1]=self.rect.topleft
-        self.pos[a2]=tuple(array(self.rect.topright)-array((a2.rect.w,0)))
-        self.padding=(self.children[0].width+2,2,self.children[0].width+2,4)
-
+        self.renew_pos()
+        self.padding=[a1.width+2,2,a2.width+2,4]
+        if self.extensible:
+            self.padding[2]+=plus.width
+        self.padding=tuple(self.padding)
         for c in self.children:
             c.rect.topleft=self.pos[c]
         self.redraw()
-
 
     def rm_state(self,state,**kwargs):
         if state=='hover':
@@ -719,12 +751,24 @@ class ArrowList(MultiTextField,UI_Widget):
     def set_state(self,state,force_redraw=False,**kwargs):
         return UI_Widget.set_state(self,state,force_redraw,**kwargs)
 
+    def renew_pos(self):
+        try:
+            a1,a2,plus=self.children
+        except:
+            a1,a2=self.children
+            plus=None
+        h=(self.rect.h-a1.rect.h)/2
+        self.pos[a1]=tuple(self.rect.topleft+array((0,h)))
+        self.pos[a2]=tuple(array(self.rect.topright)+(-a2.rect.w,h))
+        if plus:
+            self.pos[a2]=tuple(self.pos[a2]-array((plus.rect.w,0)))
+            hplus=(self.rect.h-plus.rect.h)/2
+            self.pos[plus]=tuple(array(self.rect.topright)-array((plus.rect.w,hplus)))
+
     def redraw(self):
         MultiTextField.redraw(self)
         try:
-            a1,a2=self.children
-            self.pos[a1]=self.rect.topleft+array((0,(self.rect.h-a1.rect.h)/2))
-            self.pos[a2]=tuple(array(self.rect.topright)-array((a2.rect.w,-(self.rect.h-a1.rect.h)/2)))
+            self.renew_pos()
             self.group.draw(self.image)
         except:
             pass
@@ -763,6 +807,7 @@ class ArrowList(MultiTextField,UI_Widget):
             if event.button==5:
                 return self.prev_val()
         return MultiTextField.event(self,event)
+
 
 
 class Toggler(ArrowList):

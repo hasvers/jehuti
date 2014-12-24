@@ -171,15 +171,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                 sub.name='Othgr'+other.name
                 #self.canvas.add_subgraph(sub,pos=1)
                 sub.owner=actor #TODO: this is maybe dangerous: the owner of sub[act][oth] is act
-        #if actor==self.active_player:
-            #self.canvas.set_layer(self.data.actorsubgraphs[actor][actor],0)
-            #I dont know what the comments below refer to! (august 2013)
-            #NB: this is useful so that the convgraph may be modified by Starter nodes Claim events taking place in make_conv
-            #(the convgraph is attainable as a precursor of this layer)
-            # #TODO : Clean this strange dependency
 
-        #else:
-            #self.canvas.set_layer(self.data.actorsubgraphs[actor][actor],-1 )
 
 
     def start_match(self):
@@ -529,12 +521,13 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             return True
 
         if 'select' in sgn :
-
             if self.cast in evt.affects() :
                 # Select Actor
                 if  'unselect' in sgn:
                     self.toggle_subgraph()
-                elif sarg[0]!=self.active_player:
+                elif  sarg[0]==self.active_player:
+                    self.cast.unselect()
+                else:
                     self.toggle_subgraph(sarg[0])
             if self.canvas in evt.affects():
                 #Select node or link

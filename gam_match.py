@@ -297,8 +297,17 @@ class MatchEditor(MatchHandler,SceneEditor):
                 self.del_actorgraphs(sarg[0])
             if 'unselect' in sgn  :
                 self.canvas.set_layer(self.canvas.graph)
+                try:
+                    user.ui.window['nodelist'].refresh()
+                except:
+                    pass
             elif 'select' in sgn :
                 self.canvas.set_layer(self.data.actorgraph[sarg[0]])
+                try:
+                    user.ui.window['nodelist'].refresh()
+                except:
+                    pass
+
             if 'change' in sgn and 'name' in evt.kwargs:
                 actor=evt.item
                 self.data.actorgraph[actor].name=self.cast.get_info(actor,'name')

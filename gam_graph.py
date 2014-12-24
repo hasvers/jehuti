@@ -40,6 +40,17 @@ class ConvTest(DataBit):
             return True
         return False
 
+    def truth_check(self,val,rules,truth):
+        if truth=='all':
+            return True
+        if truth =='+' and rules.truth_value(val)>0:
+            return True
+        if truth =='-' and rules.truth_value(val)<0:
+            return True
+        if truth =='?' and rules.truth_value(val)==0:
+            return True
+        return False
+
 class ConvNodeTest(ConvTest):
     '''Basic class for tests of conversation node state.'''
 
@@ -72,19 +83,7 @@ class ConvNodeTest(ConvTest):
             check =True
 
         val=match.canvas.active_graph.get_info(item,'truth')
-        if check and self.truth_check(val,match.ruleset):
-            return True
-        return False
-
-    def truth_check(self,val,rules):
-        truth=self.truth
-        if truth=='all':
-            return True
-        if truth =='+' and rules.truth_value(val)>0:
-            return True
-        if truth =='-' and rules.truth_value(val)<0:
-            return True
-        if truth =='?' and rules.truth_value(val)==0:
+        if check and self.truth_check(val,match.ruleset,self.truth):
             return True
         return False
 
@@ -99,12 +98,17 @@ class ConvLinkTest(ConvTest):
     def event_check(self,evt,item,match):
         cond=self.cond
         conds=( cond=='Default',
-            cond=='Reac' ,#TODO
-            (cond=='Claim' and 'claim' in evt.type),
-            (cond=='Contest' and 'contest' in evt.type),
-        )
+            cond=='Reac' and evt=='Reac',)
+        if hasattr(evt,'item'):
+            conds+=(
+                (cond=='Claim' and 'claim' in evt.type),
+                (cond=='Contest' and 'contest' in evt.type),
+            )
 
-        if True in conds :
+        vals=[match.canvas.active_graph.get_info(p,'truth') for p in item.parents]
+        tconds=self.truth_check(vals[0],match.ruleset,self.struth)
+        tconds = tconds and self.truth_check(val[1],match.ruleset,self.ttruth)
+        if True in conds and tconds :
             return True
         return False
 

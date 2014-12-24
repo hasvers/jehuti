@@ -7,15 +7,18 @@ from gam_match_events import*
 class CFlag(DataBit):
     '''A conversation flag is any tag that may be relevant to a node or link.'''
     dft={'val':'Include',
-        'defaults':('Include','Exclude','Perceived','LinkOnly','Unlock','Locked','Starter')}
+        'info':'',}
+
+    defaults=['Include','Exclude','Perceived',
+            'LinkOnly','Unlock','Locked','Starter']
 
     def __repr__(self):
         return self.val
 
-    def __eq__(self,x):
-        if hasattr(x,'val'):
-            return self.__class__==x.__class__ and self.val==x.val
-        return self.val==x
+    #def __eq__(self,x):
+        #if hasattr(x,'val'):
+            #return self.__class__==x.__class__ and self.val==x.val
+        #return self.val==x
 
 class OldestCFlag(object):
     dft=('val',)
