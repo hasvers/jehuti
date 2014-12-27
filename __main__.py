@@ -2,11 +2,8 @@
 import sys,site,os
 database={}
 database['basepath']=os.path.normpath('./Jeu/')
-from gam_winfields import *
-from gam_canvasicons import *
-from gam_canvas import *
-from gam_gui import *
 
+from _src import *
 
 pgdisplayflags={'full':pg.FULLSCREEN|pg.DOUBLEBUF|pg.HWSURFACE,'window':0}
 if database['resizable_window']:
@@ -49,7 +46,7 @@ def toggle_fullscreen():
         pg.mouse.set_cursor( *cursor )
         return screen
     except Exception as e:
-        fout=open('error.dat','w')
+        fout=fopen('error.dat','w')
         fout.write(str(e))
         fout.close()
         user.ui.make_balloon("Error: Your system does not allow fullscreen toggling.")
@@ -88,7 +85,7 @@ def keymap(event):
                 user.profile_time=time.time()
             else:
                 profiler.disable()
-                prolog('prolog.dat')#.format(str(pg.time.get_ticks())[:5] ))
+                prolog('logs/prolog.dat')#.format(str(pg.time.get_ticks())[:5] ))
                 print 'Stop profiling',time.time()-user.profile_time
                 user.profile_time=time.time()
         if event.type== pg.KEYUP and event.key==pg.K_l and (pres[pg.K_LCTRL] ):
