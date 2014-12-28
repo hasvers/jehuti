@@ -27,7 +27,7 @@ class CharacterData(Data):
 
     @property
     def components(self):
-        return (self.graph,self.actor)
+        return (self.graph,)
 
     def renew(self):
         Data.renew(self)
@@ -84,9 +84,18 @@ class CharaCastHandler(CastHandler):
 
 
 class CharacterEditor(MatchEditor):
+    '''Editor for character data i.e. their true attributes
+    and their belief graph. Provides it to be imported
+    by scenes. '''
+
     master=True
     name='CharacterEditor'
     handlername='Editor'
+
+    update_truename=False
+    #Potentially dangerous option: change the truename of the character and
+    #thus of all connected avatars. Requires that said avatars be in
+    #loaded data, and that said data be saved afterward.
 
     @property
     def actors(self):
@@ -184,8 +193,8 @@ class CharacterEditor(MatchEditor):
     def save_to_file(self,*args,**kwargs):
         tname=self.data.get_info(self.data.actor,'name')
         #It's a bad idea to change the truename of something frequently
-        if self.data.actor.truename!= tname:
-            print 'Updating truename of',self.data.actor
+        if self.update_truename and self.data.actor.truename!= tname:
+            print 'Updating Truename of',self.data.actor
             self.game.world.update_name(self.data,self.data.actor,tname)
             self.data.actor.truename= tname
         MatchHandler.save_to_file(self,*args,**kwargs)

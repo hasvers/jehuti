@@ -354,7 +354,7 @@ class GameEditor(CanvasEditor,GameHandler):
 
                 ]
         if not user.ui.view['nodelist']:
-                bgmenu += [('Node list',lambda:user.ui.show('nodelist') )]
+                bgmenu += [('SHow node list',lambda:user.ui.show('nodelist') )]
         return bgmenu
 
     def maingraph_menu(self,target,typ,event=None):

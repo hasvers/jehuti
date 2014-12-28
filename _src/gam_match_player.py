@@ -494,6 +494,8 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                 else:
                     self.toggle_subgraph(nxt)
                 return 1
+        if event.key==pg.K_RETURN:
+            self.perform_queue()
         return 0
 
 
@@ -536,9 +538,11 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                     item = sarg[0].item
                     if  self.canvas.get_info(item,'claimed'):
                         return False
-                    if self.time_left<0 and not database['allow_overtime']:
-                        user.set_mouseover('No time',ephemeral=1,color='r')
+                    if (self.time_left<0 and not database['allow_overtime']):
+                        user.set_mouseover('No time',anim='emote_jump',
+                            ephemeral=1,color='r')
                         self.parent.soundmaster.play('cancel')
+                        self.signal('overtime_denied')
                         return False
 
                     #In case the game rules require to claim multiple items together
@@ -554,7 +558,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                     nevt = ClaimEvt(sgn, self.active_player,item)
                     qevt=QueueEvt(nevt,self.data)
                     qevt.cues[0]="destroy"
-                    user.evt.data.bind( ( evt,qevt) )
+                    user.evt.data.bind( ( evt,qevt))
                     for o in otherclaims:
                         nevt = ClaimEvt(sgn, self.active_player,o)
                         oevt=QueueEvt(nevt,self.data)

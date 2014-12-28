@@ -353,17 +353,19 @@ class Animation(TimedEvent):
                 steps+=[(time,length,st)]
             elif anim=='blink':
                 length=kwargs.get('len',400)
-                nblinks=kwargs.get('loops',1)
+                nblinks=kwargs.get('blinks',1)
                 slen=length/2./nblinks
+                color=array(get_color(kwargs.get('color','w')))/255.
                 for z in xrange(nblinks):
                     ti=time+ 2*z*slen
-                    st1=self.Step('color',(1,1,1,1),(2,2,2,1))
-                    st2=self.Step('color',(2,2,2,1),(1,1,1,1))
+                    white=(1,1,1,1)
+                    st1=self.Step('color',white,white+color)
+                    st2=self.Step('color',white+color,white)
                     steps+=[(ti,slen,st1), (ti+slen,slen,st2) ]
             elif anim=='shake':
                 length=kwargs.get('len',1200)
                 amp=kwargs.get('amp',.4)
-                nshakes=kwargs.get('loops',3)*2
+                nshakes=kwargs.get('shakes',3)*2
                 slen=length/2./nshakes
                 for z in xrange(nshakes):
                     ti=time+ 2*z*slen

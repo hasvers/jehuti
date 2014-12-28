@@ -617,7 +617,8 @@ class UI_Widget(UI_Item):
             for c in children[::-1] :
                 if c.rect.collidepoint(pos):
                     hovering=True
-                    if (hasattr(c,'mask') and not c.mask.get_at(pos)):
+                    relpos=pos-array(c.rect.topleft)
+                    if (hasattr(c,'mask') and not c.mask.get_at(relpos)):
                         print 'MASK_TEST',c
                     else:
                         if c.event(event) :
@@ -625,12 +626,14 @@ class UI_Widget(UI_Item):
                             return True
                         if self.hover(c) :
                             newhover = c
+                        if hasattr(c,'clickthrough') and not c.clickthrough:
+                            return False
                         break
                 elif c == self.hovering:
                     self.unhover()
             if  newhover:# or self.unhover() :
                 self.update()
-            if not hovering:
+            if not hovering and self.hovering:
                 self.unhover()
 
         elif event.type==pg.KEYDOWN:
@@ -710,7 +713,8 @@ class UI_Widget(UI_Item):
     def unhover(self,recursive=True):
         if self.hovering :
             if hasattr(self.hovering,'unhover'):
-                self.hovering.unhover(recursive=recursive)
+                self.hovering.rm_state('hover')
+                self.hovering.unhover()
             elif recursive:
                 self.hovering.rm_state('hover',recursive=True)
             self.hovering=None

@@ -488,7 +488,6 @@ class BasicUI(UI_Widget):
             user.just_clicked=None
             pg.time.set_timer(31,0) # deactivate the just_clicked killer
         if event.type in (pg.MOUSEBUTTONUP, pg.MOUSEMOTION, pg.MOUSEBUTTONDOWN):
-
             if user.grabbed and user.grabbed.event(event):
                 return True
 
@@ -501,31 +500,38 @@ class BasicUI(UI_Widget):
                     elif w:
                         windowseq.append(w)
 
-            hovering=False
-            for w in windowseq:
-                if w.rect.collidepoint(event.pos):
-                    pos=event.pos-array(w.rect.topleft)
-                    if hasattr(w,'mask') and not w.mask.get_at(pos):
-                        #for c in w.children:
-                            #tmp= c.event(event)
-                        #if tmp:
-                            #return tmp
-                        continue
-                    hovering=True
-                    self.hover(w)
-                    tmp= w.event(event)
-                    if tmp or not w.clickthrough:
+            kwargs['children']=windowseq[::-1]
+            if UI_Widget.event(self,event,**kwargs):
+                return True
+
+            #EFFORT DUPLICATION (I think. For now keep it in comment until something breaks)
+            #hovering=False
+            #for w in windowseq:
+                #if w.rect.collidepoint(event.pos):
+                    #pos=event.pos-array(w.rect.topleft)
+                    #if hasattr(w,'mask') and not w.mask.get_at(pos):
+                        ##for c in w.children:
+                            ##tmp= c.event(event)
+                        ##if tmp:
+                            ##return tmp
+                        #continue
+                    #hovering=True
+                    #self.hover(w)
+                    #tmp= w.event(event)
+                    #if tmp or not w.clickthrough:
+                        #return tmp
+                #else:
+                    #if w.is_hovering:
+                        #self.unhover()
+            #if not hovering and self.hovering:
+                #self.unhover()
+
+            if event.type!=pg.MOUSEMOTION and user.focused_on:
+                if user.focused_on!=self.hovering:
+                    tmp=  user.focused_on.event(event)
+                    if tmp:
                         return tmp
-                else:
-                    if w.is_hovering:
-                        self.unhover()
-            if not hovering :
-                self.unhover()
-            if event.type!=pg.MOUSEMOTION and user.focused_on and user.focused_on!=hovering:
-                tmp=  user.focused_on.event(event)
-                if tmp:
-                    return tmp
-                user.unfocus()
+                    user.unfocus()
 
         if event.type==pg.KEYDOWN :
             if user.focused_on and  user.focused_on.event(event) :
@@ -541,6 +547,8 @@ class BasicUI(UI_Widget):
                         continue
                     if self.balloons[b][0].event(event):
                        return True
+            elif self.hovering and self.hovering.event(event):
+                return True
         if event.type == pg.KEYUP:
             if self.keymap(event):
                 return True
@@ -605,16 +613,18 @@ class BasicUI(UI_Widget):
     def set_mouseover(self,txt,anim=None,**kwargs):
         if user.mouseover:
             user.mouseover.kill()
-        user.mouseover=Emote(txt,**kwargs)
-        if anim:
-            user.mouseover.set_anim(anim,**kwargs)
-        else:
-            user.mouseover.set_anim('appear',len=ANIM_LEN['instant'])
-        self.group.add(user.mouseover)
+        user.mouseover=emote=Emote(txt,**kwargs)
         pos=kwargs.get('pos',None)
+        source=kwargs.pop('source',None)
+        emote.source=source
         if pos is None:
-            pos=user.mouse_pos()
-        user.mouseover.rect.bottomleft=pos
+            kwargs['pos']=pos=user.mouse_pos()
+        if anim:
+            emote.set_anim(anim,**kwargs)
+        else:
+            emote.set_anim('appear',len=ANIM_LEN['instant'])
+        self.group.add(emote)
+        emote.rect.bottomleft=pos
 
     def kill_mouseover(self):
         if user.mouseover:

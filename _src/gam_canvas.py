@@ -166,7 +166,7 @@ class LogicCanvasEditor(CanvasEditor,LogicCanvasHandler):
             bgmenu += [ ('Add node',lambda p=self.mousepos() :self.add_node(None,None,pos=p))
                 ]
             if not user.ui.view['nodelist']:
-                bgmenu += [('Node list',lambda:user.ui.show('nodelist') )]
+                bgmenu += [('SHow node list',lambda:user.ui.show('nodelist') )]
         else :
             act = self.canvas.active_graph
             bgmenu = [

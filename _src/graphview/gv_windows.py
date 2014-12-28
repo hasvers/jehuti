@@ -113,7 +113,7 @@ class Window(FieldContainer):
             com[source]=[]
         queue=[]
         if  method:
-            self.set_command(source,method,kwargs)
+            self.set_command(source,method,**kwargs)
         else :
             newval=kwargs.pop('val',None)
             if newval :
@@ -345,6 +345,10 @@ class Window(FieldContainer):
             return True
             #if self.container.event(event):
             #    return True
+        if event.type==pg.KEYDOWN and event.key==pg.K_RETURN:
+            if not 'confirm' in self.field_commands['always']:
+                self.exe_command('keypress',command='confirm')
+                return True
         return self.window_event(event)
 
     def window_event(self,event):

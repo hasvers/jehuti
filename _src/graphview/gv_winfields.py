@@ -35,6 +35,8 @@ class WindowField(UI_Item):
                 self.bind_command(j,self.val)
             if i == 'tip':
                 self.status_tip=j
+            if i=='mouseover':
+                self.mouseover=j
         self.image=pg.surface.Surface((self.width,self.height))
         self.image.set_colorkey(COLORKEY)
         self.image.fill(COLORKEY)
@@ -127,32 +129,32 @@ class WindowField(UI_Item):
             self.image.fill(COLORKEY)
             self.redraw()
 
-
-    def rm_state(self,state,**kwargs):
-        if state=='hover' and self.is_hovering and self.status_tip:
-            user.set_status('')
-        return UI_Item.rm_state(self,state,**kwargs)
-
-    def set_state(self,state,force_redraw=False,**kwargs):
-        if UI_Item.set_state(self,state,force_redraw,**kwargs):
-            if state=='hover' and self.status_tip:
-                user.set_status(self.status_tip)
-            return True
-        return False
-
     def kill(self,*args):
         self.unbind_command(None,True)
         UI_Item.kill(self,*args)
 
 
     def set_state(self,state,*args,**kwargs) :
-        if state=='hover' and self.mouseover and not self.is_disabled:
-            user.ui.set_mouseover(self.mouseover,bg=graphic_chart['mouseover_bg'])
-        return UI_Item.set_state(self,state,*args,**kwargs)
+        if UI_Item.set_state(self,state,*args,**kwargs):
+            if state=='hover' and self.mouseover and not self.is_disabled:
+                if not user.mouseover or user.mouseover.source!=self:
+                    user.set_mouseover(self.mouseover,bg=graphic_chart['mouseover_bg'],
+                        anim='appear',len=ANIM_LEN['short'],delay=ANIM_LEN['long'],
+                        source=self)
+            if state=='hover' and self.status_tip:
+                user.set_status(self.status_tip)
+            return True
+        return False
+
     def rm_state(self,state,*args,**kwargs) :
-        if state=='hover' and self.mouseover and user.mouseover:
-            user.ui.kill_mouseover()
-        return UI_Item.rm_state(self,state,*args,**kwargs)
+        if UI_Item.rm_state(self,state,*args,**kwargs):
+            if state=='hover':
+                if self.mouseover and user.mouseover and user.mouseover.source==self:
+                    user.kill_mouseover()
+                if self.status_tip:
+                    user.set_status('')
+            return True
+        return False
 
 class IconField(WindowField):
 
@@ -161,7 +163,6 @@ class IconField(WindowField):
     def __init__(self,parent,**kwargs):
         WindowField.__init__(self,parent,**kwargs)
         self.images['idle']=ICONLIB['none']
-        self.mouseover=kwargs.get('mouseover',None)
         self._minsize=self._maxsize=self.images['idle'].get_rect().size
         self.redraw()
         self.set_state('idle')
@@ -352,6 +353,8 @@ class TextField(WindowField):
     def rm_state(self,state,**kwargs):
         if state=='hover' and self.hover_word:
             self.set_word_state(self.hover_word,hover=0,select=0)
+        #if state in ('disabled','negative') and not kwargs.get('invisible',0):
+            #kwargs['force_remake']=True
         handled= WindowField.rm_state(self,state,**kwargs)
         if handled and state in ('disabled','negative'):
             self.redraw(force_remake=True)
@@ -364,8 +367,10 @@ class TextField(WindowField):
             return False
         if state =='focus' and not self.focusable:
             return False
+        #if state in ('disabled','negative','idle') and not kwargs.get('invisible',0):
+            #kwargs['force_remake']=True
         handled= WindowField.set_state(self,state,force_redraw,**kwargs)
-        if handled and state in ('disabled','negative','idle') and not kwargs.get('invisible',0):
+        if handled and state in ('disabled','negative','idle') and not kwargs.get('invisible',0) :
             self.redraw(force_remake=True)
         return handled
 

@@ -90,6 +90,20 @@ class Data(object):
                     c.kill(recursive)
         self.renew()
 
+    def is_sole_source(self,info_type,item):
+        '''Is this Data object the only source of a given type of infos
+        (e.g. it has no precursor with the same role).'''
+        if not info_type in self.infotypes[item.type]:
+            return False
+        if self.overwrite_item:
+            if hasattr(item,info_type):
+                return False
+        else:
+            for p in self.precursors:
+                if info_type in p.get_infotypes(item.type):
+                    return False
+            return True
+
     def get_info(self,item,info_type=None,**kwargs):
         if self.transparent and kwargs.get('transparent',True):
             if info_type == None :

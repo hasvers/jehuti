@@ -294,7 +294,8 @@ class MatchRuleset(LogicRuleset):
                     cand=agree
         if option=='last':
             #Last candidate only
-            cand=sorted(cand,key=lambda e:canvas.get_info(e,'lastmention'))[-1:]
+            if len(cand)>1:
+                cand=sorted(cand,key=lambda e:canvas.get_info(e,'lastmention'))[-1:]
         #Recursive
         cand=set(cand)
         if cand==prev_cand:

@@ -1055,7 +1055,7 @@ class CanvasEditor(CanvasHandler):
                 ('Manage subgraphs',self.manage_subgraphs),
                 ]
         if not user.ui.view['nodelist']:
-            bgmenu += [('Node list',lambda:user.ui.show('nodelist') )]
+            bgmenu += [('SHow node list',lambda:user.ui.show('nodelist') )]
         return bgmenu
 
     def menu(self,event=None,**kwargs):

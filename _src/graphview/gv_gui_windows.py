@@ -202,8 +202,8 @@ class EditorMenu(DragWindow):
                 continue
             v+=1
             #For transparent data, add the icon for deleting a field
-            if not self.itemwrite and hasattr(self.data,
-                    'transparent') and self.data.transparent:
+            if (not self.itemwrite and self.data.transparent
+                    and not self.data.is_sole_source(a[0],self.ref)) :
                 self.delfield[a[0]]=self.add('icon',val='cancel')
                 self.delfield[a[0]].mouseover='Delete local info'
             else:
@@ -486,7 +486,8 @@ class EditorMenu(DragWindow):
                     itemwrite= self.itemwrite or opt[a].get('itemwrite',False),
                         source='editor'+str(id(self)))
                 self.chgevt[a].desc='Change '+desc[a].lower()
-                if not self.itemwrite and self.data.transparent:
+                if (not self.itemwrite and self.data.transparent
+                        and not self.data.is_sole_source(a[0],self.ref)) :
                     self.delevt[a]=DeleteInfoEvt(self.ref,self.data,[a],
                         source='editor'+str(id(self)))
                     self.delevt[a].desc='Delete '+desc[a].lower()

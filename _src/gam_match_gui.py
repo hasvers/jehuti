@@ -560,9 +560,9 @@ class TurnBox(Window):
         self.timetxt=self.add('text',val='Time left:',pos=(1,0))
         self.time_left=self.add('gauge',val=1.,pos=(1,1),w=90)
         self.perf=self.add('text',val='Perform',pos=(2,0),selectable=True,
-            output_method=lambda :self.signal('perform_queue'),tip='Perform all actions.' )
-        self.finish=self.add('text',val='Finish',pos=(2,1),selectable=True,
-            output_method=self.finish ,tip='End turn.')
+            output_method=lambda :self.signal('perform_queue'),tip='Perform all planned actions.' )
+        self.finish=self.add('text',val='End turn',pos=(2,1),selectable=True,
+            output_method=self.finish ,tip='Let others speak and resplenish your time.')
         self.refresh()
 
     def finish(self):
@@ -578,6 +578,8 @@ class TurnBox(Window):
         sgn=evt.type
         if 'turn' in sgn or 'queue' in sgn or 'player' in sgn:
             self.refresh()
+        if 'overtime_denied' in sgn:
+            self.timetxt.set_anim('blink',color='r',len=ANIM_LEN['long'])
 
     def refresh(self):
         match=self.parent.match
