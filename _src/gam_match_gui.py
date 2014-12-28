@@ -241,7 +241,9 @@ class MatchEditorUI(EditorUI,SceneUI):
         self.maker_menu(flist,output_method,Talent,**kwargs)
 
     def actor_react_maker(self,output_method,**kwargs):
-        flist=(('cond','arrowsel',{'values':ActorReact.conds} ),
+        flist=(('agree','arrowsel',{'values':ActorReact.agrees} ),
+            ('emotion','arrowsel',{'values':ActorReact.emotions} ),
+            ('event','arrowsel',{'values':ActorReact.events} ),
             ('text','input',{'width':200,'height':200})
             )
         kwargs.setdefault('title','Reaction:')

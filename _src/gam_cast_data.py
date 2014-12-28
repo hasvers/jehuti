@@ -20,9 +20,11 @@ class Talent(DataBit):
         return self.name #+ str(id(self))
 
 class ActorReact(DataBit):
-    dft={'cond':'Agree','text':''}
+    dft={'agree':'all','emotion':'all','event':'None','text':''}
     #val=None
-    conds=('Agree','?Agree','!Agree','Convinced','?Convinced','!Convinced','Concede','Offended','Pleased','Appeased')
+    agrees=('all','+','?','-')
+    emotions=('all','+','?','-','!') #'!' is for shocked i.e. high activity
+    events=('None','Discovery','Concede','Dispute')
     #maybe replace offended/pleased/appeased by pleased ?pleased !pleased and make symbol ?! into separate condition
     # to shorten the list
 
@@ -61,7 +63,8 @@ class Actor(DataItem):
         'control':'human',
         'status':'Unknown',
         'prox':(),
-        'react':[]
+        'react':[],
+
         }
 
     dft_names={
@@ -74,8 +77,8 @@ class Actor(DataItem):
         'prof':'Proficiencies',
         'status':'Status',
         'prox':'Proximity',
-        #'react':'Reactions',
-        #'control':'Controller',
+        'react':'Reactions',
+        'control':'Controller',
         }
 
     dft={}

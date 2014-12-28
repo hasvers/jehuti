@@ -16,6 +16,8 @@ class FieldContainer(UI_Widget):
     active_surf=None
     interspace=4 #space between fields
     margin=4
+    hrule=False #Table lines
+    rulewidth=1
 
     scrollable=False
     _maxsize=False
@@ -223,6 +225,8 @@ class FieldContainer(UI_Widget):
                 c.draw()
         self.group.draw(self.active_surf)
         self.decorgroup.draw(self.image)
+        if self.hrule:
+            self.draw_hrule()
 
 #         = self.image.convert()
 #        test.set_alpha(180)
@@ -537,6 +541,15 @@ class FieldContainer(UI_Widget):
         self.newfields.append(field)
         return field
 
+    def draw_hrule(self):
+        l,y=self.active_rect.topleft
+        w=self.active_rect.w
+        h=self.rulewidth
+        for r in self.row_height[:-1]:
+            y+=r
+            rec=pg.rect.Rect( (l,y-self.interspace/2-h/2),(w,h) )
+            self.image.fill((255,255,255,50),rec )
+
     def remove(self,field):
         self.children.remove(field)
         self.group.remove(field)
@@ -628,6 +641,8 @@ class FieldContainer(UI_Widget):
                     if ih > row_height[ys] :
                         row_height[ys]=  ih+isp
                         largest[(0,ys)]=i
+        self.col_width=col_width
+        self.row_height=row_height
         width=sum(col_width) #+( len(col_width)-1)*isp
         height= sum(row_height) #+( len(row_height)-1)*isp
         # If either width or height in excess, add scrollbar

@@ -503,6 +503,11 @@ class BasicUI(UI_Widget):
             kwargs['children']=windowseq[::-1]
             if UI_Widget.event(self,event,**kwargs):
                 return True
+            refpos=array(kwargs.pop('refpos',self.abspos('child',with_offset=False)))
+            pos = tuple( array(event.pos)-refpos )
+            for w in windowseq:
+                if not w.clickthrough and w.rect.collidepoint(pos):
+                    return False
 
             #EFFORT DUPLICATION (I think. For now keep it in comment until something breaks)
             #hovering=False
@@ -588,7 +593,6 @@ class BasicUI(UI_Widget):
     def keymap(self,event):
         if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():
             if event.key == pg.K_z:
-                print 'undo'
                 return user.evt.undo()
             if event.key == pg.K_y:
                 return user.evt.redo()

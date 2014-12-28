@@ -153,7 +153,6 @@ class CastHandler(Handler):
         if info_type=='hover':
             info_type=False
         infos=self.data.get_info(actor)
-        print actor.truename
         if info_type:
             try :
                 txt=infos[info_type]

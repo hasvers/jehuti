@@ -445,7 +445,7 @@ class MatchCanvasPlayer(MatchCanvasHandler):
 
         if (('change' in evt.type or 'rem_info' in evt.type)
                  and 'bias' in evt.infos  and not 'truth' in evt.infos
-                 and not (evt.source and 'updbias' in evt.source)
+                 and not (evt.source and 'biascalc' in evt.source)
              or 'add' in evt.type and not evt.infos.get('bias',None) is None
                 and  evt.infos.get('truth',None) is None
             ):
