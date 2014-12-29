@@ -10,19 +10,17 @@ pg.init()
 bg=pg.image.load('background.jpg')
 
 bg2=pg.image.load('crossColor.jpg')
-bg2=pg.image.load('perso2a.png')
 bg2=pg.image.load('test.jpg')
-
 bg2=pg.image.load('10113-diffuse.jpg')
 bg2=pg.image.load('Crossbw2.png')
 bg2=pg.image.load('compass.png')
+bg2=pg.image.load('perso2a.png')
 
 scrsize=bg2.get_rect().size
 
 screen = pg.display.set_mode(scrsize )
 
 shader=ShaderManager('lightfs',screen,scrsize)
-shader=ShaderManager('normallight',screen,scrsize,normals= 'perso2a_NORMALS.png')
 shader=ShaderManager('normallight',screen,scrsize,normals= 'Crossbw2_NORMALS.png')
 shader=ShaderManager('normallight',screen,scrsize,normals= 'test.jpg',specular= 'test.jpg') #FROZEN
 shader=ShaderManager('normallight',screen,scrsize,normals= 'crossNRM.jpg',specular= 'cross_SPECULAR.png')
@@ -32,6 +30,7 @@ shader=ShaderManager('normallight',screen,scrsize,normals= 'crossNRM_NORMALS.png
 shader=ShaderManager('normallight',screen,scrsize,normals= '10113.jpg',specular= '10113AO.jpg')
 shader=ShaderManager('normallight',screen,scrsize,normals= 'Crossbw2_NORMALS.png',specular= 'Crossbw2_NORMALS.png')
 shader=ShaderManager('normallight',screen,scrsize,normals= 'compass_NORMALS.png',specular='compass_SPECULAR.png')
+shader=ShaderManager('normallight',screen,scrsize,normals= 'perso2a_NORMALS.png',specular= 'perso2a.png')
 
 #shader=ShaderManager('waterripple',screen,scrsize)
 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from gam_graph import *
 from gam_canvasicons import *
+from gam_canvas_events import *
 from gam_scene import SceneUI
 
 class LogicCanvas(Canvas):
@@ -166,7 +167,7 @@ class LogicCanvasEditor(CanvasEditor,LogicCanvasHandler):
             bgmenu += [ ('Add node',lambda p=self.mousepos() :self.add_node(None,None,pos=p))
                 ]
             if not user.ui.view['nodelist']:
-                bgmenu += [('SHow node list',lambda:user.ui.show('nodelist') )]
+                bgmenu += [('Show node list',lambda:user.ui.show('nodelist') )]
         else :
             act = self.canvas.active_graph
             bgmenu = [

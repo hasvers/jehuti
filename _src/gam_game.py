@@ -240,6 +240,8 @@ class GameHandler(Handler):
             self.loaded[node.data]=data
             if genre=='character':
                 self.world.declare(data,data.actor)
+            if genre=='place':
+                self.world.declare(data,data)
             self.data.graph.refresh_dict()
             for c in list(data.components)+[data]:
                 c.add_context(self.world)
@@ -354,7 +356,7 @@ class GameEditor(CanvasEditor,GameHandler):
 
                 ]
         if not user.ui.view['nodelist']:
-                bgmenu += [('SHow node list',lambda:user.ui.show('nodelist') )]
+                bgmenu += [('Show node list',lambda:user.ui.show('nodelist') )]
         return bgmenu
 
     def maingraph_menu(self,target,typ,event=None):

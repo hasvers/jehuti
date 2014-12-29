@@ -68,6 +68,10 @@ class PlaceData(BaseCanvasData):
         #DATA ONLY
         self.renew()
 
+    @property
+    def components(self):
+        return ()
+
     def renew(self):
         BaseCanvasData.renew(self)
         self.idx=0

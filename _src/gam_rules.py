@@ -7,17 +7,17 @@ class LogicRuleset():
     def __init__(self,data):
         self.data=data
 
-    def truth_disagreement(self,truth1,truth2):
-        if (truth1<1./3 and truth2>2./3) or (truth2<1./3 and truth1>2./3) :
-            return True
-        return False
-
     def truth_value(self,truth):
         if truth <1./3:
             return -1
         elif truth >2./3:
             return 1
         return 0
+
+    def truth_disagreement(self,truth1,truth2):
+        if self.truth_value(truth1)!=self.truth_value(truth2) :
+            return True
+        return False
 
     def link_effect_from_source(self,st,logic):
         #depending on source truth, effect on target
@@ -273,7 +273,7 @@ class MatchRuleset(LogicRuleset):
                 - the last mentioned'''
 
         option=kwargs.get('option',
-            ['none','all','only_agree','pref_agree','last'][-1])
+            ['none','all','only_agree','pref_agree','last'][0])
         if option=='none':
             return []
         canvas=match.canvas

@@ -3,7 +3,7 @@ from gam_rules import *
 from gam_canvas import *
 
 
-class MatchEvent(Event):
+class MatchEvent(LogicEvent):
     cost =0 #Speech time cost
     submitted_on_turn=False
     def __init__(self,source,*args,**kwargs):
@@ -18,67 +18,6 @@ class MatchEvent(Event):
         self.add_state(2,pred=1)
 
 
-    # when using do or undo, put match as second argument after state
-
-    def prepare(self,edge,match,*args,**kwargs):
-        if edge ==(0,1) :
-            self.prep_init(match)
-        if edge ==(1,0) :
-            self.prep_uninit(match)
-        if edge ==(1,2) :
-            self.prep_do(match)
-        if edge ==(2,1) :
-            self.prep_undo(match)
-        #print 'prep',self,edge, self.states.node[edge[1]]['children_states']
-
-    def run(self,state,*args,**kwargs):
-        #print 'run',self,state
-        return True
-
-    def do_prior(self,evt,do,undo,prior):
-        if not prior:
-            return
-        if hasattr(prior,'keys'):
-            dop=prior[do]
-            undop=prior[undo]
-        else :
-            dop=undop=prior
-        self.states.node[do]['priority'][evt]=dop
-        self.states.node[undo]['priority'][evt]=undop
-
-
-    def child_add(self,item,data,do=2,undo=1,**kwargs):
-        evt=AddEvt(item,data,infos=kwargs,assess=True,addrequired=True)
-        evt.parent=self
-        if self.check_duplicate(do,evt,**kwargs):
-            return False
-        self.states.node[do]['children_states'][evt]=1
-        self.states.node[undo]['children_states'][evt]=0
-        if do and undo : #neither is 0
-            self.states.node[0]['children_states'][evt]=0
-        self.do_prior(evt,do,undo,kwargs.pop("priority",{do:1,undo:-1}  ))
-
-
-    def child_chginfo(self,item,data,do=2,undo=1,**kwargs):
-        evt=ChangeInfosEvt(item,data,**kwargs)
-        evt.parent=self
-        if self.check_duplicate(do,evt,**kwargs):
-            return False
-        self.states.node[do]['children_states'][evt]=1
-        self.states.node[undo]['children_states'][evt]=0
-        if do and undo : #neither is 0
-            self.states.node[0]['children_states'][evt]=0
-        self.do_prior(evt,do,undo,kwargs.pop("priority",False))
-
-
-    def prep_init(self,*args,**kwargs):
-        pass
-    def prep_uninit(self,*args,**kwargs):
-        pass
-    def prep_do(self,*args,**kwargs):
-        pass
-    def prep_undo(self,*args,**kwargs):
-        pass
 
 
 class QueueEvt(MatchEvent):
@@ -895,6 +834,8 @@ class BatchEvt(MatchEvent):
 
 
     def duplicate_of(self,evt):
+        if not evt.type==self.type:
+            return False
         if not False in [True in [s.duplicate_of(s2) for s2 in evt.events ]
                 for s in self.events]:
             return True

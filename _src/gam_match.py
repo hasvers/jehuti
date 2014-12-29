@@ -171,8 +171,6 @@ class MatchHandler(SceneHandler):
         self.cast.upd_actors()
         self.canvas.dft_graph_states['idle']='ghost'
         self.canvas.set_layer(self.canvas.graph)
-        #if self.setting.view.bg: #TODO: Think this through someday
-            #self.canvas.handler.bg=self.setting.view.bg
 
         self.textmaker=TextMaker(self.data)
 

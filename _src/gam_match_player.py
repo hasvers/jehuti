@@ -5,6 +5,7 @@
 
 from gam_match import *
 
+from gam_interaction import *
 
 class MatchPlayer(MatchHandler,PhaseHandler):
     name='matchplayer'
@@ -159,7 +160,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
         subact.owner=actor
         subact.import_from_parent(rule=irule)
         self.data.actorsubgraphs[actor][actor]=subact
-        subact.name='Selfgr'+actor.name
+        subact.name='Self'+actor.name
         #self.canvas.add_subgraph(subact,pos=1)
         for other in self.cast.actors:
             if other != actor:
@@ -168,7 +169,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                 orule = lambda e, a=actor,o=other: self.ruleset.actor_othergraph_init_rule(a,o,e)
                 sub.import_from_parent(rule=orule)
                 self.data.actorsubgraphs[actor][other]=sub
-                sub.name='Othgr'+other.name
+                sub.name='Oth'+actor.name+':'+other.name
                 #self.canvas.add_subgraph(sub,pos=1)
                 sub.owner=actor #TODO: this is maybe dangerous: the owner of sub[act][oth] is act
 
@@ -181,6 +182,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                 user.music.play(self.data.music)
         except:
             pass
+        self.interact=InteractionModel(self)
         self.editor_state= deepcopy( self.canvas.dft_graph_states)
         self.canvas.dft_graph_states['idle']='hidden'
         for actor in self.actors:
@@ -522,6 +524,12 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                 self.perform_queue()
             return True
 
+        if 'claim' in sgn:
+            if evt.state==2:
+                claim=evt.evt
+                inter=self.interact.process_claim(claim)
+                inter.pass_events()
+                print inter.events
         if 'select' in sgn :
             if self.cast in evt.affects() :
                 # Select Actor
@@ -623,6 +631,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             user.evt.do(cevt)
 
     def prepared_batch(self,playerbatch):
+        return
         '''Once a batch has been prepared by its actor,
         add reactions from other actors.'''
         reactree=self.data.reactree
@@ -681,6 +690,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                  #[user.evt.do(b,self,2)  for b in batchs.get(actor,[]) ]
 
     def received_batch(self,evt):
+        return
         '''Once a batch has been executed, make:
             - speech balloons.
             - visual effects.'''

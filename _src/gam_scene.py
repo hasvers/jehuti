@@ -38,6 +38,10 @@ class SceneHandler(Handler):
         self.cast.add_actor(self.game.world.avatar(act))
         #do prox
 
+    def import_setting(self,data):
+        self.setting.set_data(self.game.world.avatar(data))
+        #do prox
+
     def return_to_editor(self):
         if hasattr(self,'clear_scene'):
             self.clear_scene()
@@ -56,6 +60,11 @@ class SceneEditor(SceneHandler):
         if exactors:
             flist=tuple( (a.name, lambda act=a:self.import_actor(act) )
                  for a in exactors)
-            struct+=('Import actor',lambda s=struct:user.ui.float_menu(flist) ),
+            struct+=('Import actor',lambda s=struct,f=flist:user.ui.float_menu(f) ),
+        places= self.game.get_sources_for(self.data,'place')
+        if places:
+            flist2=tuple( (p.name, lambda sc=p:self.import_setting(sc) )
+                 for p in places)
+            struct+=('Import setting',lambda s=struct,f=flist2:user.ui.float_menu(f) ),
 
         return struct

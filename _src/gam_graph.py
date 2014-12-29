@@ -170,8 +170,8 @@ class MatchSubgraph(Graph.Subgraph):
         return Data.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
     def __repr__(self):
-        #if self.name != Graph.Subgraph.name :
-            #return 'Subgraph:'+self.name +'('+str(self.parent)+')'
+        if self.name != Graph.Subgraph.name :
+            return 'Sub:'+self.name# +'('+str(self.parent)+')'
         return 'Sub{}('.format(self.owner)+str(self.parent)+')'
 
 class MatchGraph(Graph):
