@@ -78,12 +78,17 @@ class SphereMap(Effect):
 
 
 class NormalLight(Effect):
-    def __init__(self,basetext=None,normals=None,z=.1):
+    using_spec=True
+    
+    def __init__(self,basetext=None,normals=None,specular=None,z=.1):
         Effect.__init__(self, 'normallight')
         self.normals=normals
+        self.specular=specular
+        if specular is None:
+            self.using_spec = False
         self.z=z
-        self.lightcolor=[1.,0.3,1.]
-        self.ambientcolor=[0.5,0.7,0.4]
+        self.lightcolor=[1.,0.3,1.,.75]
+        self.ambientcolor=[0.5,0.7,0.4,1.]
         self.attenuation=[.1,.0,0.5]
 
     def set_texture(self,scrtexture):
@@ -91,23 +96,36 @@ class NormalLight(Effect):
             if self.is_loaded:
                 self.shader.set_parameter("texture")
 
-
+    def use_spec(self,val=True):
+        if self.specular is None and val==True:
+            return False
+        self.using_spec=val
+        if not self.using_spec:
+            self.load_shader("normallight.frag")
+        else:
+            self.load_shader("normalspec.frag")
+            self.spectext=spec=sfml.Texture.from_file(self.specular)
+            self.shader.set_texture_parameter("specular",spec)
+            
     def on_load(self,scrtexture=None,screensize=None):
         # load the shader
         self.sprite = sfml.Sprite(scrtexture)
-        self.load_shader("normallight.frag")
+        self.use_spec(self.using_spec)
         self.normaltext=norm=sfml.Texture.from_file(self.normals)
-        self.shader.set_texture_parameter("u_normals",norm)
+        self.shader.set_texture_parameter("normals",norm)
         return True
 
     def on_update(self, time, x, y,screensize):
         g=(5.+cos(4* time))*.2
-        lightcol= array(list( colorsys.hsv_to_rgb(*self.lightcolor))+[200*g/255])*255
+        lightcol= array(list( colorsys.hsv_to_rgb(*self.lightcolor[:3]))+[self.lightcolor[3]])*255
         self.shader.set_color_parameter("LightColor", sfml.Color(*lightcol))
-        ambcol= array(list( colorsys.hsv_to_rgb(*self.ambientcolor))+[1.])*255
+        ambcol= array(list( colorsys.hsv_to_rgb(*self.ambientcolor[:3]))+[self.ambientcolor[3]])*255
         self.shader.set_color_parameter("AmbientColor", sfml.Color(*ambcol))
         self.shader.set_parameter("Resolution", screensize )
-        self.shader.set_texture_parameter("u_normals",self.normaltext)
+        self.shader.set_texture_parameter("normals",self.normaltext)
+        if self.using_spec:
+            self.shader.set_texture_parameter("specular",self.spectext)
+            self.shader.set_vector3_paramater("eyeDirection", sfml.Vector3(0.,0.,1.))
         self.shader.set_vector3_paramater("LightPos", sfml.Vector3(x ,1.-y ,self.z))
         self.shader.set_vector3_paramater("Falloff", sfml.Vector3(*self.attenuation))#(.5+y)*g)
 
@@ -116,44 +134,6 @@ class NormalLight(Effect):
         x,y=coords
         
 
-
-class NormalLigeht(Effect):
-    def __init__(self,basetext=None,normals=None,z=.1):
-        Effect.__init__(self, 'normallight')
-        self.normals=normals
-        self.z=z
-        self.lightcolor=[1.,0.3,1.]
-        self.ambientcolor=[0.5,0.7,0.4]
-        self.attenuation=[.1,.0,0.5]
-
-    def set_texture(self,scrtexture):
-        if scrtexture:
-            if self.is_loaded:
-                self.shader.set_parameter("texture")
-
-
-    def on_load(self,scrtexture=None,screensize=None):
-        # load the shader
-        self.sprite = sfml.Sprite(scrtexture)
-        self.shader = sfml.Shader.from_file(fragment="shaders/normallight.frag")
-        self.normaltext=norm=sfml.Texture.from_file(self.normals)
-        self.shader.set_texture_parameter("u_normals",norm)
-        return True
-
-    def on_update(self, time, x, y,screensize):
-        g=(5.+cos(4* time))*.2
-        lightcol= array(list( colorsys.hsv_to_rgb(*self.lightcolor))+[200*g/255])*255
-        self.shader.set_color_parameter("LightColor", sfml.Color(*lightcol))
-        ambcol= array(list( colorsys.hsv_to_rgb(*self.ambientcolor))+[1.])*255
-        self.shader.set_color_parameter("AmbientColor", sfml.Color(*ambcol))
-        self.shader.set_parameter("Resolution", screensize )
-        self.shader.set_texture_parameter("u_normals",self.normaltext)
-        self.shader.set_vector3_paramater("LightPos", sfml.Vector3(x ,1.-y ,self.z))
-        self.shader.set_vector3_paramater("Falloff", sfml.Vector3(*self.attenuation))#(.5+y)*g)
-
-    def on_click(self,coords,screensize):
-        w,h=screensize
-        x,y=coords 
         
         
 class LightFS(Effect):

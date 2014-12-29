@@ -114,10 +114,10 @@ class Data(object):
                         tmp.update(info)
                 tmp.update(self.infos.get(item,{}))
                 return tmp
-            try :
+            if item in self.infos and info_type in self.infos[item] :
                 #print item,info_type, self.infos[item][info_type]
                 return self.infos[item][info_type]
-            except :
+            else :
                 for p in self.precursors:
                     info= p.get_info(item,info_type)
                     if info!=None:
@@ -125,7 +125,7 @@ class Data(object):
                 return None
 
         if info_type != None and not info_type in self.infotypes[item.type]:
-            return False
+            return None
         if not item in self.infos :
             if not info_type:
                 return {}

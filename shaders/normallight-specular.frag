@@ -1,15 +1,15 @@
 //http://stackoverflow.com/questions/13538216/normal-mapping-specular-mapping-and-ambient-mapping
 
 // Interpolated values from the vertex shaders
-in vec2 texcoord;
-in vec3 worldPosition;
-in vec3 cameraLightDirection;
+//in vec2 texcoord;
+//in vec3 worldPosition;
+//in vec3 cameraLightDirection;
 
-in vec3 lightDirectionTangent;
-in vec3 eyeDirectionTangent;
+//in vec3 lightDirectionTangent;
+//in vec3 eyeDirectionTangent;
 
 // Ouput data
-out vec3 color;
+//out vec3 color;
 
 // Values that stay constant for the whole mesh.
 uniform sampler2D diffuseTextureSampler;
@@ -25,8 +25,9 @@ uniform float LightPower;
 uniform vec3 LightColor;
 
 void main() {
-    vec3 cameraEyeDirection = (0.,0.,1.) ;
-    vec2 texCoord= gl_TexCoord[0].xy;
+    vec3 cameraLightDirection = (0.,0.,1.) ;
+    vec3 eyeDirectionTangent = (0.,0.,1.) ;
+    vec2 texcoord= gl_TexCoord[0].xy;
 
     // Light emission properties
     // You probably want to put them as uniforms

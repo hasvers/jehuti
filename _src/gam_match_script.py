@@ -9,8 +9,8 @@ class CFlag(DataBit):
     dft={'val':'Include',
         'info':'',}
 
-    defaults=['Include','Exclude','Perceived',
-            'LinkOnly','Unlock','Locked','Starter']
+    defaults=['Include','Starter','Exclude','Perceived',
+            'LinkOnly','Doxa','Locked']
 
     def __repr__(self):
         return self.val

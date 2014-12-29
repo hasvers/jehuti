@@ -138,43 +138,6 @@ class InteractionRules(object):
         if abs(emotion)>.8 and abs(agreement)<abs(emotion):
             return 'emotion'
 
-    def perceived_truth(self,ego,claim,infosrc):
-        '''When ego receives a claim with a given truthvalue,
-        how much error is there on it in the perceived_claim?'''
-        baseval=claim.truth
-        #return baseval #perfect percepton
-        percep=infosrc.get_info(ego,'perc')
-        chance=rnd.uniform(-1,1)
-        #If chance>0, perceived truth tends toward boundary of ?ness
-        #else it is amplified
-        extr=rint(2*baseval-1)/6.+.5
-        diff=extr-baseval
-        return max(0,min(1,baseval+diff*(1-percep)*chance))
-
-    def perceived_agreement(self,ego,reac,infosrc):
-        '''When ego receives a reac with a given agreement,
-        how much error is there on it in the perceived_claim?'''
-        baseval=reac.agreement
-        percep=infosrc.get_info(ego,'perc')
-        chance=rnd.uniform(-1,1)
-        return baseval*(1.+(1-percep)*chance)
-
-    def truth_from_agreement(self,ego,perceived_reac,infosrc):
-        '''Make assumption on someone else's opinion based on perceived agreement.'''
-        baseval=infosrc.get_info(perceived_reac.item,'truth')
-        agr=perceived_reac.agreement
-        t= 0.5+ (baseval-.5)*min(max(-1,agr),1)
-        return max(0,min(1,t))
-
-    def belief_revision_under_influence(self,ego,perceived_claim,infosrc):
-            #=> Some influence from claimant who can distort or encourage remembrance
-        trust=self.psy[ego].trust_opinon(ego,perceived_claim.actor,self.match.cast)
-        egotruth=infosrc.get_info(ego,'truth')
-        if trust>.5:
-            return {'bias': trust*(perceived_claim.truth-egotruth)/2 }
-        else:
-            return {}
-
     def belief_creation_under_influence(self,ego,perceived_claim,infosrc):
             #(wanting to believe/disbelieve the perceived claim depending on
             #ethos and proximity)
@@ -182,6 +145,15 @@ class InteractionRules(object):
         egotruth=infosrc.get_info(perceived_claim.item,'truth')
         if trust>.5:
             return {'bias': trust*(perceived_claim.truth-egotruth) }
+        else:
+            return {}
+
+    def belief_revision_under_influence(self,ego,perceived_claim,infosrc):
+            #=> Some influence from claimant who can distort or encourage remembrance
+        trust=self.psy[ego].trust_opinon(ego,perceived_claim.actor,self.match.cast)
+        egotruth=infosrc.get_info(ego,'truth')
+        if trust>.5:
+            return {'bias': trust*(perceived_claim.truth-egotruth)/2 }
         else:
             return {}
 
@@ -201,7 +173,6 @@ class InteractionRules(object):
         return self.psy[ego].emotion(consequences,self.match)
 
 
-
     def ethos_effects(self,factors):
         '''Compute the ethos effects resulting from various factors.'''
         face,terr,prox=0,0,0
@@ -216,6 +187,39 @@ class InteractionRules(object):
                 prox-=.05
                 face-=.05
         return {'face':face,'terr':terr,'prox':prox}
+
+    #Perception stuff
+
+    def perceived_truth(self,ego,claim,infosrc):
+        '''When ego receives a claim with a given truthvalue,
+        how much error is there on it in the perceived_claim?'''
+        baseval=claim.truth
+        #return baseval #perfect percepton
+        percep=infosrc.get_info(ego,'perc')
+        chance=rnd.uniform(-1,1)
+        #If chance>0, perceived truth tends toward boundary of ?ness
+        #else it is amplified
+        extr=rint(2*baseval-1)/6.+.5
+        diff=extr-baseval
+        return max(0,min(1,baseval+diff*(1-percep)*chance))
+
+    def perceived_agreement(self,ego,reac,infosrc):
+        '''When ego receives a reac with a given agreement,
+        how much error is there on it in the perceived_reac?'''
+        #The perceived agreement is a function that tends to
+        #the real agreement for large values of it
+        #but is muddled in the middle
+        baseval=reac.agreement
+        percep=infosrc.get_info(ego,'perc')
+        chance=rnd.uniform(-1,1)
+        return baseval*(1.+(1-percep)*chance*(1-min(abs(baseval),1)) )
+
+    def truth_from_agreement(self,ego,perceived_reac,infosrc):
+        '''Make assumption on someone else's opinion based on perceived agreement.'''
+        baseval=infosrc.get_info(perceived_reac.item,'truth')
+        agr=perceived_reac.agreement
+        t= 0.5+ (baseval-.5)*min(max(-1,agr),1)
+        return max(0,min(1,t))
 
 
 #### MECHANICS #####=============================================================
@@ -252,6 +256,12 @@ class Interaction(object):
         self.conseq.add_node(factor)
         self.conseq.add_edge(stage,factor)
 
+    def add_edge(self,stage1,stage2):
+        for s in (stage1,stage2):
+            if not s in self.schema.nodes():
+                self.add_stage(s)
+        self.schema.add_edge(stage1,stage2)
+
 
     def get_textdic(self):
         '''Get a matrix of which Stage will produce the text seen
@@ -277,7 +287,35 @@ class Interaction(object):
                         tdic[a][b]=n
         return tdic
 
+    def create_evts(self,element):
+        if element in self.events:
+            return False
+        evts=[]
+        if 'claim' in element.type:
+            item=element.item
+            data=element.data
+            if element.discovery>0:
+                evt=AddEvt(item,data,**newinfos)
+            elif newinfos:
+                evt=ChangeEvt(item,data,**newinfos)
+            evts.append(evt)
 
+        #Check events for further consequences
+        checked=[]
+        #while evts
+
+        self.events[element]=checked
+
+
+
+    def pass_events(self):
+        '''The events have already been run privately
+        while building the interaction.
+        Now they need to be passed to all relevant handlers,
+        to update graphics and sonon.'''
+        for elem,evts in self.events:
+            for e in evts:
+                user.ui.pass_event(e,self,ephemeral=True)
 
 class InteractionModel(object):
     '''Mechanics of the interaction'''
@@ -313,22 +351,29 @@ class InteractionModel(object):
         actors=self.actors
         node=claimevt.item
         Stage=self.Stage
+        match=self.match
 
-        claim=Stage('claim',node=claimevt.item,actor=claimevt.actor,truth=claimevt)
-        inter.schema.add_node(claim)
         claimant=claimevt.actor
 
+        #Claim for self
+        claim=Stage('claim',node=claimevt.item,actor=claimant,
+            truth=claimevt.infos['truth'],
+            ego=clamant,data=claimevt.data)
+        self.run(claim,inter)
         #Tree of reactions
         for act2 in actors:
             if act2==claimant:
                 continue
 
-
-            #Reaction to perceived claim
+            #Perceived claim
             perceived_claim=self.perceive_claim(act2,claimant,claim)
             inter.add_edge(claim,perceived_claim)
+            self.run(perceived_claim,inter)
+
+            #Reaction to perceived claim
             reac=self.react_node_claim(act2,claimant,perceived_claim)
             inter.add_edge(perceived_claim,reac)
+            self.run(reac,inter)
 
             #Reaction is then interpreted
             for act3 in actors:
@@ -337,14 +382,28 @@ class InteractionModel(object):
                 #Interpretation of perceived reaction
                 perceived_reac=self.perceive_reac(act3,act2,reac)
                 inter.add_edge(reac,perceived_reac)
+                self.run(perceived_reac,inter)
 
 
-                interp=self.interpret_node_reac(act3,act2,perceived_reac)
-                inter.add_edge(perceived_reac,interp)
+                interpret=self.interpret_node_reac(act3,act2,perceived_reac)
+                inter.add_edge(perceived_reac,interpret)
+                self.run(interpret,inter)
 
-    def react_node_claim(self,ego,actor,perceived_claim):
-        #React to some *perceived* claim
-        inter=self.interactions[-1]
+
+    def run(self,stage,inter):
+        inter.create_evts(perceived_claim)
+        inter.run_evts(perceived_claim)
+
+    def perceive_claim(self,ego,actor,claim):
+        match=self.match
+        item=claim.item
+        perceived_claim=self.Stage('perceived_claim',ego=ego,actor=actor,
+                    data=match)
+
+        if item.type=='node':
+            truth=self.perceived_truth(ego,claim,match.cast)
+
+
         #Belief of actor 2
         subg=self.subgraph[ego][ego]
         actg=self.actgraph[ego]
@@ -365,14 +424,14 @@ class InteractionModel(object):
         perceived_claim.discovery=discovery
 
         #Include effect of logical cascades!
-        #(especially if it leads to feedback loop
-        #changing the belief on the claimed node)
         if discovery:
             #simulate the effect of changing the belief
             for n in self.logical_cascade(ego,newinfos,match):
                 consequences.append( n)
                 inter.add_consequence(perceived_claim)
 
+
+    def react_node_claim(self,ego,actor,perceived_claim):
 
         #Agreement of reactant
         agreement=self.rules.agreement(ego,perceived_claim,consequences,match)
@@ -388,19 +447,14 @@ class InteractionModel(object):
         cevt=ChangeInfosEvt()
 
 
-    def perceive_claim(self,ego,actor,claim):
-        perceived_claim=self.Stage('perceived_claim',ego=ego,actor=actor,
-            belief=belief,discovery=discovery,
-                    agreement=agreement,consequences=consequences)
-        perceived_claim.truth=self.
-        return perceived_claim
 
     def perceive_reac(self,ego,actor,reac):
-        perceived_reac=reac.copy()
-        #The perceived agreement is a function that tends to
-        #the real agreement for large values of it
-        #but is muddled
-        perceived_reac.agreement=
+        if reac.verbal=='agreement':
+            agreement=reac.agreement
+        else:
+            agreement=self.perceived_agreement(ego,reac,self.match.cast)
+        perceived_reac=self.Stage('perceived_reac',ego=ego,actor=actor,
+                    agreement=agreement)
         return perceived_reac
 
     def make_ethos_effects(self,scheme):
