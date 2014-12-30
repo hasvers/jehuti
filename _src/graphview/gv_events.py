@@ -278,15 +278,8 @@ class EventCommander(object):
         else :
             evt.prepare(edge,*args,**kwargs)
         handled=False
-        priority=[ (0,evt) ]
-        #print '   evt_goto', evt.type,id(evt),evt.state,state,debug.caller_name(),evt.states.node[state]['children_states']
-        for c,s in evt.states.node[state]['children_states'].iteritems():
-            if c in evt.states.node[state]['priority']:
-                priority.append((evt.states.node[state]['priority'][c], c) )
-            else :
-                priority.append( (0,c) )
+        priority=evt.priority_list(state)
 
-        priority=sorted(priority,key = lambda e: e[0], reverse=True )
         #if 'cflag' in evt.type:
             #print '\nPRIO',state, evt,id(evt),priority
         for p,c in priority:
@@ -566,6 +559,20 @@ class Event(Signal):
                 children|=set(c.current_children(1))
             return children
 
+    def priority_list(self,state=None):
+        '''Prioritized list of all children events called by given state.
+        Output is formatted as [(priority,event),...] in decreasing order.'''
+        priority=[]
+        if state is None:
+            state=self.state
+        priority.append( (0,self) )
+        for c,s in self.states.node[state]['children_states'].iteritems():
+            if c in self.states.node[state]['priority']:
+                priority.append((self.states.node[state]['priority'][c], c) )
+            else :
+                priority.append( (0,c) )
+        priority=sorted(priority,key = lambda e: e[0], reverse=True )
+        return priority
 
     def clear_children(self):
         for state in self.states:

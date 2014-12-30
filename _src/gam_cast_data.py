@@ -64,7 +64,7 @@ class Actor(DataItem):
         'status':'Unknown',
         'prox':(),
         'react':[],
-
+        'patterns':database['link_patterns'],
         }
 
     dft_names={

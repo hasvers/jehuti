@@ -22,6 +22,7 @@ class ShaderManager():
     shadtyp={'lightfs':LightFS,
     'waterripple':WaterRipple,
     'normallight':NormalLight,
+    'immersion':Immersion,
     }
 
     def __init__(self,shadername,screen,size,**kwargs):

@@ -174,6 +174,38 @@ class MatchSubgraph(Graph.Subgraph):
             return 'Sub:'+self.name# +'('+str(self.parent)+')'
         return 'Sub{}('.format(self.owner)+str(self.parent)+')'
 
+class MatchSubgraph(Graph.Subgraph):
+    owner=None
+    klass_name='MatchGraph.Subgraph'
+    infotypes={
+        'node':
+            ('truth',
+            'stated_truth',#Useful only for subgraph[self][other]: allows to reeval bias
+            'bias',
+            'desc',
+            'scripts',
+            'cflags',
+            'terr',
+            ),
+        'link':
+            ('desc',
+            'scripts',
+            'cflags',
+            ),
+        }
+    rule = 'none'
+
+    def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
+        kwargs.setdefault('add_param',[]).append('owner')
+        kwargs.setdefault('init_param',[]).append('parent')
+        return Data.txt_export(self,keydic,txtdic,typdic,**kwargs)
+
+    def __repr__(self):
+        if self.name != Graph.Subgraph.name :
+            return 'Sub:'+self.name# +'('+str(self.parent)+')'
+        return 'Sub{}('.format(self.owner)+str(self.parent)+')'
+
+
 class MatchGraph(Graph):
     name='graph'
     infotypes={

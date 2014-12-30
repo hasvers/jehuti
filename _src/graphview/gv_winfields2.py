@@ -342,6 +342,7 @@ class DragField(WindowField):
     showval=1 #Show the value in large print within the bar (else it is shown in mouseover)
     focusable=True
     reverse_dir=0 #for things increasing when you go down (e.g. scrollbars)
+    design=1 #0= scrollbar, 1=skeuomorphic slider
 
     def __init__(self,parent,**kwargs):
         self.unit=kwargs.pop('unit',1./ database['floatprecision'])
@@ -387,13 +388,12 @@ class DragField(WindowField):
         color=kwargs.get('color',None)
         if color is None:
             color=self.color
-        if len(color)==2:
-            if self.direction == 0 :
-                self.image.blit(gradients.horizontal(self.rect.size, *color),(0,0))
-            else :
-                self.image.blit(gradients.vertical(self.rect.size, *color),(0,0))
-        else :
-            self.image.fill(color)
+        if self.design==0:
+            rect=pg.rect.Rect((0,0),self.rect.size)
+        else:
+            rect=pg.rect.Rect((0,0),(self.rect.size[0],4) )
+            rect.center=self.rect.center-array(self.rect.topleft)
+        self.draw_bg(color,rect)
         cursize=[0,0]
         cursize[self.direction]=kwargs.pop('curlen',graphic_chart['drag_cursor_size'])
         cursize[1-self.direction]=self.rect.size[1-self.direction]
@@ -412,7 +412,6 @@ class DragField(WindowField):
             if self.cursorstate=='grabbed':
                 self.cursor.image.fill((55,55,155,100))
 
-        self.bg=self.image.copy()
         self.set_val(kwargs.get('val',self.val))
         self.image.blit(self.bg,(0,0))
         self.image.blit(self.cursor.image,self.cursor.rect.topleft)
@@ -568,15 +567,7 @@ class GaugeField(WindowField):
     def redraw(self,**kwargs):
         self.group.empty()
         bgcolor=kwargs.get('bgcolor',self.bgcolor)
-        self.bg=self.image.copy()
-        self.bg.fill((255,255,255,0))
-        if len(bgcolor)==2:
-            if self.direction == 0 :
-                self.bg.blit(gradients.horizontal(self.rect.size, *bgcolor),(0,0))
-            else :
-                self.bg.blit(gradients.vertical(self.rect.size, *bgcolor),(0,0))
-        else :
-            self.bg.fill(bgcolor)
+        self.draw_bg(bgcolor)
         self.set_val(self.val,True)
 
 
@@ -638,6 +629,7 @@ class ScrollBar(DragField):
     direction=1
     showval=0
     reverse_dir=1
+    design=0
     def __init__(self,parent,**kwargs):
         super(ScrollBar, self).__init__(parent,**kwargs)
 

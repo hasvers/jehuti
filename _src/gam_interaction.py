@@ -89,6 +89,7 @@ class PsychologyModel(object):
                 active+=3.
             elif e.type=='unknown_pattern':
                 pleas-=1.
+                active+2.
             elif e.type=='teri_change':
                 active+=1.
             elif e.type=='teri_activ':
@@ -178,6 +179,12 @@ class PsychologyModel(object):
 
 class InteractionRules(object):
 
+    update_true_beliefs=1 #Does the truth in the Actorgraph change as a result of conversation?
+        #If no, then when nodes are remembered, their truth does not take into account
+        #what has transpired since the beginning of the conversation. This is not a
+        #problem in most cases snice any link claim to them will trigger a TruthCalcEvt
+        #but still.
+
     factors=(
             #Ego-centered
             'discovery',
@@ -210,7 +217,7 @@ class InteractionRules(object):
         ethos and proximity)'''
         trust=self.psy[ego].trust_opinon(perceived_claim.actor,self.match)
         dbias=trust*(perceived_claim.truth-.5)
-        if trust>.5:
+        if trust>=.5:
             return {'bias': dbias,'truth':.5+dbias}
         else:
             return {}
@@ -289,16 +296,45 @@ class InteractionRules(object):
         diff=extr-baseval
         return max(0,min(1,baseval+diff*(1-percep)*chance))
 
-    def perceived_agreement(self,ego,reac,infosrc):
+    def perceived_agreement(self,ego,reac):
         '''When ego receives a reac with a given agreement,
         how much error is there on it in the perceived_reac?'''
         #The perceived agreement is a function that tends to
         #the real agreement for large values of it
         #but is muddled in the middle
         baseval=reac.agreement
-        percep=infosrc.get_info(ego,'perc')
+        perc=self.match.cast.get_info(ego,'perc')
         chance=rnd.uniform(-1,1)
-        return baseval*(1.+(1-percep)*chance*(1-min(abs(baseval),1)) )
+        return baseval*(1.+(1-perc)*chance*(1-min(abs(baseval),1)) )
+
+    def perceived_emotion(self,ego,reac):
+        '''When ego receives a reac with a given agreement,
+        how much error is there on it in the perceived_reac?'''
+        #The perceived agreement is a function that tends to
+        #the real agreement for large values of it
+        #but is muddled in the middle
+        baseval=reac.emotion
+        perc=self.match.cast.get_info(ego,'perc')
+        chance=rnd.uniform(-1,1)
+        return baseval*(1.+(1-perc)*chance*(1-min(abs(baseval),1)) )
+
+
+    def discern_nonverbal(self,ego,nonverbal):
+        '''When ego receives a complex nonverbal response, how well
+        can they discern the details. With lack of perception, this
+        just regresses toward the average value.'''
+        nv=nonverbal
+        #Average
+        aagree,aemote=sum(nv[i][0] for i in nv), sum(nv[i][1] for i in nv)
+        mean=(aagree+aemote.real)/2.
+
+        perc=self.match.cast.get_info(ego,'perc')
+        #Distinction between agreement and emotion:
+        pagree=mean +(aagree-mean)*perc
+        pemote=mean+aemote.imag +(aemote.real-mean)*perc
+        #
+        return {r:(pagree+(nv[r][0]-pagree)*perc**2,
+                pemote+(nv[r][0]-pemote)*perc**2 ) for r in nv},(pagree,pemote)
 
     def truth_from_agreement(self,ego,perceived_reac,infosrc):
         '''Make assumption on someone else's opinion based on perceived agreement.'''
@@ -464,20 +500,51 @@ class InteractionModel(object):
                 if not reacs:
                     continue
                 #Perceive reaction is a comparatively trivial step
-                perc_reacs=[]
+                preacs=[]
                 for reac in reacs:
                     perceived_reac=self.perceive_reac(ego,act,reac)
+                    preacs.append(perceived_reac)
                     #TEMPORARY, AWAITING INTERPRETATION IMPLEMENTATION
-                    inter.add_edge(reac,perceived_reac)#TMP TMP
-                    self.prepare_stage(perceived_reac,inter) #TMP TMP
+                    #inter.add_edge(reac,perceived_reac)#TMP TMP
+                    #self.prepare_stage(perceived_reac,inter) #TMP TMP
 
-                continue
                 #Interpretation of perceived reactions
-                interpret=self.interpret_reacs(ego,act,perc_reacs)
+                interpret=self.interpret_reacs(ego,act,preacs)
                 for reac in reacs:
                     inter.add_edge(reac,interpret)
                 self.prepare_stage(interpret,inter)
         return inter
+
+
+    #SECOND PART OF CLAIM PROCESSING====================================
+
+
+    def interpret_reacs(self,ego,actor,perceived_reacs):
+        '''Ego perceives a bunch of reactions from actor (e.g.
+        independent reactions for a link and its nodes)'''
+        verbal={r:(r.verbal,getattr(r,r.verbal)) for r in perceived_reacs
+            if r.verbal}
+        nv={r:(r.agreement,r.emotion) for r in perceived_reacs
+            if not r.verbal}
+        nonverbal,mean=self.rules.discern_nonverbal(ego,nv)
+        return self.Stage('interpret',ego=ego,actor=actor,
+            verbal=verbal,nonverbal=nonverbal,mean=mean)
+
+
+    def perceive_reac(self,ego,actor,reac):
+        if reac.verbal=='agreement':
+            agreement=reac.agreement
+        else:
+            agreement=self.rules.perceived_agreement(ego,reac)
+        if reac.verbal=='emotion':
+            emotion=reac.emotion
+        else:
+            emotion=self.rules.perceived_emotion(ego,reac)
+        #print 'PERCEIVE REAC',ego,actor
+        perceived_reac=self.Stage('perceived_reac',ego=ego,actor=actor,item=reac.item,
+                    agreement=agreement,emotion=reac.emotion,verbal=reac.verbal)
+        return perceived_reac
+
 
 
     #FIRST PART OF CLAIM PROCESSING====================================
@@ -562,25 +629,6 @@ class InteractionModel(object):
         return self.Stage('reac',item=item,ego=ego,agreement=agreement,
             emotion=emotion,verbal=verbal,actor=actor)
 
-
-    #SECOND PART OF CLAIM PROCESSING====================================
-
-
-    def interpret_node_reac(self,ego,actor,perceived_reac):
-        return self.Stage('interpret',ego=ego,actor=act3)
-
-
-    def perceive_reac(self,ego,actor,reac):
-        if reac.verbal=='agreement':
-            agreement=reac.agreement
-        else:
-            agreement=self.rules.perceived_agreement(ego,reac,self.match.cast)
-        #print 'PERCEIVE REAC',ego,actor
-        perceived_reac=self.Stage('perceived_reac',ego=ego,actor=actor,item=reac.item,
-                    agreement=agreement,emotion=reac.emotion,verbal=reac.verbal)
-        return perceived_reac
-
-
     #GENERAL PROCESSING====================================
 
     def prepare_stage(self,stage,inter):
@@ -610,8 +658,9 @@ class InteractionModel(object):
             othgraph=self.match.data.actorsubgraphs[ego][actor]
             if stage.discovery==1:
                 facs.append(Fac('discovery',ego=ego,item=item) )
-            if self.match.ruleset.truth_disagreement(sgraph.get_info(item,'truth'),
-                    othgraph.get_info(item,'truth')):
+            tr=self.match.ruleset.truth_value
+            if tr(sgraph.get_info(item,'truth'))*tr(
+                        othgraph.get_info(item,'truth'))<0:
                 facs.append(Fac('opinion_conflict',ego=ego,actor=actor,item=item) )
 
         changes={}
@@ -649,7 +698,7 @@ class InteractionModel(object):
                 if i=='terr' and data==selfgraph:
                     #Change in invested territory
                     fac.append(Fac('teri_change' ),val=dif )
-                if i=='terr' and data!=selfgraph:
+                if i=='bias' and data!=selfgraph:
                     fac.append(Fac('reeval_bias', val=dif, ego=selfgraph.owner,actor=actor ) )
         inter.factors[stage][:]=facs
         for f in facs:
@@ -668,28 +717,25 @@ class InteractionModel(object):
     def run_evts(self,events):
         '''Local version of evt_do, without passing anything.
         It might be more elegant to actually use evt_do'''
-        priority=[]
-        for evt in events:
-            state=evt.state
-            priority.append( (0,evt) )
-            for c,s in evt.states.node[state]['children_states'].iteritems():
-                if c in evt.states.node[state]['priority']:
-                    priority.append((evt.states.node[state]['priority'][c], c) )
-                else :
-                    priority.append( (0,c) )
-
-        priority=sorted(priority,key = lambda e: e[0], reverse=True )
-        #if 'cflag' in evt.type:
-            #print '\nPRIO',state, evt,id(evt),priority
-        for p,e in priority:
-            s=e.state
-            while s+1 in e.states:
-                e.prepare((s,s+1),self.match)
-                if not e.run(s+1):
-                    break
-                s+=1
-                e.state=s
-            #print e.state,e,e.kwargs
+        remaining=list(events)
+        while remaining:
+            priority=[]
+            for e in events:
+                s=e.state
+                if not s+1 in e.states:
+                    remaining.remove(e)
+                    continue
+                priority+=e.priority_list(s)
+            priority=sorted(priority,key = lambda e: e[0], reverse=True )
+            for p,e in priority:
+                s=e.state
+                while s+1 in e.states:
+                    e.prepare((s,s+1),self.match)
+                    if not e.run(s+1):
+                        break
+                    s+=1
+                    e.state=s
+                #print e.state,e,e.kwargs
 
     def create_logic_evts(self,stage,inter):
         '''This looks only at the logical consequences
@@ -710,53 +756,90 @@ class InteractionModel(object):
             item=stage.item
             egoinfos=stage.egoinfos
             actinfos={}
-            evt,levt=None,None
+            evt=None
             if stage.discovery>0:
                 if stage.discovery==1:
                     #Add to actorgraph
-                    bevt=AddEvt(item,actg)
+                    devt=AddEvt(item,actg)
+                    evts.append(devt)
                 #Add to selfgraph
                 evt=AddEvt(item,subg,infos=egoinfos)
             elif egoinfos:
                 #Change in selfgraph
                 evt=ChangeEvt(item,subg,**egoinfos)
-            if stage.discovery==1:
-                evts.append(bevt)
-                levt=TruthCalcEvt(item,actg)
-            elif evt:
-                levt=TruthCalcEvt(item,subg)
-            if levt:
-                levt.add_sim_child(evt,priority=1)
-                evts.append(levt)
+            if evt:
+                evts.append(evt)
+
             if item.type=='node':
-                actinfos['truth']=stage.truth
                 #Deduce actor's' bias from the links known to ego
                 #but with the truth values that ego believes actor has
+                actinfos['truth']=stage.truth
+                actinfos['stated_truth']=stage.truth
                 egotruth=egoinfos.get('truth',subg.get_info(item,'truth'))
                 pbias= stage.truth-match.ruleset.calc_truth(item,subg,
                     subact,extrapolate=1,bias=0)
                 actinfos['bias']=pbias
-            othevt=AddEvt(item,subact,infos=actinfos)
-            evts.append(othevt)
+            #Adding item to subgraph[self][other]
+            oevt=AddEvt(item,subact,infos=actinfos)
+            evts.append(oevt)
 
         if 'reac' == stage.type:
             #
             pass
 
-        if 'perceived_reac' == stage.type:
-            #Ego perceives reaction by actor
-            item=stage.item
-            agree=stage.agreement
-            infos={}
-            if item.type=='link':
-                if not agree:
-                    infos['pattern']='Unknown'
-            elif item.type=='node':
-                infos['truth']=self.rules.truth_from_agreement(
-                    ego,stage,subg)
-            #print ego,stage.actor,subact,infos
-            evt=AddEvt(item,subact,infos=infos)
-            evts.append(evt)
+        if 'interpret' == stage.type:
+            #Ego interpets reaction by actor
+            to_add={}
+            verbal=stage.verbal
+            nonverbal=stage.nonverbal
+            mean=stage.mean #average agreement and emotion
+            for r,i in verbal.iteritems():
+                actor=r.actor
+                g=self.subgraph[ego][stage.actor]
+                item=r.item
+                if i[0]=='agreement':
+                    to_add[(item,g)]=i[1]
+                else:
+                    to_add[(item,g)]=mean[0]
+            for r,i in nonverbal.iteritems():
+                actor=r.actor
+                g=self.subgraph[ego][stage.actor]
+                item=r.item
+                if not (item,g) in to_add:
+                    to_add[(item,g)]=i[0]
+            for item,graph in to_add:
+                agree=to_add[(item,graph)]
+                actinfos={}
+                if item.type=='link':
+                    if not agree:
+                        actinfos['pattern']='Unknown'
+                elif item.type=='node':
+                    tmpstage=self.Stage('tmp',item=item,agreement=agree)
+                    #Deduce truth from degree of agreement
+                    truth=self.rules.truth_from_agreement(
+                        ego,tmpstage,graph)
+                    actinfos['truth']=truth
+                    actinfos['stated_truth']=truth
+                    egotruth=subg.get_info(item,'truth')
+                    #Deduce bias
+                    pbias= truth-match.ruleset.calc_truth(item,subg,
+                        subact,extrapolate=0,bias=0)
+                    actinfos['bias']=pbias
+                evt=AddEvt(item,graph,infos=actinfos)
+                evts.append(evt)
+
+        #If there are AddEvts/ChangeInfosEvts, attach them to TruthCalcEvts
+        #which take their place in the event list
+        for evt in tuple(evts):
+            if 'add' in evt.type or 'change' in evt.type and 'truth' in evt.infos:
+                if evt.data == actg and not self.rules.update_true_beliefs:
+                    #dont change actorgraph
+                    continue
+                tevt=TruthCalcEvt(evt.item,subg,evt.data)
+                tevt.add_sim_child(evt,priority=1)
+                evts.insert(evts.index(evt),tevt)
+                evts.remove(evt)
+                print evt,evt.data,evt.infos
         inter.events[stage]=evts
 
 

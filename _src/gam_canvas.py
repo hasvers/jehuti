@@ -415,60 +415,65 @@ class MatchCanvasPlayer(MatchCanvasHandler):
                     for em in icon.effects.values():
                         em.set_anim('appear',len=ANIM_LEN['long'])
 
-        if  (True in [tt  in evt.type for tt in ('add' ,'change', 'rem_info' )]
-            and True in [x in evt.infos for x in ('logic','val')]):
-            owner=evt.data.owner
-            #print '===================', evt.type,evt.data.name, match.data.actorgraph[owner].name
-            truthchange=[]
-            item=evt.item
-            for ac1,rest in match.data.actorsubgraphs.iteritems():
-                for ac2, gph in rest.iteritems():
-                    if ac1!= owner and ac2!=owner:
-                        #not necessary to reevaluate in subgraphs unconcerned by this evt
-                        continue
-                    if ac1!=ac2 and gph.contains(item) and (item.type=='node' or
-                             not False in [gph.contains(p) for p in item.parents]):
-                        if self.truth_calc(item,gph):
-                            truthchange.append(gph)
-            sgph =match.data.actorgraph[owner]
-            if not sgph.contains(item):
-                sub=match.data.actorsubgraphs[owner][owner]
-                #print 'not contained in actorgraph', evt.item, sgph.name
-                if self.truth_calc(item,sgph,sub):
-                    truthchange.append(sub)
-                #print '======================='
-            if truthchange:
-                #print 'Truth changed', evt.item, [i.name for i in truthchange]
-                #anim=lambda t=item:self.canvas.icon[t].set_anim('blink')
-                #wrap=FuncWrapper(anim,type='visual_appear_{}'.format(item),source=evt,priority=1)
-                #match.add_phase(wrap)
-                pass
+        return
+        #BELOW: OLD WAYS OF UPDATING TRUTH AND BIAS. THIS IS PLAYER,
+        #THEREFORE ALL CHANGES WILL COME FROM EVENTS THAT COMPUTE
+        #THEIR OWN CONSEQUENCES
 
-        if (('change' in evt.type or 'rem_info' in evt.type)
-                 and 'bias' in evt.infos  and not 'truth' in evt.infos
-                 and not (evt.source and 'biascalc' in evt.source)
-             or 'add' in evt.type and not evt.infos.get('bias',None) is None
-                and  evt.infos.get('truth',None) is None
-            ):
-                #print '*** bias set=> truthcalc', evt.item, evt.data.name, evt.infos['bias']
+        #if  (True in [tt  in evt.type for tt in ('add' ,'change', 'rem_info' )]
+            #and True in [x in evt.infos for x in ('logic','val')]):
+            #owner=evt.data.owner
+            ##print '===================', evt.type,evt.data.name, match.data.actorgraph[owner].name
+            #truthchange=[]
+            #item=evt.item
+            #for ac1,rest in match.data.actorsubgraphs.iteritems():
+                #for ac2, gph in rest.iteritems():
+                    #if ac1!= owner and ac2!=owner:
+                        ##not necessary to reevaluate in subgraphs unconcerned by this evt
+                        #continue
+                    #if ac1!=ac2 and gph.contains(item) and (item.type=='node' or
+                             #not False in [gph.contains(p) for p in item.parents]):
+                        #if self.truth_calc(item,gph):
+                            #truthchange.append(gph)
+            #sgph =match.data.actorgraph[owner]
+            #if not sgph.contains(item):
+                #sub=match.data.actorsubgraphs[owner][owner]
+                ##print 'not contained in actorgraph', evt.item, sgph.name
+                #if self.truth_calc(item,sgph,sub):
+                    #truthchange.append(sub)
+                ##print '======================='
+            #if truthchange:
+                ##print 'Truth changed', evt.item, [i.name for i in truthchange]
+                ##anim=lambda t=item:self.canvas.icon[t].set_anim('blink')
+                ##wrap=FuncWrapper(anim,type='visual_appear_{}'.format(item),source=evt,priority=1)
+                ##match.add_phase(wrap)
+                #pass
 
-                self.truth_calc(evt.item,evt.data)
-        if (('change' in evt.type or 'rem_info' in evt.type)
-                and 'truth' in evt.infos and not 'bias' in evt.infos
-                 and not (evt.source and 'truthcalc' in evt.source)
-             or 'add' in evt.type and  not evt.infos.get('truth',None) is None
-                 and evt.infos.get('bias',None) is None
-            ):
-            #print '*** truth set=> biascalc', evt.item, evt.data.name, evt.infos['truth']
+        #if (('change' in evt.type or 'rem_info' in evt.type)
+                 #and 'bias' in evt.infos  and not 'truth' in evt.infos
+                 #and not (evt.source and 'biascalc' in evt.source)
+             #or 'add' in evt.type and not evt.infos.get('bias',None) is None
+                #and  evt.infos.get('truth',None) is None
+            #):
+                ##print '*** bias set=> truthcalc', evt.item, evt.data.name, evt.infos['bias']
 
-            #Any external change of truth values in an other-subgraph (e.g. in reaction events)
-            #causes owner to reevaluate
-            owner=evt.data.owner
-            subs=match.data.actorsubgraphs
-            for oact,sao in subs[owner].iteritems():
-                if oact != owner and evt.data==sao and sao.contains(evt.item):
-                    #print 'Update bias perception in',owner,'about',oact, evt.item,' due to', evt
-                    self.update_bias(evt.item,subs[owner][owner],sao)
+                #self.truth_calc(evt.item,evt.data)
+        #if (('change' in evt.type or 'rem_info' in evt.type)
+                #and 'truth' in evt.infos and not 'bias' in evt.infos
+                 #and not (evt.source and 'truthcalc' in evt.source)
+             #or 'add' in evt.type and  not evt.infos.get('truth',None) is None
+                 #and evt.infos.get('bias',None) is None
+            #):
+            ##print '*** truth set=> biascalc', evt.item, evt.data.name, evt.infos['truth']
+
+            ##Any external change of truth values in an other-subgraph (e.g. in reaction events)
+            ##causes owner to reevaluate
+            #owner=evt.data.owner
+            #subs=match.data.actorsubgraphs
+            #for oact,sao in subs[owner].iteritems():
+                #if oact != owner and evt.data==sao and sao.contains(evt.item):
+                    ##print 'Update bias perception in',owner,'about',oact, evt.item,' due to', evt
+                    #self.update_bias(evt.item,subs[owner][owner],sao)
 
 
     def update_bias(self, item,graph=None,sao=None,tracklist=None):

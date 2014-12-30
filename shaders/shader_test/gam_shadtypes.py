@@ -41,6 +41,12 @@ class Effect(sfml.Drawable):
     def on_draw(self, target, states):
         states.shader = self.shader
         target.draw(self.sprite, states)
+        
+    def set_texture(self,scrtexture):
+        if scrtexture:
+            if self.is_loaded:
+                self.shader.set_parameter("texture")
+
 
 class SphereMap(Effect):
     def __init__(self):
@@ -48,9 +54,10 @@ class SphereMap(Effect):
         #self.blend_mode='add'
         self.centerlist=[]
 
-    def set_texture(self,scrtexture):
+    def set_texture(self,scrtexture,repeated=False):
         if scrtexture:
-            #texture.repeated=True
+            if repeated:
+                scrtexture.repeated=True
             if self.is_loaded:
                 self.shader.set_parameter("texture")
 
@@ -135,6 +142,31 @@ class NormalLight(Effect):
         
 
         
+class Immersion(Effect):
+    '''Transition between two textures that uses a depth map to tell which part
+    of the layer below pokes through the layer above. 
+    The texture contained is the one that should poke through.'''
+    mode='in'
+    def __init__(self,tex=None,depth=None):
+        Effect.__init__(self, 'immersion')
+        #self.blend_mode='add'
+        self.texname=tex
+        self.depth=depth
+    def on_load(self,texture=None,screensize=None):
+        # load the texture and initialize the sprite
+        self.sprite = sfml.Sprite(texture)
+
+        # load the shader
+        self.load_shader("immersion.frag")
+        self.tex=tex=sfml.Texture.from_file(self.texname)
+        self.shader.set_texture_parameter("poke",tex)
+        self.depthtex=tex=sfml.Texture.from_file(self.depth)
+        self.shader.set_texture_parameter("depth",tex)
+
+        return True
+
+    def on_update(self, time, x, y,screensize):
+        self.shader.set_parameter("z",-float(time/4.-2.)) 
         
 class LightFS(Effect):
     def __init__(self):

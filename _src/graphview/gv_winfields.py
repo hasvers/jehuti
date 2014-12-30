@@ -129,6 +129,22 @@ class WindowField(UI_Item):
             self.image.fill(COLORKEY)
             self.redraw()
 
+    def draw_bg(self,color,rect=None):
+        '''Generic function for simple backgrounds.'''
+        self.bg=self.image.copy()
+        if not rect:
+            rect=pg.rect.Rect((0,0),self.rect.size)
+
+        self.bg.fill(COLORKEY)
+        if len(color)==2:
+            if self.direction == 0 :
+                self.bg.blit(gradients.horizontal(rect.size, *color),rect.topleft)
+            else :
+                self.bg.blit(gradients.vertical(rect.size, *color),rect.topleft)
+        else :
+            self.bg.fill(color,rect)
+
+
     def kill(self,*args):
         self.unbind_command(None,True)
         UI_Item.kill(self,*args)

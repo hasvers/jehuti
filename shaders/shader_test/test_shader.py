@@ -11,9 +11,8 @@ bg=pg.image.load('background.jpg')
 
 bg2=pg.image.load('crossColor.jpg')
 bg2=pg.image.load('test.jpg')
-bg2=pg.image.load('10113-diffuse.jpg')
 bg2=pg.image.load('Crossbw2.png')
-bg2=pg.image.load('compass.png')
+bg2=pg.image.load('10113-diffuse.jpg')
 bg2=pg.image.load('perso2a.png')
 
 scrsize=bg2.get_rect().size
@@ -32,6 +31,16 @@ shader=ShaderManager('normallight',screen,scrsize,normals= 'Crossbw2_NORMALS.png
 shader=ShaderManager('normallight',screen,scrsize,normals= 'compass_NORMALS.png',specular='compass_SPECULAR.png')
 shader=ShaderManager('normallight',screen,scrsize,normals= 'perso2a_NORMALS.png',specular= 'perso2a.png')
 
+if 1:
+    #EMERSION TRANSITION
+    shader=ShaderManager('immersion',screen,scrsize,tex='perso2a.png',depth='compass_NORMALS_DEPTH.png')
+    bg2=pg.image.load('background.jpg')
+
+if 0:
+    bg2=pg.image.load('perso2a.png')
+    shader=ShaderManager('immersion',screen,scrsize,tex='compass.png',depth='compass_NORMALS_DEPTH.png')
+
+#shader=ShaderManager('immersion',screen,scrsize,bg='perso2a.png',depth='perso2a.png')
 #shader=ShaderManager('waterripple',screen,scrsize)
 
 FPS=60
