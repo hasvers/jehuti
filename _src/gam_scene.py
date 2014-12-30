@@ -61,7 +61,7 @@ class SceneEditor(SceneHandler):
             flist=tuple( (a.name, lambda act=a:self.import_actor(act) )
                  for a in exactors)
             struct+=('Import actor',lambda s=struct,f=flist:user.ui.float_menu(f) ),
-        places= self.game.get_sources_for(self.data,'place')
+        places=[]# self.game.get_sources_for(self.data,'place')
         if places:
             flist2=tuple( (p.name, lambda sc=p:self.import_setting(sc) )
                  for p in places)

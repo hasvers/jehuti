@@ -148,6 +148,19 @@ class PsychologyModel(object):
             bias*=len(graph.nodes)/8.
         return bias
 
+    def perceive_trait(self,trait,actor,infosrc):
+        '''For all psychological traits, how well does ego evaluate them
+        in actor? This is a fight between ego.perc and act.terr'''
+        #Converges to trait (perc wins) or to 0 (terr wins)
+        egoinfos=infosrc.get_info(self.ego)
+        actinfos=infosrc.get_info(actor)
+        perc=egoinfos['perc']
+        if not perc:
+            perc=.05
+        terr=actinfos['terr']
+        #print perc,terr,exp(-terr/4./perc)
+        return trait*exp(-terr**2/2./perc)
+
     def trust_opinon(self,actor,match):
         '''How likely ego is likely to trust actor's opinion
         irrationally, and thus become biased. Depends on actor's
@@ -242,10 +255,23 @@ class InteractionRules(object):
         if egotruth is None:
             egotruth=perceived_claim.egoinfos['truth']
         claimtruth=perceived_claim.truth
-        agreement=abs(egotruth+claimtruth -1)/2.
+        agreement= (egotruth+claimtruth-1)**2-(egotruth-claimtruth)**2
         #agreement*=1-.9*perceived_claim.discovery
         agreement*=self.psy[ego].demonstrativeness(actor,match.cast)
         return agreement
+
+
+    def truth_from_agreement(self,ego,perceived_reac,infosrc):
+        '''Make assumption on someone else's opinion based on perceived agreement.
+        Inverse of previous function.'''
+        egotruth=infosrc.get_info(perceived_reac.item,'truth')
+        agr=perceived_reac.agreement
+        actor=perceived_reac.actor
+        demonstr=self.psy[actor].demonstrativeness(ego,self.match.cast)
+        agr/=self.psy[ego].perceive_trait(demonstr,actor,self.match.cast)
+        t= (1-agr-2*egotruth)/2/(1-2*egotruth)
+        return t
+
 
     #LINK CLAIM AND AGREEMENT
 
@@ -336,12 +362,6 @@ class InteractionRules(object):
         return {r:(pagree+(nv[r][0]-pagree)*perc**2,
                 pemote+(nv[r][0]-pemote)*perc**2 ) for r in nv},(pagree,pemote)
 
-    def truth_from_agreement(self,ego,perceived_reac,infosrc):
-        '''Make assumption on someone else's opinion based on perceived agreement.'''
-        baseval=infosrc.get_info(perceived_reac.item,'truth')
-        agr=perceived_reac.agreement
-        t= 0.5+ (baseval-.5)*min(max(-1,agr),1)
-        return max(0,min(1,t))
 
 
 #### MECHANICS #####=============================================================
@@ -814,7 +834,8 @@ class InteractionModel(object):
                     if not agree:
                         actinfos['pattern']='Unknown'
                 elif item.type=='node':
-                    tmpstage=self.Stage('tmp',item=item,agreement=agree)
+                    tmpstage=self.Stage('tmp',item=item,agreement=agree,
+                        ego=ego,actor=stage.actor)
                     #Deduce truth from degree of agreement
                     truth=self.rules.truth_from_agreement(
                         ego,tmpstage,graph)
