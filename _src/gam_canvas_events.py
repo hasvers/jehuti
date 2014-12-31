@@ -87,6 +87,8 @@ class TruthCalcEvt(LogicEvent):
             tgtgraph=refgraph
         self.tgtgraph=tgtgraph
         self.type='truthcalc'
+        self.ignore_stated=kwargs.get('ignore_stated',False)
+        self.changevts={}
 
     def prep_init(self,match,*args,**kwargs):
         return self.truth_calc(match,self.item,self.refgraph,self.tgtgraph)
@@ -110,9 +112,11 @@ class TruthCalcEvt(LogicEvent):
             s,t=item.parents
             logic=graph.get_info(item,'logic')
             if srceff(graph.get_info(s,'truth'),logic ):
-                return self.truth_calc(t,graph,sub,track,tracklist)
+                return self.truth_calc(match,t,graph,sub,track,tracklist)
             elif tgteff(graph.get_info(t,'truth'),logic ):
-                return self.truth_calc(s,graph,sub,track,tracklist)
+                return self.truth_calc(match,s,graph,sub,track,tracklist)
+            else:
+                return 0
 
         #Truth inferred from the graph's logic
         truth=match.ruleset.calc_truth(item,graph,sub,extrapolate=0)
@@ -122,21 +126,30 @@ class TruthCalcEvt(LogicEvent):
 
         #If the graph is a model of someone else's mind, rather than own belief,
         #there may be stated truths, i.e. values of which we are sure for the
-        #other. Therefore, they cannot be changed, instead it is the other's
-        #underlying BIAS that is recomputed.
-        statedtruth= sub.get_info(item,'stated_truth')
+        #other. Instead it is the other's underlying BIAS that is recomputed
+        #unless this event is flagged to ignore this. This flagging is used
+        #when computing the effect on the representation  of a NEW information,
+        #i.e. when we know that someone just learned about a new link and we
+        #want to know how this has transformed their stated truths.
+        if self.ignore_stated:
+            statedtruth=None
+        else:
+            statedtruth= sub.get_info(item,'stated_truth')
         if not statedtruth is None:
-            bias=statedtruth-truth
+            should_have_truth=match.ruleset.calc_truth(item,graph,sub,extrapolate=1,bias=0)
+            bias=statedtruth-should_have_truth
             prevbias=sub.get_info(item,'bias')
             #print 'truth of {} is {} should be {} hence bias {} (before, {})'.format(item,truth, should_have_truth,bias,prevbias)
             if prevbias!=bias:
-                evt=ChangeInfosEvt(item,sub,bias=bias,invisible=True,source='biascalc')
+                evt=ChangeInfosEvt(item,sub,bias=bias,source='biascalc')
+                print 'bias change {} to {}'.format(prevbias,bias),item,should_have_truth,statedtruth, sub
                 self.add_sim_child(evt,priority=-1)
             return 0
 
         #print 'glappy:', item,graph.name,sub.name,truth,prevtruth
-        if truth==prevtruth:
+        if truth==prevtruth and track:
             return 0
+        #print 'truth change',truth,prevtruth,item, sub,sub.get_info(item,'truth'),graph
         if item in track:
             basetruth=track[item][0]
             assert track[item][1]==prevtruth #else there is something strange going on
@@ -148,8 +161,7 @@ class TruthCalcEvt(LogicEvent):
                 #cancel
                 for i in tracklist[tracklist.index(item):]:
                     if sub.get_info(i,'truth')!=track[i][0]:
-                        evt=ChangeInfosEvt(i,sub,truth=track[i][0],invisible=True,source='truthcalc')
-                        self.add_sim_child(evt,priority=-1)
+                        self.set_change(i,sub,truth=track[i][0],source='truthcalc')
                         track[i]=(track[i][0],track[i][0])
                 return 0
             else:
@@ -160,8 +172,7 @@ class TruthCalcEvt(LogicEvent):
                     if match.ruleset.truth_value(truth)== match.ruleset.truth_value(prevtruth):
                         nt=(1.+match.ruleset.truth_value(truth))/2
 
-                        evt=ChangeInfosEvt(i,sub,truth=nt,invisible=True,source='truthcalc')
-                        self.add_sim_child(evt,priority=-1)
+                        self.set_change(i,sub,truth=nt,source='truthcalc')
                         track[item]=(basetruth,nt)
                         return 0
                 else:
@@ -169,8 +180,7 @@ class TruthCalcEvt(LogicEvent):
                     #attenuating effect, will converge, no problem
 
 
-        evt=ChangeInfosEvt(item,sub,truth=truth,invisible=True,source='truthcalc')
-        self.add_sim_child(evt,priority=-1)
+        self.set_change(item,sub,truth=truth,source='truthcalc')
         #print 'set truth',item.name,truth, 'from' ,prevtruth, 'in', graph.name
         track[item]=(prevtruth,truth)
         tracklist.append(item)
@@ -179,11 +189,23 @@ class TruthCalcEvt(LogicEvent):
                 logic=sub.get_info(l,'logic')
                 if l.parents[0]==item:
                     if srceff(truth,logic)!=srceff(prevtruth,logic):
-                        self.truth_calc(l.parents[1],graph,sub,track,tracklist)
+                        self.truth_calc(match,l.parents[1],graph,sub,track,tracklist)
                 elif tgteff(truth,logic)!=tgteff(prevtruth,logic):
-                    self.truth_calc(l.parents[0],graph,sub,track,tracklist)
+                    self.truth_calc(match,l.parents[0],graph,sub,track,tracklist)
 
-
+    def set_change(self,item,sub,truth,source):
+        if item in self.changevts:
+            #In case we backtrack on a change
+            old=self.changevts[item]
+            del self.changevts[item]
+            self.rem_child(old)
+        infos={'truth':truth}
+        if self.ignore_stated:
+            #Recompute the stated
+            infos['stated_truth']=truth
+        evt=ChangeInfosEvt(item,sub,source='truthcalc',**infos)
+        print id(self),'set change',item,sub,infos
+        self.add_sim_child(evt,priority=-1)
 
 
 class BiasCalcEvt(Event):
@@ -216,7 +238,7 @@ class BiasCalcEvt(Event):
         prevbias=graph.get_info(item,'bias')
         #print 'truth of {} is {} should be {} hence bias {} (before, {})'.format(item,truth, should_have_truth,bias,prevbias)
         if prevbias!=bias:
-            evt=ChangeInfosEvt(item,sao,bias=bias,invisible=True,source='biascalc')
+            evt=ChangeInfosEvt(item,sao,bias=bias,source='biascalc')
             self.add_sim_child(evt,priority=-1)
         tracklist.append(item)
         for l in graph.links.get(item,[]):

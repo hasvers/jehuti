@@ -147,11 +147,13 @@ class Immersion(Effect):
     of the layer below pokes through the layer above. 
     The texture contained is the one that should poke through.'''
     mode='in'
-    def __init__(self,tex=None,depth=None):
+    def __init__(self,tex=None,depth=None,**kwargs):
         Effect.__init__(self, 'immersion')
         #self.blend_mode='add'
         self.texname=tex
         self.depth=depth
+        self.zrange=kwargs.pop('zrange',None)
+        self.kwargs=kwargs
     def on_load(self,texture=None,screensize=None):
         # load the texture and initialize the sprite
         self.sprite = sfml.Sprite(texture)
@@ -166,7 +168,10 @@ class Immersion(Effect):
         return True
 
     def on_update(self, time, x, y,screensize):
-        self.shader.set_parameter("z",-float(time/4.-2.)) 
+        z=-float(time/4.-2.)
+        if self.zrange:
+            z=max(self.zrange[0],min(self.zrange[1],z))
+        self.shader.set_parameter("z",z) 
         
 class LightFS(Effect):
     def __init__(self):

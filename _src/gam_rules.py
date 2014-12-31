@@ -38,7 +38,7 @@ class LogicRuleset():
         #Truth of a node during the conversation, including link contributions
         #graph is mindscape of the observer, sub is what he thinks is true for
         #the mindscape he is computing truth in (could be his own, could be someone else's)
-        base= kwargs.get('bias',graph.get_info(node,'bias'))+.5
+        base= kwargs.get('bias',sub.get_info(node,'bias'))+.5
         case='typ'
         extrapolate=kwargs.get('extrapolate',0)
         if extrapolate:
@@ -50,6 +50,11 @@ class LogicRuleset():
         else:
             #case where the observer computes only from links he knows that the other knows
             links = sub.links.get(node,[])
+        links=set(links)
+        if 'exclude_links' in kwargs:
+            for l in kwargs['exclude_links']:
+                if l in links:
+                    links.remove(l)
         for l in links:
             logic=graph.get_info(l,'logic')
             magn=sub.get_info(l,'val')

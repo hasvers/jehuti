@@ -529,8 +529,8 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                 claim=evt.evt
                 inter=self.interact.process_claim(claim)
                 inter.pass_events()
-                print inter.events
-                print inter.factors
+                #print inter.events
+                #print inter.factors
                 print inter.ethos
         if 'select' in sgn :
             if self.cast in evt.affects() :

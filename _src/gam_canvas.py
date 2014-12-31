@@ -42,9 +42,11 @@ class LogicCanvasHandler(CanvasHandler):
                 return self.truth_calc(s,graph,sub,track,tracklist)
 
         truth=match.ruleset.calc_truth(item,graph,sub,extrapolate=0)
-        prevtruth=graph.get_info(item,'truth')
+        prevtruth=sub.get_info(item,'truth')
         #print 'glappy:', item,graph.name,sub.name,truth,prevtruth
-        if truth==prevtruth:
+        if truth==prevtruth and track:
+            #If there is no track yet, we are looking at the original item
+            #We may want to see if its change has had consequences
             return 0
         if item in track:
             basetruth=track[item][0]
@@ -308,7 +310,7 @@ class MatchCanvasPlayer(MatchCanvasHandler):
             #if database['edit_mode']:
                 #return  '{} {}'.format(infos['name'],infos['truth'])
             else:
-                return  '{}'.format(infos['name'])#,rfloat(infos['bias']),rfloat(infos['truth'])) #+ ' T:'+str(infos.get('terr',0))#+ ': '+ infos['desc']
+                return  '{} {} {}'.format(infos['name'],infos['truth'],infos.get('bias',None))#,rfloat(infos['bias']),rfloat(infos['truth'])) #+ ' T:'+str(infos.get('terr',0))#+ ': '+ infos['desc']
         elif item.type=='link':
             return  infos['pattern'] #+ ': '+ infos['desc']
 

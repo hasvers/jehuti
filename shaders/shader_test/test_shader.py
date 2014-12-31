@@ -33,8 +33,8 @@ shader=ShaderManager('normallight',screen,scrsize,normals= 'perso2a_NORMALS.png'
 
 if 1:
     #EMERSION TRANSITION
-    shader=ShaderManager('immersion',screen,scrsize,tex='perso2a.png',depth='compass_NORMALS_DEPTH.png')
-    bg2=pg.image.load('background.jpg')
+    shader=ShaderManager('immersion',screen,scrsize,tex='perso2a.png',depth='compass_NORMALS_DEPTH.png',zrange=(0.4,2.) )
+    bg2=pg.image.load('Crossbw2.png')
 
 if 0:
     bg2=pg.image.load('perso2a.png')

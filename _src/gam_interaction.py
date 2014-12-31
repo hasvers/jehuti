@@ -73,16 +73,16 @@ class PsychologyModel(object):
             Im: activation'''
         emo=0+0J
         pleas=0 #How pleasant the experience is
-        activ=0 #How busy the experience is
+        active=0 #How busy the experience is
         for e in factors:
             if e.type=='ethos':
                 pleas+=self.ethos_positivity(e.effects)
             elif e.type=='opinion_divergence':
                 pleas-=.5
-                activ+=1.
+                active+=1.
             elif e.type=='concede':
                 pleas-=1.
-                activ+=1.
+                active+=1.
             elif e.type=='opinion_shift':
                 active+=1.
             elif e.type=='deep_shift':
@@ -98,9 +98,9 @@ class PsychologyModel(object):
                 please+=3*e.val
         ethos=self.ethos_positivity(self.ethos_effects(factors))
         pleas+=ethos
-        activ+=abs(ethos)
+        active+=abs(ethos)
 
-        emo=pleas/5.+1J*activ/8.
+        emo=pleas/5.+1J*active/8.
         return emo
 
     def ethos_effects(self,factors):
@@ -334,7 +334,7 @@ class InteractionRules(object):
         return baseval*(1.+(1-perc)*chance*(1-min(abs(baseval),1)) )
 
     def perceived_emotion(self,ego,reac):
-        '''When ego receives a reac with a given agreement,
+        '''When ego receives a reac with a given emotion,
         how much error is there on it in the perceived_reac?'''
         #The perceived agreement is a function that tends to
         #the real agreement for large values of it
@@ -343,6 +343,15 @@ class InteractionRules(object):
         perc=self.match.cast.get_info(ego,'perc')
         chance=rnd.uniform(-1,1)
         return baseval*(1.+(1-perc)*chance*(1-min(abs(baseval),1)) )
+
+    def perceived_discovery(self,ego,reac):
+        '''When ego receives a reac, do they detect whether
+        this was a discovery?'''
+        perc=self.match.cast.get_info(ego,'perc')
+        if reac.discovery:
+            if rnd.uniform(0,1) < perc:
+                return 1
+        return 0
 
 
     def discern_nonverbal(self,ego,nonverbal):
@@ -389,7 +398,7 @@ class Interaction(object):
                 else:
                     info=self.truth
             if 'reac' in self.type:
-                info='A{:.2} E{:.2}'.format(self.agreement,self.emotion)
+                info='A{:.2} E{:.2}'.format(float(self.agreement),self.emotion)
             return 'Stage:{} {} {}'.format(self.type,self.ego,info)
 
     class Factor(object):
@@ -405,10 +414,29 @@ class Interaction(object):
         self.schema=nx.DiGraph()
         self.conseq=nx.DiGraph()
         self.factors={}
-        self.events={}
+        self.events={} #All the events of a stage
+        self.event_source={} #The stages which are involved in shaping an event
         self.ethos={}
         self.by_actor={}
+        #Important: order in which stages are run
+        self.stage_priority={}
 
+    def get_stage_priority(self,stage):
+        '''Find the priority of a stage. If it is not in the dictionary
+        stage_priority, look for the priority of its ancestors.'''
+        cur=[stage]
+        prior=self.stage_priority
+        while cur:
+            pcur=[prior[c] for c in cur if c in prior]
+            if pcur:
+                return max(pcur)
+            s=cur.pop(0)
+            if s is None:
+                continue
+            nxt=self.schema.predecessors(s)
+            if nxt:
+                cur+=nxt
+        return 0
 
     def add_stage(self,stage):
         if stage in self.schema.nodes():
@@ -451,7 +479,6 @@ class Interaction(object):
                     if not b in tdic[a]:
                         tdic[a][b]=n
         return tdic
-
 
     def pass_events(self):
         '''The events have already been run privately
@@ -497,18 +524,21 @@ class InteractionModel(object):
 
         claimant=claimevt.actor
 
-
         #Process claims and reactions in parallel
-        for c in [claimevt]+claimevt.subclaims:
-            item=claimevt.item
+        #First do subclaims by priority order
+        plist=[(p,c) for p,c in claimevt.priority_list(1) if c in claimevt.subclaims or c==claimevt]
+        priority={}
+        for p,c in plist:
+            item=c.item
             claim=Stage('claim',item=item,actor=claimant,ego=claimant)
             if item.type=='node':
-                claim.truth=claimevt.decl.kwargs['truth']
+                claim.truth=c.decl.kwargs['truth']
             elif item.type=='link':
                 claim.pattern=self.match.data.actorgraph[
-                    claimevt.actor].get_info(item,'pattern')
+                    c.actor].get_info(item,'pattern')
             inter.add_stage(claim)
             self.process_claim_to_reac(claim,inter)
+            priority[claim]=p
 
         #Reactions are then interpreted in a way that depends on which
         #ones are verbal or not!
@@ -524,14 +554,15 @@ class InteractionModel(object):
                 for reac in reacs:
                     perceived_reac=self.perceive_reac(ego,act,reac)
                     preacs.append(perceived_reac)
+                    inter.add_edge(reac,perceived_reac)
                     #TEMPORARY, AWAITING INTERPRETATION IMPLEMENTATION
                     #inter.add_edge(reac,perceived_reac)#TMP TMP
                     #self.prepare_stage(perceived_reac,inter) #TMP TMP
 
                 #Interpretation of perceived reactions
                 interpret=self.interpret_reacs(ego,act,preacs)
-                for reac in reacs:
-                    inter.add_edge(reac,interpret)
+                for preac in preacs:
+                    inter.add_edge(preac,interpret)
                 self.prepare_stage(interpret,inter)
         return inter
 
@@ -561,8 +592,11 @@ class InteractionModel(object):
         else:
             emotion=self.rules.perceived_emotion(ego,reac)
         #print 'PERCEIVE REAC',ego,actor
-        perceived_reac=self.Stage('perceived_reac',ego=ego,actor=actor,item=reac.item,
-                    agreement=agreement,emotion=reac.emotion,verbal=reac.verbal)
+
+        discovery=self.rules.perceived_discovery(ego,reac)
+        perceived_reac=self.Stage('perceived_reac',ego=ego,actor=actor,
+            item=reac.item, agreement=agreement,emotion=reac.emotion,
+            verbal=reac.verbal, discovery=discovery)
         return perceived_reac
 
 
@@ -647,7 +681,7 @@ class InteractionModel(object):
         emotion=self.rules.emotion(ego,factors)
         verbal=self.rules.verbalisation(agreement,emotion)
         return self.Stage('reac',item=item,ego=ego,agreement=agreement,
-            emotion=emotion,verbal=verbal,actor=actor)
+            emotion=emotion,verbal=verbal,actor=actor,discovery=perceived_claim.discovery)
 
     #GENERAL PROCESSING====================================
 
@@ -692,7 +726,7 @@ class InteractionModel(object):
                     if 'pattern' in e.infos and e.infos['pattern']=='Unknown':
                         facs.append(Fac('unknown_pattern',item=e.item))
                 if 'change' in e.type:
-                    dif={i:j-e.oldinfos[i] for i,j in e.infos.iteritems()}
+                    dif={i:j-e.oldinfo[i] for i,j in e.infos.iteritems()}
                     changes.setdefault((e.item,e.data),[]).append(dif)
         #information changes
         for xs,cs in changes.iteritems():
@@ -701,12 +735,14 @@ class InteractionModel(object):
             selfgraph=self.match.data.actorsubgraphs[actor][actor]
             finalchange={i:sum(c[i] for c in cs if i in c) for i in item.dft }
             for i,dif in finalchange.iteritems():
+                if dif==0:
+                    continue
                 if i=='truth' and data==selfgraph:
-                    datinf=data.get_infos(item)
+                    datinf=data.get_info(item)
                     shift= self.rules.interpret_truth_change(actor,dif,datinf)
                     if shift:
                         #Consequences of opinion shift
-                        if self.match.canvas.get_info(item,'claimed')==act.ID :
+                        if self.match.canvas.get_info(item,'claimed')==actor.ID :
                             #Concession
                             facs.append(Fac('concede',item=item,ego=actor,actor=stage.actor))
                         facs.append(Fac(shift,item=item,dif=dif))
@@ -714,12 +750,13 @@ class InteractionModel(object):
                             #Activation/Deactivation of invested territory
                             act= datinf['terr']*self.match.ruleset.truth_value(datinf['truth'])
                             if act:
-                                fac.append(Fac('teri_activ' ),val=act )
+                                facs.append(Fac('teri_activ' ),val=act )
                 if i=='terr' and data==selfgraph:
                     #Change in invested territory
-                    fac.append(Fac('teri_change' ),val=dif )
+                    facs.append(Fac('teri_change' ),val=dif )
                 if i=='bias' and data!=selfgraph:
-                    fac.append(Fac('reeval_bias', val=dif, ego=selfgraph.owner,actor=actor ) )
+                    facs.append(Fac('reeval_bias', val=dif, ego=selfgraph.owner,actor=actor ) )
+                    #print 'dif bias',dif,actor,item,data,data.get_info(item,'bias')
         inter.factors[stage][:]=facs
         for f in facs:
             inter.events[f]=[]
@@ -729,33 +766,52 @@ class InteractionModel(object):
 
 
     def run_logic_evts(self,stage,inter):
-        self.run_evts(inter.events[stage])
+        events=inter.events[stage]
+        prior={e:max(inter.get_stage_priority(r) for r in
+                inter.event_source.get(e,[None])) for e in events }
+        self.run_evts(events,prior)
 
     def run_factor_evts(self,stage,inter):
-        self.run_evts(evt for f in inter.factors[stage] for evt in inter.events[f])
+        events=(evt for f in inter.factors[stage]
+                for evt in inter.events[f])
+        prior={e:max(inter.get_stage_priority(r) for r in
+                inter.event_source.get(e,[None])) for e in events }
+        self.run_evts(events,prior)
 
-    def run_evts(self,events):
+    def run_evts(self,events,priorities={}):
         '''Local version of evt_do, without passing anything.
         It might be more elegant to actually use evt_do'''
         remaining=list(events)
+        #In which order should the events be executed?
+        priorities ={}
         while remaining:
-            priority=[]
+            priorlist=[]
             for e in events:
                 s=e.state
                 if not s+1 in e.states:
                     remaining.remove(e)
                     continue
-                priority+=e.priority_list(s)
-            priority=sorted(priority,key = lambda e: e[0], reverse=True )
-            for p,e in priority:
+                elist=e.priority_list(s)
+                if e in priorities:
+                    #If the base event itself has a priority compared to others
+                    #(e.g. subclaims), add it to the subpriorities
+                    evtpri=priorities[e]
+                    elist=[(i[0]+evtpri,i[1] ) for i in elist]
+                priorlist+=elist
+            priorlist=sorted(priorlist,key = lambda e: e[0], reverse=True )
+            for p,e in priorlist:
                 s=e.state
-                while s+1 in e.states:
+                if s+1 in e.states:
                     e.prepare((s,s+1),self.match)
                     if not e.run(s+1):
-                        break
+                        continue
                     s+=1
                     e.state=s
-                #print e.state,e,e.kwargs
+                    #print e.state,e
+                    #if 'add' in e.type:
+                        #print '    ',e.infos
+                    #if 'chang' in e.type:
+                        #print '    ',e.oldinfo
 
     def create_logic_evts(self,stage,inter):
         '''This looks only at the logical consequences
@@ -770,6 +826,7 @@ class InteractionModel(object):
         subact=self.subgraph[ego][stage.actor]
         actg=self.actgraph[ego]
         evts=[]
+        link_discoveries=[] #PERCEIVED REACTIONS that betray the discovery of a new link
 
         if 'perceived_claim' == stage.type:
             #Ego perceives claim by actor
@@ -815,20 +872,19 @@ class InteractionModel(object):
             mean=stage.mean #average agreement and emotion
             for r,i in verbal.iteritems():
                 actor=r.actor
-                g=self.subgraph[ego][stage.actor]
                 item=r.item
                 if i[0]=='agreement':
-                    to_add[(item,g)]=i[1]
+                    to_add[(item,r)]=i[1]
                 else:
-                    to_add[(item,g)]=mean[0]
+                    to_add[(item,r)]=mean[0]
             for r,i in nonverbal.iteritems():
                 actor=r.actor
                 g=self.subgraph[ego][stage.actor]
                 item=r.item
-                if not (item,g) in to_add:
-                    to_add[(item,g)]=i[0]
-            for item,graph in to_add:
-                agree=to_add[(item,graph)]
+                if not (item,r) in to_add:
+                    to_add[(item,r)]=i[0]
+            for item,reac in to_add:
+                agree=to_add[(item,reac)]
                 actinfos={}
                 if item.type=='link':
                     if not agree:
@@ -838,7 +894,7 @@ class InteractionModel(object):
                         ego=ego,actor=stage.actor)
                     #Deduce truth from degree of agreement
                     truth=self.rules.truth_from_agreement(
-                        ego,tmpstage,graph)
+                        ego,tmpstage,subact)
                     actinfos['truth']=truth
                     actinfos['stated_truth']=truth
                     egotruth=subg.get_info(item,'truth')
@@ -846,23 +902,48 @@ class InteractionModel(object):
                     pbias= truth-match.ruleset.calc_truth(item,subg,
                         subact,extrapolate=0,bias=0)
                     actinfos['bias']=pbias
-                evt=AddEvt(item,graph,infos=actinfos)
+                evt=AddEvt(item,subact,infos=actinfos)
                 evts.append(evt)
+                inter.event_source.setdefault(evt,[]).append(reac)
+                if reac.discovery and item.type=='link':
+                    link_discoveries.append(evt)
+
+
 
         #If there are AddEvts/ChangeInfosEvts, attach them to TruthCalcEvts
         #which take their place in the event list
         for evt in tuple(evts):
             if 'add' in evt.type or 'change' in evt.type and 'truth' in evt.infos:
                 if evt.data == actg and not self.rules.update_true_beliefs:
-                    #dont change actorgraph
+                    #dont change actorgraph if rules forbid it
                     continue
-                tevt=TruthCalcEvt(evt.item,subg,evt.data)
-                tevt.add_sim_child(evt,priority=1)
+                #If a link has been discovered by actor, truthcalc must ignore_stated
+                #because the stated_truth from before may be different from
+                #what actor now believes, knowing the link.
+                ignore_stated= evt in link_discoveries
+                tevt=TruthCalcEvt(evt.item,subg,evt.data,ignore_stated=ignore_stated)
+                tevt.add_sim_child(evt,priority=2)
                 evts.insert(evts.index(evt),tevt)
                 evts.remove(evt)
-                print evt,evt.data,evt.infos
-        inter.events[stage]=evts
+                if not evt in link_discoveries:
+                    continue
+                #If ego realizes that someone DID NOT know a link before,
+                #reevaluate ego's opinion of their bias: compute what ego thinks
+                #is their bias WITHOUT this link.
+                for node in evt.item.parents:
+                    should_have_truth=match.ruleset.calc_truth(node,subg,evt.data,
+                        extrapolate=1,bias=0,exclude_links=[evt.item] )
+                    bias=evt.data.get_info(node,'truth')-should_have_truth
+                    prevbias=evt.data.get_info(node,'bias')
+                    #print 'truth of {} is {} should be {} hence bias {} (before, {})'.format(item,truth, should_have_truth,bias,prevbias)
+                    if prevbias!=bias:
+                        cevt=ChangeInfosEvt(node,evt.data,bias=bias,
+                                    source='perceived_link_discovery')
+                        tevt.add_sim_child(cevt,priority=1)
 
+                #print ' >P:',evt,evt.infos
+            inter.event_source.setdefault(evt,[]).append(stage)
+        inter.events[stage]=evts
 
     def create_factor_events(self,facs,inter):
         match=self.match
