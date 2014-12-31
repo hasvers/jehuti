@@ -90,7 +90,14 @@ class TruthCalcEvt(LogicEvent):
         self.ignore_stated=kwargs.get('ignore_stated',False)
         self.changevts={}
 
-    def prep_init(self,match,*args,**kwargs):
+    def __repr__(self):
+        item,refgraph,tgtgraph=self.item,self.refgraph,self.tgtgraph
+        if refgraph!=tgtgraph:
+            return "TruthCalc {} {} {}".format(item,refgraph,tgtgraph)
+        else:
+            return "TruthCalc {} {}".format(item,refgraph)
+
+    def prep_do(self,match,*args,**kwargs):
         return self.truth_calc(match,self.item,self.refgraph,self.tgtgraph)
 
     def truth_calc(self,match, item,graph=None,sub=None,track=None,tracklist=None):
@@ -142,8 +149,8 @@ class TruthCalcEvt(LogicEvent):
             #print 'truth of {} is {} should be {} hence bias {} (before, {})'.format(item,truth, should_have_truth,bias,prevbias)
             if prevbias!=bias:
                 evt=ChangeInfosEvt(item,sub,bias=bias,source='biascalc')
-                print 'bias change {} to {}'.format(prevbias,bias),item,should_have_truth,statedtruth, sub
-                self.add_sim_child(evt,priority=-1)
+                #print 'bias change {} to {}'.format(prevbias,bias),item,should_have_truth,statedtruth, sub
+                self.add_child(evt,{0:0,2:1},priority=-1)
             return 0
 
         #print 'glappy:', item,graph.name,sub.name,truth,prevtruth
@@ -179,9 +186,10 @@ class TruthCalcEvt(LogicEvent):
                     print 'converging cycle', basetruth,prevtruth,truth
                     #attenuating effect, will converge, no problem
 
+        if truth!= prevtruth:
 
-        self.set_change(item,sub,truth=truth,source='truthcalc')
-        #print 'set truth',item.name,truth, 'from' ,prevtruth, 'in', graph.name
+            self.set_change(item,sub,truth=truth,source='truthcalc')
+            #print 'set truth',item.name,truth, 'from' ,prevtruth, 'in', sub
         track[item]=(prevtruth,truth)
         tracklist.append(item)
         if match.ruleset.truth_value(truth)!= match.ruleset.truth_value(prevtruth):
@@ -204,11 +212,45 @@ class TruthCalcEvt(LogicEvent):
             #Recompute the stated
             infos['stated_truth']=truth
         evt=ChangeInfosEvt(item,sub,source='truthcalc',**infos)
-        print id(self),'set change',item,sub,infos
-        self.add_sim_child(evt,priority=-1)
+        self.add_child(evt,{0:0,2:1},priority=-1)
 
+
+class ReactLinkDiscoveryEvt(Event):
+    #If ego realizes that someone DID NOT know a link before,
+    #reevaluate ego's opinion of their bias: compute what ego thinks
+    #is their bias WITHOUT this link.
+
+    def __init__(self,item,refgraph,tgtgraph=None,**kwargs):
+        super(ReactLinkDiscoveryEvt, self).__init__(**kwargs)
+        self.item=item
+        self.refgraph=refgraph
+        if tgtgraph is None:
+            tgtgraph=refgraph
+        self.tgtgraph=tgtgraph
+        self.type='reactlinkdiscovery'
+
+
+    def prepare(self,edge,match,*args,**kwargs):
+        ref=self.refgraph
+        tgt=self.tgtgraph
+        item=self.item
+        if edge==(0,1):
+            for node in item.parents:
+                should_have_truth=match.ruleset.calc_truth(node,ref,tgt,
+                    extrapolate=1,bias=0,exclude_links=[item] )
+                truth=tgt.get_info(node,'truth')
+                bias=truth-should_have_truth
+                prevbias=tgt.get_info(node,'bias')
+                if prevbias!=bias:
+                    #print 'truth of {} is {} should be {} hence bias {} (before, {})'.format(node,truth, should_have_truth,bias,prevbias)
+                    #print 'MAKECHANGE',tgt,node,bias
+                    cevt=ChangeInfosEvt(node,tgt,bias=bias,
+                                source='perceived_link_discovery')
+                    self.add_sim_child(cevt)
 
 class BiasCalcEvt(Event):
+        #OBSOLETE
+
         #update what Actor thinks of another's biases so that they are consistent
         #with what Actor knows of other's truth values.
 
@@ -218,7 +260,7 @@ class BiasCalcEvt(Event):
         self.type='biascalc'
 
 
-    def prep_init(self,match,*args,**kwargs):
+    def prep_do(self,match,*args,**kwargs):
         return self.bias_calc(match,self.item,self.data)
 
     def bias_calc(self,match, item,graph=None,sao=None,tracklist=None):
@@ -239,7 +281,7 @@ class BiasCalcEvt(Event):
         #print 'truth of {} is {} should be {} hence bias {} (before, {})'.format(item,truth, should_have_truth,bias,prevbias)
         if prevbias!=bias:
             evt=ChangeInfosEvt(item,sao,bias=bias,source='biascalc')
-            self.add_sim_child(evt,priority=-1)
+            self.add_child(evt,{0:0,2:1},priority=-1)
         tracklist.append(item)
         for l in graph.links.get(item,[]):
             logic=graph.get_info(l,'logic')

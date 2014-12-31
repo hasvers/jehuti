@@ -145,7 +145,7 @@ class AIPlayer(object):
             try:
                 q()
             except:
-                self.queue.append(lambda e=q: user.evt.do(q,2))
+                self.queue.append(lambda e=q: user.evt.do(q,self,2))
             self.queue.remove(q)
 
         while match.time_left-match.time_cost >0:
@@ -175,13 +175,13 @@ class AIPlayer(object):
                     cst=max(0.3,match.time_left-match.time_cost)
                     nevt = ExploreEvt('AI', actor,pos=match.canvas.graph.pos[item],cost=cst)
                     cevt=QueueEvt(nevt,match.data,newbatch=True)
-                    user.evt.do(cevt,1)
+                    user.evt.do(cevt,self,1)
                 #break
             else :
                 print 'best item', bestitem, bestvalue
                 nevt = ClaimEvt('AI', actor,bestitem)
                 cevt=QueueEvt(nevt,match.data,newbatch=True)
-                user.evt.do(cevt,1)
+                user.evt.do(cevt,self,1)
                 if bestitem.type=='node':
                     nunclaimed.remove(bestitem)
                 else:
@@ -197,13 +197,13 @@ class AIPlayer(object):
             #de-ident the following to have all actions in one batch
             batch=cevt.batch
             #print 'adding phase', batch, id(batch), cevt
-            self.queue.append(lambda b=batch:user.evt.do(b,2))
+            self.queue.append(lambda b=batch:user.evt.do(b,self,2))
         match.add_phase(FuncWrapper(self.next_action) )
             #match.next_phase()
         match.advance_phase()
         #match.next_player()
         #match.next_player()
-        #user.evt.do(batch,2)
+        #user.evt.do(batch,self,2)
 
     def next_action(self):
         #print 'NEXT ACTION==================================', self.queue

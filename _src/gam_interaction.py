@@ -28,7 +28,7 @@
 
 
 from gam_script import *
-from gam_canvas_events import TruthCalcEvt,BiasCalcEvt
+from gam_canvas_events import TruthCalcEvt,ReactLinkDiscoveryEvt
 
 #### GAME RULES #####===========================================================
 #Attempt to separate game logic from basic engine pocesses
@@ -427,7 +427,7 @@ class Interaction(object):
         cur=[stage]
         prior=self.stage_priority
         while cur:
-            pcur=[prior[c] for c in cur if c in prior]
+            pcur=[prior[c] for c in cur if c in prior and prior[c]!=None]
             if pcur:
                 return max(pcur)
             s=cur.pop(0)
@@ -538,7 +538,8 @@ class InteractionModel(object):
                     c.actor].get_info(item,'pattern')
             inter.add_stage(claim)
             self.process_claim_to_reac(claim,inter)
-            priority[claim]=p
+            priority[claim]=p*100
+        inter.stage_priority.update(priority)
 
         #Reactions are then interpreted in a way that depends on which
         #ones are verbal or not!
@@ -766,52 +767,30 @@ class InteractionModel(object):
 
 
     def run_logic_evts(self,stage,inter):
+        #print '\n\n==================\n{}\n=================='.format(stage)
         events=inter.events[stage]
-        prior={e:max(inter.get_stage_priority(r) for r in
-                inter.event_source.get(e,[None])) for e in events }
-        self.run_evts(events,prior)
+        self.run_evts(events,inter)
 
     def run_factor_evts(self,stage,inter):
         events=(evt for f in inter.factors[stage]
                 for evt in inter.events[f])
-        prior={e:max(inter.get_stage_priority(r) for r in
-                inter.event_source.get(e,[None])) for e in events }
-        self.run_evts(events,prior)
+        self.run_evts(events,inter)
 
-    def run_evts(self,events,priorities={}):
+    def run_evts(self,events,inter):
         '''Local version of evt_do, without passing anything.
         It might be more elegant to actually use evt_do'''
-        remaining=list(events)
-        #In which order should the events be executed?
-        priorities ={}
-        while remaining:
-            priorlist=[]
-            for e in events:
-                s=e.state
-                if not s+1 in e.states:
-                    remaining.remove(e)
-                    continue
-                elist=e.priority_list(s)
-                if e in priorities:
-                    #If the base event itself has a priority compared to others
-                    #(e.g. subclaims), add it to the subpriorities
-                    evtpri=priorities[e]
-                    elist=[(i[0]+evtpri,i[1] ) for i in elist]
-                priorlist+=elist
-            priorlist=sorted(priorlist,key = lambda e: e[0], reverse=True )
-            for p,e in priorlist:
-                s=e.state
-                if s+1 in e.states:
-                    e.prepare((s,s+1),self.match)
-                    if not e.run(s+1):
-                        continue
-                    s+=1
-                    e.state=s
-                    #print e.state,e
-                    #if 'add' in e.type:
-                        #print '    ',e.infos
-                    #if 'chang' in e.type:
-                        #print '    ',e.oldinfo
+
+
+        priorities={e:max(inter.get_stage_priority(r) for r in
+                inter.event_source.get(e,None)) for e in events }
+
+        for e in sorted(events,key=lambda x:priorities[x],reverse=True):
+            #print '\n\n==================',e, e.priority_list(1)
+            user.evt.do(e,self,2,shall_not_pass=True)
+
+        return
+
+
 
     def create_logic_evts(self,stage,inter):
         '''This looks only at the logical consequences
@@ -915,7 +894,7 @@ class InteractionModel(object):
         for evt in tuple(evts):
             if 'add' in evt.type or 'change' in evt.type and 'truth' in evt.infos:
                 if evt.data == actg and not self.rules.update_true_beliefs:
-                    #dont change actorgraph if rules forbid it
+                    #dont update truth in actorgraph if rules forbid it
                     continue
                 #If a link has been discovered by actor, truthcalc must ignore_stated
                 #because the stated_truth from before may be different from
@@ -925,24 +904,14 @@ class InteractionModel(object):
                 tevt.add_sim_child(evt,priority=2)
                 evts.insert(evts.index(evt),tevt)
                 evts.remove(evt)
-                if not evt in link_discoveries:
-                    continue
-                #If ego realizes that someone DID NOT know a link before,
-                #reevaluate ego's opinion of their bias: compute what ego thinks
-                #is their bias WITHOUT this link.
-                for node in evt.item.parents:
-                    should_have_truth=match.ruleset.calc_truth(node,subg,evt.data,
-                        extrapolate=1,bias=0,exclude_links=[evt.item] )
-                    bias=evt.data.get_info(node,'truth')-should_have_truth
-                    prevbias=evt.data.get_info(node,'bias')
-                    #print 'truth of {} is {} should be {} hence bias {} (before, {})'.format(item,truth, should_have_truth,bias,prevbias)
-                    if prevbias!=bias:
-                        cevt=ChangeInfosEvt(node,evt.data,bias=bias,
-                                    source='perceived_link_discovery')
-                        tevt.add_sim_child(cevt,priority=1)
+                inter.event_source[tevt]=inter.event_source.get(evt,[None])
+                if evt in link_discoveries:
+                    cevt=ReactLinkDiscoveryEvt(evt.item,subg,evt.data)
+                    tevt.add_sim_child(cevt,priority=1)
+                    inter.event_source[cevt]=inter.event_source[tevt]
 
                 #print ' >P:',evt,evt.infos
-            inter.event_source.setdefault(evt,[]).append(stage)
+            inter.event_source.setdefault(evt,[stage])
         inter.events[stage]=evts
 
     def create_factor_events(self,facs,inter):

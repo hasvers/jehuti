@@ -245,6 +245,7 @@ class EventCommander(object):
         '''Core function, never to be called directly, that runs events,
         changes their state, calls their children and bound events.'''
 
+        ### BOUNDARY CASES
         if self.paused and not evt in self.moving and not (evt,state,args,kwargs) in self.stacked:
             self.stacked.append( (evt,state,args,kwargs))
             return False
@@ -268,6 +269,8 @@ class EventCommander(object):
                 dest.append((state,args,kwargs))
             #print '[[ On hold:', evt,state
             return False
+
+        ### CORE
         self.moving.append(evt)
         t,oldstate=time.time(),evt.state
         edge=(evt.state,state)
@@ -317,7 +320,8 @@ class EventCommander(object):
 
                 if evtdone:
                     evt.state=state
-                    self.pass_event(evt,None,kwargs.get('ephemeral',False) )
+                    if not kwargs.get('shall_not_pass',False):
+                        self.pass_event(evt,None,kwargs.get('ephemeral',False) )
                     if (evt,state) in self.data.calls.nodes() : #bound events
                         #print 'yay',(evt,state),self.data.calls.succ[(evt,state)]
                         for e2,s2 in self.data.calls.neighbors( (evt,state) ):
