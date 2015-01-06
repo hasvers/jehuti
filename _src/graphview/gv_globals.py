@@ -160,19 +160,6 @@ for i in loader :
         print 'Loading '+j[0]
         exec( 'from '+j[0] +' import *')"""
 
-icon_db={}
-def load_icon(typ,**kwargs):
-    if typ=='node':
-        try:
-            if not 'node' in icon_db:
-                icon_db['node']=image_load(database['image_path']+'icons/node/base.png')
-            return icon_db['node']
-        except:
-            return False
-
-mycursor=pg.transform.smoothscale(pg.image.load(database['cursor_img']),database['cursor_size'])
-
-
 def get_color(txt):
     text=txt.strip()
     if not text:

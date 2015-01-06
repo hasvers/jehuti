@@ -156,7 +156,7 @@ class User():
         if img is None:
             img =self.ui.screen
         if ['show_cursor_on_video']:
-            img.blit(mycursor,pg.mouse.get_pos())
+            img.blit(ICON_LIB["mycursor"],pg.mouse.get_pos())
         pil_string_image = pg.image.tostring(img, "RGB")
         if enhance:
             pil_image = pilImage.fromstring("RGB",img.get_rect().size,pil_string_image)

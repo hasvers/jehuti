@@ -145,7 +145,7 @@ class MatchNodeIcon(NodeIcon):
         radius-=ringw
         center=array(size)/2
         val = info.get('truth',1.)-.5
-        basesurf=load_icon('node',val=val,unsat=unsaturated)
+        basesurf=CANVAS_ICON_LIB.get_icon('node',MatchNodeIcon,val=val,unsat=unsaturated)
         if basesurf:
             basesurf=pg.transform.smoothscale(basesurf,2*array((radius,radius)))
             surf=pgsurface.Surface(size ,pg.SRCALPHA)
@@ -285,30 +285,6 @@ class MatchNodeIcon(NodeIcon):
             self.state_change()
             return True
         return False
-
-
-def load_icon(typ,**kwargs):
-    if typ=='node':
-        nbimgs=20
-        val=kwargs.get('val',1.)
-        unsat=kwargs.get('unsat',0)
-        intval=int(round(nbimgs*val))
-        #try:
-        term='node'+str(intval)
-        if unsat:
-            term+='u'
-        if not term in icon_db:
-            try:
-                icon_db[term]=image_load(database['image_path']+'icons/node/'+term+'.png')
-            except:
-                rad=graphic_chart['node_base_size']
-                size=(rad*2,rad*2)
-                icon_db[term]=MatchNodeIcon().make_icon(size,rad,
-                    graphic_chart['icon_node_fill_colors'],intval/float(nbimgs),unsat).convert_alpha()
-                pg.image.save(icon_db[term],database['image_path']+'icons/node/'+term+'.png')
-        return icon_db[term]
-        #except:
-        #    return False
 
 
 

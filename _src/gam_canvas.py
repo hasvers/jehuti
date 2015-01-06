@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-from gam_graph import *
-from gam_canvasicons import *
+from gam_flow_canvas import *
 from gam_canvas_events import *
 from gam_scene import SceneUI
 
@@ -115,14 +114,19 @@ class LogicCanvasEditor(CanvasEditor,LogicCanvasHandler):
 
     def subgraph_menu(self,target,typ,event=None):
         struct= CanvasEditor.subgraph_menu(self,target,typ,event)
+        gph=self.canvas.active_graph
+        if isinstance(gph,FlowGraph):
+            pass
+
         if typ=='node':
             target=target.item
-            gph=self.canvas.active_graph
-            if gph.contains(target) and gph.links[target]:
-                t=self.parent.handler.ruleset.calc_truth(target,gph,gph)
-                if t!= gph.get_info(target,'truth'):
-                    lamb=lambda:self.canvas.change_infos(target,truth=t)
-                    struct+= ('Derive logic',lamb),
+            #USEFUL FOR DEBUG ONLY
+            #if gph.contains(target) and gph.links[target]:
+                #t=self.parent.handler.ruleset.calc_truth(target,gph,gph)
+                #print t, gph.get_info(target,'truth')
+                #if t!= gph.get_info(target,'truth'):
+                    #lamb=lambda:self.canvas.change_infos(target,truth=t)
+                    #struct+= ('Derive logic',lamb),
         return struct
 
     def start_linkgrabber(self,source,logic=None):
@@ -346,6 +350,7 @@ class MatchCanvasPlayer(MatchCanvasHandler):
                         minval=pmin,maxval=maxval,showval=0,val=maxval)
                 else:
                     lampon=lambda: out(pmin)
+                lampon=lambda:out(pmin)
                 struct=()
                 struct +=( ('Ponder',lampon,
                         'Ponder: Explore mental space.'),
@@ -396,8 +401,6 @@ class MatchCanvasPlayer(MatchCanvasHandler):
         return MatchCanvasHandler.keymap(self,event,**kwargs)
 
     def react(self,evt):
-        #print '==flu'
-        match=self.parent.handler
         if 'hyperlink' in evt.type :
             #print 'canvas received',evt,evt.args
             gr=self.canvas.graph
@@ -417,96 +420,6 @@ class MatchCanvasPlayer(MatchCanvasHandler):
                     for em in icon.effects.values():
                         em.set_anim('appear',len=ANIM_LEN['long'])
 
-        return
-        #BELOW: OLD WAYS OF UPDATING TRUTH AND BIAS. THIS IS PLAYER,
-        #THEREFORE ALL CHANGES WILL COME FROM EVENTS THAT COMPUTE
-        #THEIR OWN CONSEQUENCES
-
-        #if  (True in [tt  in evt.type for tt in ('add' ,'change', 'rem_info' )]
-            #and True in [x in evt.infos for x in ('logic','val')]):
-            #owner=evt.data.owner
-            ##print '===================', evt.type,evt.data.name, match.data.actorgraph[owner].name
-            #truthchange=[]
-            #item=evt.item
-            #for ac1,rest in match.data.actorsubgraphs.iteritems():
-                #for ac2, gph in rest.iteritems():
-                    #if ac1!= owner and ac2!=owner:
-                        ##not necessary to reevaluate in subgraphs unconcerned by this evt
-                        #continue
-                    #if ac1!=ac2 and gph.contains(item) and (item.type=='node' or
-                             #not False in [gph.contains(p) for p in item.parents]):
-                        #if self.truth_calc(item,gph):
-                            #truthchange.append(gph)
-            #sgph =match.data.actorgraph[owner]
-            #if not sgph.contains(item):
-                #sub=match.data.actorsubgraphs[owner][owner]
-                ##print 'not contained in actorgraph', evt.item, sgph.name
-                #if self.truth_calc(item,sgph,sub):
-                    #truthchange.append(sub)
-                ##print '======================='
-            #if truthchange:
-                ##print 'Truth changed', evt.item, [i.name for i in truthchange]
-                ##anim=lambda t=item:self.canvas.icon[t].set_anim('blink')
-                ##wrap=FuncWrapper(anim,type='visual_appear_{}'.format(item),source=evt,priority=1)
-                ##match.add_phase(wrap)
-                #pass
-
-        #if (('change' in evt.type or 'rem_info' in evt.type)
-                 #and 'bias' in evt.infos  and not 'truth' in evt.infos
-                 #and not (evt.source and 'biascalc' in evt.source)
-             #or 'add' in evt.type and not evt.infos.get('bias',None) is None
-                #and  evt.infos.get('truth',None) is None
-            #):
-                ##print '*** bias set=> truthcalc', evt.item, evt.data.name, evt.infos['bias']
-
-                #self.truth_calc(evt.item,evt.data)
-        #if (('change' in evt.type or 'rem_info' in evt.type)
-                #and 'truth' in evt.infos and not 'bias' in evt.infos
-                 #and not (evt.source and 'truthcalc' in evt.source)
-             #or 'add' in evt.type and  not evt.infos.get('truth',None) is None
-                 #and evt.infos.get('bias',None) is None
-            #):
-            ##print '*** truth set=> biascalc', evt.item, evt.data.name, evt.infos['truth']
-
-            ##Any external change of truth values in an other-subgraph (e.g. in reaction events)
-            ##causes owner to reevaluate
-            #owner=evt.data.owner
-            #subs=match.data.actorsubgraphs
-            #for oact,sao in subs[owner].iteritems():
-                #if oact != owner and evt.data==sao and sao.contains(evt.item):
-                    ##print 'Update bias perception in',owner,'about',oact, evt.item,' due to', evt
-                    #self.update_bias(evt.item,subs[owner][owner],sao)
-
-
-    def update_bias(self, item,graph=None,sao=None,tracklist=None):
-        #update what Actor thinks of another's biases so that they are consistent
-        #with what Actor knows of other's truth values.
-        if tracklist is None:
-            tracklist=[]
-        elif item in tracklist:
-            return
-        #print 'updating bias', item
-        match=self.parent.handler
-        srceff=match.ruleset.link_effect_from_source
-        tgteff=match.ruleset.link_effect_from_target
-        if graph is None:
-            graph=self.canvas.active_graph
-
-        should_have_truth=match.ruleset.calc_truth(item,graph,sao,extrapolate=1,bias=0)
-        truth=sao.get_info(item,'truth')
-        bias=truth-should_have_truth
-        prevbias=graph.get_info(item,'bias')
-        #print 'truth of {} is {} should be {} hence bias {} (before, {})'.format(item,truth, should_have_truth,bias,prevbias)
-        if prevbias!=bias:
-            self.canvas.change_infos(item,bias=bias,graph=sao,invisible=True)
-        tracklist.append(item)
-        for l in graph.links.get(item,[]):
-            logic=graph.get_info(l,'logic')
-            if l.parents[0]==item:
-                if srceff(truth,logic) or srceff(should_have_truth,logic):
-                    self.update_bias(l.parents[1],graph,sao,tracklist)
-            elif tgteff(truth,logic) or tgteff(should_have_truth,logic):
-                self.update_bias(l.parents[0],graph,sao,tracklist)
         return
 
 

@@ -126,12 +126,13 @@ class PsychologyModel(object):
             elif e.type=='reeval_bias':
                 #If the actor seems less biased, like them more
                 prox+= eps* abs(e.val)
-        return {'face':face,'terr':terr,'prox':prox}
+        ethos= {'face':face,'terr':terr,'prox':prox}
+        return {i:j for i,j in ethos.iteritems() if j!=0}
 
     def ethos_positivity(self,dico):
         '''Takes a dictionary of ethos effect and returns how
         positive the summed outcome is taken to be.'''
-        return dico['face']+dico['terr']+dico['prox']/2.
+        return dico.get('face',0)+dico.get('terr',0)+dico.get('prox',0)/2.
 
     def perceive_bias(self,actor,match):
         '''How biased ego perceives actor to be in their opinions.
@@ -445,10 +446,12 @@ class Interaction(object):
         self.conseq.add_node(stage)
         self.factors[stage]=[]
         self.events[stage]=[]
+        self.ethos[stage]=[]
 
     def add_factor(self,factor,stage):
         self.conseq.add_node(factor)
         self.conseq.add_edge(stage,factor)
+        self.ethos[factor]=[]
 
     def add_edge(self,stage1,stage2):
         for s in (stage1,stage2):
@@ -565,6 +568,7 @@ class InteractionModel(object):
                 for preac in preacs:
                     inter.add_edge(preac,interpret)
                 self.prepare_stage(interpret,inter)
+        self.make_ethos_effects(inter)
         return inter
 
 
@@ -712,7 +716,7 @@ class InteractionModel(object):
             sgraph=self.match.data.actorsubgraphs[ego][ego]
             othgraph=self.match.data.actorsubgraphs[ego][actor]
             if stage.discovery==1:
-                facs.append(Fac('discovery',ego=ego,item=item) )
+                facs.append(Fac('discovery',ego=ego,actor=actor,item=item) )
             tr=self.match.ruleset.truth_value
             if tr(sgraph.get_info(item,'truth'))*tr(
                         othgraph.get_info(item,'truth'))<0:
@@ -725,7 +729,8 @@ class InteractionModel(object):
                     continue
                 if 'add' in e.type:
                     if 'pattern' in e.infos and e.infos['pattern']=='Unknown':
-                        facs.append(Fac('unknown_pattern',item=e.item))
+                        facs.append(Fac('unknown_pattern',item=e.item,
+                                actor=stage.actor,ego=stage.ego))
                 if 'change' in e.type:
                     dif={i:j-e.oldinfo[i] for i,j in e.infos.iteritems()}
                     changes.setdefault((e.item,e.data),[]).append(dif)
@@ -738,6 +743,7 @@ class InteractionModel(object):
             for i,dif in finalchange.iteritems():
                 if dif==0:
                     continue
+                facinfos={'ego':actor,'actor':stage.actor}
                 if i=='truth' and data==selfgraph:
                     datinf=data.get_info(item)
                     shift= self.rules.interpret_truth_change(actor,dif,datinf)
@@ -745,18 +751,18 @@ class InteractionModel(object):
                         #Consequences of opinion shift
                         if self.match.canvas.get_info(item,'claimed')==actor.ID :
                             #Concession
-                            facs.append(Fac('concede',item=item,ego=actor,actor=stage.actor))
-                        facs.append(Fac(shift,item=item,dif=dif))
+                            facs.append(Fac('concede',item=item,**facinfos))
+                        facs.append(Fac(shift,item=item,dif=dif,**facinfos))
                         if datinf.get('terr',None):
                             #Activation/Deactivation of invested territory
-                            act= datinf['terr']*self.match.ruleset.truth_value(datinf['truth'])
-                            if act:
-                                facs.append(Fac('teri_activ' ),val=act )
+                            activ= datinf['terr']*self.match.ruleset.truth_value(datinf['truth'])
+                            if activ:
+                                facs.append(Fac('teri_activ' ),val=activ,**facinfos)
                 if i=='terr' and data==selfgraph:
                     #Change in invested territory
-                    facs.append(Fac('teri_change' ),val=dif )
+                    facs.append(Fac('teri_change' ),val=dif,**facinfos )
                 if i=='bias' and data!=selfgraph:
-                    facs.append(Fac('reeval_bias', val=dif, ego=selfgraph.owner,actor=actor ) )
+                    facs.append(Fac('reeval_bias', val=dif, ego=actor,actor=stage.actor ) )
                     #print 'dif bias',dif,actor,item,data,data.get_info(item,'bias')
         inter.factors[stage][:]=facs
         for f in facs:
@@ -934,7 +940,8 @@ class InteractionModel(object):
                 effects=[]
                 effect= {}
                 #Format ethos effects from the rules in the universal format
-                for i,j in self.rules.ethos_effects([f]).iteritems():
+                psy=self.rules.psy[f.ego].ethos_effects([f]).iteritems()
+                for i,j in psy:
                     if i=='prox':
                         j={f.actor:j}
                     effect[(f.ego,i)]=j
@@ -943,14 +950,15 @@ class InteractionModel(object):
 
                 if f.type=='concede' and not 'shift' in f.type:
                     #Add ethos effects from the node, in the same universal format
-                    effects.append(self.node_ethos_effect(stage))
+                    effects.append(self.node_ethos_effects(f.item,f))
+                inter.ethos[f]+=effects
 
             if stage.type=='claim':
-                inter.ethos[stage].append(self.node_ethos_effect(stage))
+                inter.ethos[stage].append(self.node_ethos_effects(stage.item,stage))
 
 
     def node_ethos_effects(self,item,evt):
-            #EFFECTS RESULTING FROM NODE BEING CLAIMED/CONCEDED
+            #EFFECTS ATTACHED TO NODE, ACTIVATED UPON CLAIMED/CONCEDED
         match=self.match
         info = match.canvas.get_info(evt.item)
         effects={}

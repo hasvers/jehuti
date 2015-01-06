@@ -55,6 +55,9 @@ class IconLibrary(ResourceLibrary):
         s=pg.surface.Surface((size,size),pg.SRCALPHA)
         s.fill((0,0,0,0))
         self.buffer["none"]=s
+        self.buffer["mycursor"]=pg.transform.smoothscale(
+            pg.image.load(database['cursor_img']),database['cursor_size'])
+
 
     def load(self,name,**kwargs):
         if name in self.buffer:
@@ -140,3 +143,43 @@ class WindowSkinLibrary(ResourceLibrary):
         return self.buffer[name]
 
 WINSKINLIB=WindowSkinLibrary(preload='./')
+
+
+class CanvasIconLibrary(ResourceLibrary):
+
+    typ='image'
+    folder='icons/'
+    ext='png'
+
+    def get_icon(self,typ,klass,**kwargs):
+        icon_db=self.buffer
+        if typ=='node':
+            nbimgs=20
+            val=kwargs.get('val',1.)
+            unsat=kwargs.get('unsat',0)
+            intval=int(round(nbimgs*val))
+            #try:
+            term='node'+str(intval)
+            if unsat:
+                term+='u'
+            if not term in icon_db:
+                try:
+                    icon_db[term]=image_load(self.basepath+'node/{}.{}'.format(term,self.ext))
+                    print 'yay', self.basepath+'node/'+term+self.ext
+                except:
+                    rad=graphic_chart['node_base_size']
+                    size=(rad*2,rad*2)
+                    icon_db[term]=klass().make_icon(size,rad,
+                        graphic_chart['icon_node_fill_colors'],intval/float(nbimgs),unsat).convert_alpha()
+                    pg.image.save(icon_db[term],self.basepath+'node/{}.{}'.format(term,self.ext))
+            return icon_db[term]
+        return False
+
+            #try:
+                #if not 'node' in icon_db:
+                    #icon_db['node']=image_load(self.basepath+'node/base.png')
+                #return icon_db['node']
+            #except:
+                #pass
+CANVAS_ICON_LIB=CanvasIconLibrary()
+
