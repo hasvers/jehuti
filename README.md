@@ -1,16 +1,20 @@
 ﻿=======================================
-    JEHUTI MK II (12-07-2014)
+    JEHUTI MK II (2014/01/05)
 =======================================
 
-This editor was used to create Exeunt Omnes (http://rpgmaker.net/games/6576/)
+This engine and editor is a work in progress from Lilavati
 
-------------------------------------------------------------
+http://lilavati.org
 
-CREDITS
+IT IS NEITHER RELEASED, NOR SUPPORTED, AND BARELY DOCUMENTED. 
+There is a very low probability that it will burn your house, 
+but use at your own perils.
 
-Adam Hasvers (adam.hasvers@free.fr)
 
-Sound effects: http://www.universal-soundbank.com/
+
+CONTACT
+
+Adam Hasvers (contact@lilavati.org)
 
 ------------------------------------------------------------
 
