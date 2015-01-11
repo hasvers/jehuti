@@ -165,7 +165,6 @@ class CanvasIconLibrary(ResourceLibrary):
             if not term in icon_db:
                 try:
                     icon_db[term]=image_load(self.basepath+'node/{}.{}'.format(term,self.ext))
-                    print 'yay', self.basepath+'node/'+term+self.ext
                 except:
                     rad=graphic_chart['node_base_size']
                     size=(rad*2,rad*2)

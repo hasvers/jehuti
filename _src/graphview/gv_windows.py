@@ -382,9 +382,6 @@ class DragWindow(Window):
         if event.type == pg.MOUSEBUTTONDOWN and event.button ==1 and not self.hovering:
             user.focus_on(self)
             return True
-        if user.focused_on==self and event.type==pg.MOUSEMOTION:
-            user.unfocus()
-            user.grab(self)
             #print self.is_grabbed, evts
         if self.is_grabbed :
 
@@ -400,6 +397,9 @@ class DragWindow(Window):
                         pos=array(pos)+array(event.rel)
                         self.parent.pos[self]=tuple(pos)
                     return True
+        if user.focused_on==self and event.type==pg.MOUSEMOTION:
+            user.unfocus()
+            user.grab(self)
         return False
 
 class FloatMenu(DragWindow):

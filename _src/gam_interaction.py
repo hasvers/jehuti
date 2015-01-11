@@ -377,8 +377,89 @@ class InteractionRules(object):
 #### MECHANICS #####=============================================================
 
 class InteractionScript(Script):
-    def parse_interaction(self,inter):
-        pass
+
+
+
+    def __init__(self,inter,**kwargs):
+        Script. __init__(self,**kwargs)
+        self.by_actor={}
+        self.interaction=inter
+
+    def parse_interaction(self,scene):
+        inter=self.interaction
+        factors=inter.factors
+        events=inter.events
+        schema=inter.schema
+        ethos=inter.ethos
+        roots=[n for n,d in schema.in_degree().items() if d==0]
+        states={}
+        cur=set(roots)
+        state=1
+        while cur:
+            states[state]=[]
+            for c in tuple(cur):
+                states[state].append(c)
+                cur=cur.union(set(schema.successors(c)))
+                cur.remove(c)
+            state+=1
+        calls=[]
+        for i in states:
+            evtcontainer=SceneScriptEffect()
+            evtcontainer.typ='container'
+            evtcontainer.target=[]
+            src=[]
+            effects=[evtcontainer]
+            for s in states[i]:
+                src.append(s)
+                fac=factors[s]
+                src+=fac
+                if s.type in ('claim','reac'):
+                    for called in scene.canvas.get_info(s.item,'scripts'):
+                        if not called.event_check(s.type,s.item,scene):
+                            continue
+                        if called in calls:
+                            continue
+                        eff=SceneScriptEffect()
+                        eff.typ='Call'
+                        eff.target=called
+                        effects.append(eff)
+            for s in src:
+                for e in events.get(s,()):
+                    evtcontainer.target.append(e)
+                if not s in ethos:
+                    continue
+                eth=self.total_ethos_effect(ethos[s])
+                for act, infos in eth.iteritems():
+                    eff=SceneScriptEffect()
+                    eff.typ='Cast'
+                    eff.evt='info'
+                    eff.target=act
+                    eff.info= infos
+                    eff.info["additive"]=True
+                    effects.append(eff)
+            for e in effects:
+                self.effects.append(e)
+
+    def total_ethos_effect(self,eth):
+        ego={}
+        for e in eth:
+            for tup, val in e.iteritems():
+                act,typ=tup
+                if not act in ego:
+                    ego[act]={}
+                if not typ in ego:
+                    ego[act][typ]=val
+                else:
+                    if hasattr(val,'keys'):
+                        for i,j in val.iteritems():
+                            if i in ego[act][typ]:
+                                ego[act][typ][i]+=j
+                            else:
+                                ego[act][typ][i]=j
+                    else:
+                        ego[act][typ]+=val
+        return ego
+
 
 class Interaction(object):
     '''This is a report on the interaction. All the building is done
@@ -413,7 +494,7 @@ class Interaction(object):
 
     def __init__(self):
         self.schema=nx.DiGraph()
-        self.conseq=nx.DiGraph()
+        #self.conseq=nx.DiGraph()
         self.factors={}
         self.events={} #All the events of a stage
         self.event_source={} #The stages which are involved in shaping an event
@@ -443,15 +524,10 @@ class Interaction(object):
         if stage in self.schema.nodes():
             return
         self.schema.add_node(stage)
-        self.conseq.add_node(stage)
+        #self.conseq.add_node(stage)
         self.factors[stage]=[]
         self.events[stage]=[]
         self.ethos[stage]=[]
-
-    def add_factor(self,factor,stage):
-        self.conseq.add_node(factor)
-        self.conseq.add_edge(stage,factor)
-        self.ethos[factor]=[]
 
     def add_edge(self,stage1,stage2):
         for s in (stage1,stage2):
@@ -492,6 +568,27 @@ class Interaction(object):
             for e in evts:
                 user.evt.pass_event(e,self,ephemeral=True)
 
+    def undo_events(self):
+        '''Rolls back all events, starting from the leaves of the interaction.'''
+
+        schema=self.schema
+        leaves=[n for n,d in schema.out_degree().items() if d==0]
+        cur=set(leaves)
+        events=[]
+        while cur:
+            for c in tuple(cur):
+                cur=cur.union(set(schema.predecessors(c)))
+                cur.remove(c)
+                if c in self.events:
+                    events+= self.events[c]
+                    #print c,self.events[c]
+        cur=list(events)
+        while cur:
+            e=cur[0]
+            if user.evt.go(e,0,shall_not_pass=True):
+                cur.remove(e)
+                #print e,[(c,e.states.node[e.state]['children_states'].get(c,"WUT")) for c in e.current_children(1)],e.state
+
 class InteractionModel(object):
     '''Mechanics of the interaction'''
     Stage=Interaction.Stage
@@ -504,6 +601,14 @@ class InteractionModel(object):
         self.actors=match.actors
         self.actgraph=match.data.actorgraph
         self.subgraph=match.data.actorsubgraphs
+
+    def make_script(self,evt,scene):
+        if 'claim' in evt.type:
+            inter=self.process_claim(evt)
+            script=InteractionScript(inter)
+            inter.undo_events()
+            script.parse_interaction(scene)
+            return script
 
     def process_claim(self,claimevt,inter=None):
         '''Treatment of a claim proceeds in four stages:
@@ -897,6 +1002,7 @@ class InteractionModel(object):
 
         #If there are AddEvts/ChangeInfosEvts, attach them to TruthCalcEvts
         #which take their place in the event list
+        per_item={}
         for evt in tuple(evts):
             if 'add' in evt.type or 'change' in evt.type and 'truth' in evt.infos:
                 if evt.data == actg and not self.rules.update_true_beliefs:
@@ -906,9 +1012,11 @@ class InteractionModel(object):
                 #because the stated_truth from before may be different from
                 #what actor now believes, knowing the link.
                 ignore_stated= evt in link_discoveries
-                tevt=TruthCalcEvt(evt.item,subg,evt.data,ignore_stated=ignore_stated)
+                item=evt.item
+                tevt=TruthCalcEvt(item,subg,evt.data,ignore_stated=ignore_stated)
                 tevt.add_sim_child(evt,priority=2)
-                evts.insert(evts.index(evt),tevt)
+                per_item.setdefault(item,[]) #List to group truthcalc relating to same item
+                per_item[item].append( tevt)
                 evts.remove(evt)
                 inter.event_source[tevt]=inter.event_source.get(evt,[None])
                 if evt in link_discoveries:
@@ -918,6 +1026,19 @@ class InteractionModel(object):
 
                 #print ' >P:',evt,evt.infos
             inter.event_source.setdefault(evt,[stage])
+
+
+        #Group truthcalc events concerning the same item
+        for item in per_item:
+            tcalc=per_item[item]
+            for e1 in tuple(tcalc):
+                for e2 in tuple(tcalc):
+                    if e2==e1:
+                        continue
+                    if e1.tgtgraph in e2.tgtgraph.precursors:
+                        tcalc.remove(e2)
+                        e1.add_sim_child(e2,priority="enclosed")
+            evts+=tcalc
         inter.events[stage]=evts
 
     def create_factor_events(self,facs,inter):

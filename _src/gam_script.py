@@ -370,10 +370,16 @@ class SceneScriptEffect(TimedEvent):
         return True
 
     def prep_do(self,scene,**kwargs):
+        if self.typ =='container':
+            for e in self.target:
+                self.add_sim_child(e)
         if self.typ=='Text':
             self.block_thread=1
         elif self.typ=='Call':
-            called=scene.get_scripts(call=self.info )
+            if isinstance(self.target,Script):
+                called=(self.target,)
+            else:
+                called=scene.get_scripts(call=self.info )
             for c in called:
                 scene.add_call(self.parent,c)
                 c.prepare((0,1),scene)
@@ -405,7 +411,10 @@ class SceneScriptEffect(TimedEvent):
                 #Already prepared
                 return True
             if self.evt in ('info','add'):
-                infos=self.infosep(self.info)
+                if hasattr(self.info,'keys'):
+                    infos=self.info
+                else:
+                    infos=self.infosep(self.info)
                 if self.typ=='Scene':
                     data=scene.data
                 elif self.typ=='Cast':

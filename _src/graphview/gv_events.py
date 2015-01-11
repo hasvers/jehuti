@@ -570,12 +570,33 @@ class Event(Signal):
         if state is None:
             state=self.state
         priority.append( (0,self) )
+        minp,maxp=0,0
         for c,s in self.states.node[state]['children_states'].iteritems():
-            if c in self.states.node[state]['priority']:
-                priority.append((self.states.node[state]['priority'][c], c) )
-            else :
-                priority.append( (0,c) )
-        priority=sorted(priority,key = lambda e: e[0], reverse=True )
+            p=self.states.node[state]['priority'].get(c,0)
+            priority.append([p, c] )
+            if not isinstance(p,basestring):
+                if p<minp:
+                    minp=p
+                if p>maxp:
+                    maxp=p
+        for tup in priority:
+            if tup[0]=='before':
+                tup[0]=maxp+1
+            elif tup[0]=='after':
+                tup[0]=minp-1
+            elif tup[0]=='enclosing':
+                #Do first and undo last
+                if state>self.state:
+                    tup[0]=maxp+1
+                else:
+                    tup[0]=minp-1
+            elif tup[0]=='enclosed':
+                #Do last and undo first
+                if state<self.state:
+                    tup[0]=maxp+1
+                else:
+                    tup[0]=minp-1
+        priority=sorted((tuple(x) for x in priority),key = lambda e: e[0], reverse=True )
         return priority
 
     def clear_children(self):

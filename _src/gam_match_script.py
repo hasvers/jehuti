@@ -135,9 +135,9 @@ class MatchScriptEffect(SceneScriptEffect):
         del templatelist['Scene']
         templatelist.update(
             {
-            'AutoText':(('text','input'),
-                ('info','input',{'legend':'Options:'}),
-                ),
+            #'AutoText':(('text','input'),
+                #('info','input',{'legend':'Options:'}),
+                #),
             'Action':( ('actor','arrowsel',{'values':actors}),
                 ('target','extsel',{'val':nodes[0],'values':nodes +links,'selsource':match.canvas}),
                 ('evt','arrowsel',{'values':('claim','explore','declar')}),
@@ -171,7 +171,7 @@ class MatchScriptEffect(SceneScriptEffect):
         )
 
         if not actors:
-            templatelist={'Text':templatelist['Text'],'AutoText':templatelist['AutoText']}
+            templatelist={'Text':templatelist['Text']}#,'AutoText':templatelist['AutoText']}
         elif not nodes:
             templatelist={'Text':templatelist['Text'],'Cast':templatelist['Cast']}
         return templatelist
@@ -202,8 +202,8 @@ class MatchScriptEffect(SceneScriptEffect):
             return base +': {} {}'.format(self.evt,self.info)
         if self.typ=='Canvas':
             return base +': {} {}'.format(self.evt,self.target)
-        if self.typ=='AutoText':
-            return base+': {}'.format(self.text)
+        #if self.typ=='AutoText':
+            #return base+': {}'.format(self.text)
         return SceneScriptEffect.__repr__(self)
 
     def prep_do(self,scene,**kwargs):
@@ -468,6 +468,7 @@ class ConvNodeScript(Script,ConvNodeTest):
     dft={}
     dft.update(Script.dft)
     dft.update(ConvNodeTest.dft)
+    dft["text"]=''
     def test_cond(self,scene,evt=None):
         return self.event_check(evt,self.item,scene) and MatchScript.test_cond(self,scene,evt)
 
@@ -479,6 +480,7 @@ class ConvLinkScript(Script,ConvLinkTest):
     dft={}
     dft.update(Script.dft)
     dft.update(ConvLinkTest.dft)
+    dft["text"]=''
     def test_cond(self,scene,evt=None):
         return self.event_check(evt,self.item,scene) and MatchScript.test_cond(self,scene,evt)
 

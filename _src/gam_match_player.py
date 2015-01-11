@@ -527,11 +527,12 @@ class MatchPlayer(MatchHandler,PhaseHandler):
         if 'claim' in sgn:
             if evt.state==2:
                 claim=evt.evt
-                inter=self.interact.process_claim(claim)
-                inter.pass_events()
+                inter=self.interact.make_script(claim,self)
+                print inter.interaction.ethos
+                self.add_phase(inter)
+                #inter.pass_events()
                 #print inter.events
                 #print inter.factors
-                print inter.ethos
         if 'select' in sgn :
             if self.cast in evt.affects() :
                 # Select Actor

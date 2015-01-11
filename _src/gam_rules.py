@@ -263,7 +263,7 @@ class MatchRuleset(LogicRuleset):
         if not nbact:
             return database['conv_radius_mult']*dist
 
-        return database['conv_radius_mult']*dist*sqrt(totprox/float(nbact))
+        return max(dist,database['conv_radius_mult']*dist*sqrt(totprox/float(nbact)))
 
 # Actions
 

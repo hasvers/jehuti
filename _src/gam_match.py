@@ -332,8 +332,5 @@ class MatchEditor(MatchHandler,SceneEditor):
         name=info['name']
         name=self.textmaker.quotify(name)
         #quote=ConvNodeScript(truth='+',cond='Alone')
-        quote=ConvNodeScript(truth='all',cond='Default')
-        eff=MatchScriptEffect(typ='AutoText')
-        eff.text=name
-        quote.effects.append(eff)
+        quote=ConvNodeScript(truth='all',cond='Default',text=name)
         self.canvas.change_infos(item,scripts=[quote],update=True)

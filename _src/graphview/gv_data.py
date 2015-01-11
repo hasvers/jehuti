@@ -270,13 +270,13 @@ class Data(object):
 
     def remove(self,item):
         try:
+            try:
+                getattr(self,item.type+'s').remove(item)
+            except:
+                pass
             del self.infos[item]
             try:
                 self.new_items.remove(item)
-            except:
-                pass
-            try:
-                getattr(self,item.type+'s').remove(item)
             except:
                 pass
             return True

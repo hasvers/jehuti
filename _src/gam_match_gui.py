@@ -424,7 +424,9 @@ class MatchUI(BasicUI,SceneUI):
 
 
     def event(self,event,**kwargs):
-        wseq=kwargs.pop('wseq',list(ergonomy['viewables'])+['turnbox','actionlist','dialbox'])
+        classic=list(ergonomy['viewables'])
+        idx=classic.index('statusbar')
+        wseq=kwargs.pop('wseq',classic[:idx]+['turnbox','actionlist','dialbox']+classic[idx:])
         return super(MatchUI, self).event(event,wseq=wseq,**kwargs)
 
     def save_state(self,savename):
