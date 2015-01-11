@@ -128,6 +128,8 @@ class Arrow(CanvasIcon):
         self.parent = parent
         self.set=parent.set
         val = self.canvas.get_info(parent.link,'val')
+        if not val:
+            val=0.
         lwid= graphic_chart['link_base_width']
         self.size=(lwid*2,int(lwid*(1.5 + val/2)))
         CanvasIcon.create(self,group,self.set)
@@ -369,6 +371,7 @@ class LinkIcon(CanvasIcon):
 class LinkGrabber(NodeIcon):
     draggable=True
     layer = 0
+    ID=None
     def __init__(self,canvas):
         self.image_sets={}
         self.set=None

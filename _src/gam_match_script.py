@@ -187,7 +187,6 @@ class MatchScriptEffect(SceneScriptEffect):
         elif hasattr(template,'__iter__'):
             return [templatelist[i] for i in template]
         else:
-            print templatelist[template]
             return templatelist[template]
 
     def __repr__(self):

@@ -154,14 +154,20 @@ class MatchEditorUI(EditorUI,SceneUI):
     def item_script_maker(self,output_method,**kwargs):
         klass=kwargs.pop('class',ConvNodeScript)
         flist=(
-            ('name','input',{'legend':'Caoy','width':200}),)
+            ('name','input',{'legend':'Name','width':200}),)
+        legends={'cond':'Context'}
         for i in klass.dft:
             if hasattr(klass,i+'s'):
                 flist+= (i,'arrowsel',{'values':getattr(klass,i+'s')} ),
+                if i in legends:
+                    flist[-1][2]['legend']=legends[i]
         flist+=(
             ('logic','input',{'legend':'Logic','width':300}),
-            ('conds','inputlist',{'legend':'Add conds','width':200,'add':True,'menu':{'type':'scrcond'}}),
-            ('effects','inputlist',{'legend':'Effects','width':200,'add':True,'menu':{'type':'screffect'}}),
+            ('conds','inputlist',{'legend':'Add. Cond.','width':200,'add':True,
+                    'menu':{'type':'scrcond'}}),
+            ('text','input',{'legend':'AutoText','height':120,'width':300,'wrap':True}),
+            ('effects','inputlist',{'legend':'Effects','width':200,'add':True,
+                    'menu':{'type':'screffect'}}),
             )
         self.maker_menu(flist,output_method,klass,**kwargs)
 

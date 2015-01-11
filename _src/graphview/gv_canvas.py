@@ -173,7 +173,10 @@ class Canvas():
                 icon = self.NodeIcon(self,item)
             elif item.type =='link':
                 picon=[]
-                icon = self.LinkIcon(self,item,picon)
+                klass=self.LinkIcon
+                if hasattr(klass,'keys'):
+                    klass=klass[item.__class__]
+                icon = klass(self,item,picon)
                 for p in item.parents:
                     if not p in self.icon :
                         self.add(p)
@@ -345,7 +348,10 @@ class Canvas():
                         icon = self.NodeIcon(self,item)
                     elif item.type =='link':
                         picon=[]
-                        icon = self.LinkIcon(self,item,picon)
+                        klass=self.LinkIcon
+                        if hasattr(klass,'keys'):
+                            klass=klass[item.__class__]
+                        icon = klass(self,item,picon)
                         for p in item.parents:
     #                        if not p in self.icon :
      #                           self.add(p)

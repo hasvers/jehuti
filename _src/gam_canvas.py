@@ -6,7 +6,8 @@ from gam_scene import SceneUI
 class LogicCanvas(Canvas):
     Graph=MatchGraph
     NodeIcon=MatchNodeIcon
-    LinkIcon=MatchLinkIcon
+    LinkIcon={MatchLink:MatchLinkIcon,
+        FlowLink:LinkIcon}
     def react(self,evt):
         self.handler.react(evt)
         #except:
@@ -98,36 +99,7 @@ class LogicCanvasHandler(CanvasHandler):
 class LogicCanvasEditor(CanvasEditor,LogicCanvasHandler):
     #Generic canvas editor for matchs, beliefs
 
-    def maingraph_menu(self,target,typ,event=None):
-        if typ == 'node':
-            if not ergonomy['edit_on_select']:
-                struct=('Edit',lambda t=target:self.signal('edit',t)),
-            else :
-                struct=()
-            logic = target.typ_area(array(self.mousepos())-array(target.rect.center))
-            struct +=( ('Add link',lambda: self.start_linkgrabber(target,logic)),
-            ('Delete node',lambda: self.rem_node(target.node)),
-            ('Fast quote',lambda: self.parent.handler.make_quote(target.node))
-            )
-            return struct
-        return CanvasEditor.maingraph_menu(self,target,typ,event)
 
-    def subgraph_menu(self,target,typ,event=None):
-        struct= CanvasEditor.subgraph_menu(self,target,typ,event)
-        gph=self.canvas.active_graph
-        if isinstance(gph,FlowGraph):
-            pass
-
-        if typ=='node':
-            target=target.item
-            #USEFUL FOR DEBUG ONLY
-            #if gph.contains(target) and gph.links[target]:
-                #t=self.parent.handler.ruleset.calc_truth(target,gph,gph)
-                #print t, gph.get_info(target,'truth')
-                #if t!= gph.get_info(target,'truth'):
-                    #lamb=lambda:self.canvas.change_infos(target,truth=t)
-                    #struct+= ('Derive logic',lamb),
-        return struct
 
     def start_linkgrabber(self,source,logic=None):
         if logic==None :
@@ -147,9 +119,11 @@ class LogicCanvasEditor(CanvasEditor,LogicCanvasHandler):
                     #self.canvas.rewire(i.link,tuple(newp))
                    # i.rm_state('ghost')
                     infos=self.canvas.get_info(i.link)
-                    logic = self.hovering.typ_area(array(self.mousepos())-array(self.hovering.rect.center))
-                    logic=(self.canvas.get_info(i.link,'logic')[0],logic,0,0)
-                    infos['logic']=logic
+                    if 'logic' in i.link.dft:
+                        logic = self.hovering.typ_area(array(self.mousepos())-
+                                array(self.hovering.rect.center))
+                        logic=(self.canvas.get_info(i.link,'logic')[0],logic,0,0)
+                        infos['logic']=logic
                     self.canvas.remove(i.link)
                     act=self.canvas.active_graph
                     evt = AddEvt(act.Link(tuple(newp)),act,infos=infos )
@@ -251,13 +225,18 @@ class LogicCanvasEditor(CanvasEditor,LogicCanvasHandler):
         if hasattr(item,"item"): #if we receive an icon
             item=item.item
         infos = self.canvas.get_info(item)
+        if not infos:
+            return item.type
+
         if item.type=='node':
             desc='N{}: {}'.format(item.ID,infos['name']) #+ ' T:'+str(infos.get('terr',0))#+ ': '+ infos['desc']
             if infos['cflags']:
                 desc +=' {}'.format(infos['cflags'])
             return  desc
         elif item.type=='link':
-            return  str([i.ID for i in item.parents])+infos['pattern'] #+ ': '+ infos['desc']
+            if 'pattern' in infos:
+                return  str([i.ID for i in item.parents])+infos['pattern'] #+ ': '+ infos['desc']
+        return str(item)
 
 class MatchCanvas(LogicCanvas):
     pass
@@ -266,6 +245,16 @@ class MatchCanvasHandler(LogicCanvasHandler):
     pass
 
 class MatchCanvasEditor(LogicCanvasEditor,MatchCanvasHandler):
+
+    def __init__(self,*args,**kwargs):
+        LogicCanvasEditor.__init__(self,*args,**kwargs)
+        self.flowgraph={}
+
+    def keymap(self,event,**kwargs):
+        if event.key==pg.K_f:
+            self.trigger_flow()
+        return LogicCanvasEditor.keymap(self,event,**kwargs)
+
     def react(self,evt):
         if (True in [tt  in evt.type for tt in ('add' ,'change', 'rem_info' )]
                 and True in [x in evt.infos for x in ('bias' ,'logic','val')]):
@@ -273,6 +262,116 @@ class MatchCanvasEditor(LogicCanvasEditor,MatchCanvasHandler):
                 if gph.contains(evt.item):
                     self.truth_calc(evt.item,gph)
 
+    def end_linkgrabber(self,grabber,event):
+        act=self.canvas.active_graph
+        if isinstance(act,FlowGraph):
+            ante=[i for i,j in self.flowgraph.iteritems() if j==act][0]
+            self.canvas.set_active_graph(ante)
+            self.canvas.assess_itemstate()
+            self.test_hovering(event)
+            self.canvas.set_active_graph(act)
+            self.canvas.assess_itemstate()
+            for icon in grabber.ilinks:
+                self.canvas.remove(icon.link)
+                newp=[self.hovering.node if p==grabber else p for p in icon.link.parents]
+                if newp[0]==newp[1]:
+                    continue
+
+                icon.add_to_group(self.canvas.tools)
+                #item=icon.item
+                #s=Script()
+                #evt=ChangeInfosEvt(item.parents[0],ante,scripts=[s],additive=True)
+                #user.evt.do(evt,self,2,ephemeral=True)
+                link=act.Link(tuple(newp))
+                evt = AddEvt(link,act,addrequired=True,infos={'val':0} )
+                user.evt.do(evt,self)
+                print self.canvas.active_graph.infos
+                print 'yay', self.canvas.icon[link]
+            grabber.kill()
+
+            return True
+        else:
+            return LogicCanvasEditor.end_linkgrabber(self,grabber,event)
+
+
+    def subgraph_menu(self,target,typ,event=None):
+        gph=self.canvas.active_graph
+        if not isinstance(gph,FlowGraph):
+            struct= CanvasEditor.subgraph_menu(self,target,typ,event)
+            if typ=='bg':
+                struct += ( ('Flow tools',self.trigger_flow ),
+                )
+            return struct
+        struct=()
+
+        if typ=='node':
+            target=target.item
+            #USEFUL FOR DEBUG ONLY
+            #if gph.contains(target) and gph.links[target]:
+                #t=self.parent.handler.ruleset.calc_truth(target,gph,gph)
+                #print t, gph.get_info(target,'truth')
+                #if t!= gph.get_info(target,'truth'):
+                    #lamb=lambda:self.canvas.change_infos(target,truth=t)
+                    #struct+= ('Derive logic',lamb),
+            struct+=(
+                        ('Add flow',lambda: self.make_flow_link(target)),
+            )
+        if typ=='bg':
+            struct += ( ('Hide flow',self.trigger_flow ),
+                )
+        return struct
+
+    def maingraph_menu(self,target,typ,event=None):
+        if typ == 'node':
+            if not ergonomy['edit_on_select']:
+                struct=('Edit',lambda t=target:self.signal('edit',t)),
+            else :
+                struct=()
+            logic = target.typ_area(array(self.mousepos())-array(target.rect.center))
+            struct +=( ('Add link',lambda: self.start_linkgrabber(target,logic)),
+            ('Delete node',lambda: self.rem_node(target.node)),
+            ('Fast quote',lambda: self.parent.handler.make_quote(target.node)),
+            )
+            return struct
+
+        struct= CanvasEditor.maingraph_menu(self,target,typ,event)
+        if typ=='bg':
+            struct += ( ('Flow tools',self.trigger_flow ),
+                )
+        return struct
+
+    def trigger_flow(self):
+        gph=self.canvas.active_graph
+        if isinstance(gph,FlowGraph):
+            for i,j in self.flowgraph.iteritems():
+                if j==gph:
+                    gph=i
+                    break
+        else:
+            if not gph in self.flowgraph:
+                self.make_flow_graph(gph)
+            gph=self.flowgraph[gph]
+        self.canvas.set_active_graph(gph)
+        self.canvas.assess_itemstate()
+        self.canvas.update()
+
+    def make_flow_graph(self,graph):
+        flow=self.flowgraph[graph]=FlowGraph()
+        self.depend.add_dep(self.canvas,flow)
+        self.canvas.layers.append(flow)
+        self.canvas.dft_graph_states[flow]="hidden"
+
+    def make_flow_link(self,target):
+        gph=self.canvas.active_graph
+        if not isinstance(gph,FlowGraph):
+            self.canvas.set_active_graph(self.flowgraph[gph])
+        self.start_linkgrabber(self.canvas.icon[target])
+
+    def set_active_graph(self,graph):
+        LogicCanvasEditor.set_active_graph(self,graph)
+        if graph in self.flowgraph:
+            pass
+        return True
 
 class MatchCanvasPlayer(MatchCanvasHandler):
     select_opt=deepcopy(MatchCanvasHandler.select_opt)

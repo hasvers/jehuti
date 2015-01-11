@@ -345,7 +345,12 @@ class MatchLinkIcon(LinkIcon):
             surf.fill(COLORKEY)
             if bordercolor:
                 surf.fill(bordercolor)
-            surf.fill(desc[0],pgrect.Rect(0,borderw,blength,wid-2*borderw) )
+            color=list(desc[0])
+            if unsaturated:
+                r,g,b=color[:3]
+                gray = (30*r+59*g+11*b)/100
+                color[:3]=(gray for i in range(3))
+            surf.fill(color,pgrect.Rect(0,borderw,blength,wid-2*borderw) )
             self.premade[desc]=surf
             return surf
         for x in range(blength):

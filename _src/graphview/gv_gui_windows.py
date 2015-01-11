@@ -208,7 +208,7 @@ class EditorMenu(DragWindow):
                 self.delfield[a[0]].mouseover='Delete local info'
             else:
                 self.add('blank',height=30,width=10)
-            self.add('text',val=a[2],pos=(v,1),width=80)
+            self.add('text',val=a[4].get('legend',a[2]),pos=(v,1),width=80)
             if not a[1] in ('list','inputlist'):
                 #Normal fields
                 typ,opts=a[1],{}
