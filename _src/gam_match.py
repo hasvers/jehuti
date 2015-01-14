@@ -314,6 +314,49 @@ class MatchEditor(MatchHandler,SceneEditor):
                 actor=evt.item
                 self.data.actorgraph[actor].name=self.cast.get_info(actor,'name')
 
+        if 'flow' in sgn:
+            self.make_flow_script(*sarg)
+
+    def make_flow_script(self,*args):
+
+        link=args[0]
+        item=link.parents[0]
+        target=link.parents[1]
+        data=args[1]
+        if hasattr(data,'owner') and data.owner in self.actors:
+            owner=data.owner
+        else:
+            owner=None
+        s=Script()
+        cond=MatchScriptCondition()
+        effect=MatchScriptEffect()
+        s.conds.append(cond)
+        s.effects.append(effect)
+        addeff={'typ':'Graph','target':target,'owner':owner,'subject':owner,
+                        'evt':'add','info':''}
+        dftmodes={
+            'Include':[{'typ':'Conversation','info':'1'},addeff],
+            'Reveal':[{'typ':'Graph','target':item,'owner':owner,'subject':owner,
+                            'evt':'State','info':'claimed','cond':''},addeff],
+            'Starter':[{'typ':'Conversation','info':'1'},
+                {'typ':'Action','target':item,'actor':owner,
+                        'evt':'claim','info':'cost:0'}]
+            }
+
+        j=self.canvas.get_info(link,'genre')
+        s.name=j
+        if j in dftmodes:
+            print 'Setting',j,dftmodes[j]
+            for k,l in dftmodes[j][0].iteritems():
+                cond.set_attr(k,l)
+            for k,l in dftmodes[j][1].iteritems():
+                effect.set_attr(k,l)
+        evt=ChangeInfosEvt(item,data,scripts=[s],additive=True)
+        user.evt.do(evt,self,1,ephemeral=True)
+        print [c.conds for c in data.get_info(item,'scripts')]
+        print [c.effects for c in data.get_info(item,'scripts')]
+
+
     def menu(self,event):
         #lam=lambda: self.parent.load_menu('cast',self.cast.add_actor_from_file,new=self.cast.new_actor)
         struct=(('Edit match',lambda e=self.data: self.signal('edit',e)),

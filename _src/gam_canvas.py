@@ -278,15 +278,10 @@ class MatchCanvasEditor(LogicCanvasEditor,MatchCanvasHandler):
                     continue
 
                 icon.add_to_group(self.canvas.tools)
-                #item=icon.item
-                #s=Script()
-                #evt=ChangeInfosEvt(item.parents[0],ante,scripts=[s],additive=True)
-                #user.evt.do(evt,self,2,ephemeral=True)
                 link=act.Link(tuple(newp))
-                evt = AddEvt(link,act,addrequired=True,infos={'val':0} )
+                evt = AddEvt(link,act,addrequired=True,infos={'val':0,'genre':"Reveal"} )
                 user.evt.do(evt,self)
-                print self.canvas.active_graph.infos
-                print 'yay', self.canvas.icon[link]
+                self.signal('add_flow',link,ante)
             grabber.kill()
 
             return True
@@ -357,6 +352,8 @@ class MatchCanvasEditor(LogicCanvasEditor,MatchCanvasHandler):
 
     def make_flow_graph(self,graph):
         flow=self.flowgraph[graph]=FlowGraph()
+        flow.parent=self.canvas.graph
+        flow.transparent=True
         self.depend.add_dep(self.canvas,flow)
         self.canvas.layers.append(flow)
         self.canvas.dft_graph_states[flow]="hidden"
