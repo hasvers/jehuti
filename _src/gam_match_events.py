@@ -167,7 +167,7 @@ class NewReactEvt(MatchEvent):
         self.batch=batch
         self.is_discovery=False
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} Discovery: {}  -> {}'.format(self.desc,self.actor,self.is_discovery)
 
 
@@ -185,7 +185,7 @@ class ReactEvt(MatchEvent):
         self.subreact=[]
 
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} Discovery: {}  -> {}'.format(self.desc,self.actor,self.is_discovery,self.parent)
 
     def duplicate_of(self,evt):
@@ -309,7 +309,7 @@ class InterpretEvt(MatchEvent):
         self.subinterp=[]
 
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} Discovery: {}  -> {}'.format(self.desc,self.actor,self.is_discovery,self.parent)
 
 
@@ -391,7 +391,7 @@ class LogicEvt(MatchEvent):
         self.args=item,
 
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} {}'.format(self.desc,self.actor,self.item)
 
     def duplicate_of(self,evt):
@@ -467,7 +467,7 @@ class DeclareEvt(MatchEvent):
         self.args=item,
 
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} {}'.format(self.desc,self.actor,self.item)
 
     def duplicate_of(self,evt):
@@ -508,7 +508,7 @@ class ClaimEvt(MatchEvent):
         self._cost=0
 
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} {}'.format(self.desc,self.actor,self.item)
 
     def duplicate_of(self,evt):
@@ -612,7 +612,7 @@ class ConcedeEvt(MatchEvent):
         self._cost=0
 
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} to {} {}'.format(self.desc,self.actor, self.receiver,self.item)
 
     def duplicate_of(self,evt):
@@ -654,7 +654,7 @@ class ExploreEvt(MatchEvent):
         self.pos=kwargs.get('pos',None)
 
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} {}'.format(self.desc,self.actor,self.radius)
 
     def duplicate_of(self,evt):
@@ -734,7 +734,7 @@ class PathosEvt(MatchEvent):
         self.path_type=kwargs.get('type',self.type)
         self.targets=kwargs.get('targets',self.actor)
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} {} {} {} {} -- Targets {}'.format(self.desc, self.path_typ,self.actor,self.item, self.cond, self.val, self.targets)
 
 
@@ -829,7 +829,7 @@ class BatchEvt(MatchEvent):
         for e in events:
             self.add_event(e)
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {}  -- {}'.format(self.desc,self.actor,self.root_events)
 
 

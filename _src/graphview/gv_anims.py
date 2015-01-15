@@ -302,7 +302,7 @@ class Animation(TimedEvent):
         self.schedule(**kwargs)
         self.opts=kwargs
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} {}'.format(self.anim,self.state,self.item)
 
     class Step(object):
@@ -312,7 +312,7 @@ class Animation(TimedEvent):
             self.args=args
             self.opts=kwargs
             self.done=False #only useful for sounds and other punctual events
-        def __repr__(self):
+        def __str__(self):
             return 'Step {} {}'.format(self.genre,self.args)
 
     def schedule(self,**kwargs):

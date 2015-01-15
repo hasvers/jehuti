@@ -977,7 +977,7 @@ class FieldList(FieldContainer):
                 pos=(0,j)
             else :
                 pos=(j,0)
-            tmp=self.add(TextField(self,val=str(i[0]),selectable=True),pos=pos)
+            tmp=self.add(TextField(self,val=unicode(i[0]),selectable=True),pos=pos)
             self.fieldlist.append(tmp)
             self.valdict[tmp]=i[1]
             if self.active_fields:

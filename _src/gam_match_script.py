@@ -12,7 +12,7 @@ class CFlag(DataBit):
     defaults=['Include','Starter','Exclude','Perceived',
             'LinkOnly','Doxa','Locked']
 
-    def __repr__(self):
+    def __str__(self):
         return self.val
 
     #def __eq__(self,x):
@@ -95,7 +95,7 @@ class OldCFlag(Script):
         elif 0:#maybe a bit too harsh for slght modifs e.g. choosing target in Unlock
             self.name='Custom'
 
-    def __repr__(self):
+    def __str__(self):
         return self.name
 
 
@@ -189,7 +189,7 @@ class MatchScriptEffect(SceneScriptEffect):
         else:
             return templatelist[template]
 
-    def __repr__(self):
+    def __str__(self):
         base = self.name+' '+self.typ
         if self.typ=='Action':
             return base +': {} {}'.format(self.evt,self.target)
@@ -419,8 +419,8 @@ class MatchScriptCondition(SceneScriptCondition):
                 rep=info
             #print rep, self.cond, eval(str(rep)+self.cond),data.name#,data.get_info(self.target)
             if not self.cond:
-                return eval(str(rep))
-            return eval(str(rep)+self.cond)
+                return eval(unicode(rep))
+            return eval(unicode(rep)+self.cond)
         elif self.typ=='Conversation':
             test='{}'.format(self.info)
             if not test:
@@ -429,7 +429,7 @@ class MatchScriptCondition(SceneScriptCondition):
                 '[time_left]':match.time_left,
                 '[active_player]':'"{}"'.format(match.active_player.name)}
             for i,j in corr.iteritems():
-                test=test.replace(i,str(j))
+                test=test.replace(i,unicode(j))
             return eval(test)
         elif self.typ=='Event' and not evt is None:
             if 'batch' in evt.type:
@@ -448,7 +448,7 @@ class MatchScriptCondition(SceneScriptCondition):
                     #return True
         return SceneScriptCondition.test(self,match,evt)
 
-    def __repr__(self):
+    def __str__(self):
         base = self.name+' '+self.typ
         if self.typ in ('Conversation','Call'):
             return base +': '+self.info[:8]
@@ -471,7 +471,7 @@ class ConvNodeScript(Script,ConvNodeTest):
     def test_cond(self,scene,evt=None):
         return self.event_check(evt,self.item,scene) and MatchScript.test_cond(self,scene,evt)
 
-    def __repr__(self):
+    def __str__(self):
         return 'NodeScr:'+self.name
 
 class ConvLinkScript(Script,ConvLinkTest):
@@ -484,5 +484,5 @@ class ConvLinkScript(Script,ConvLinkTest):
         return self.event_check(evt,self.item,scene) and MatchScript.test_cond(self,scene,evt)
 
 
-    def __repr__(self):
+    def __str__(self):
         return 'LinkScr:'+self.name

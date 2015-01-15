@@ -337,7 +337,7 @@ class Data(object):
             for comp in ('<','>','=','!='):
                 tup=rule.split(comp)
                 if len(tup)>1:
-                    return eval( str(self.get_info(item,tup[0])) + comp + tup[1])
+                    return eval( unicode(self.get_info(item,tup[0])) + comp + tup[1])
             return False
 
         if isinstance(rule,list):
@@ -400,7 +400,7 @@ class Data(object):
                         if o == array(None):
                             return None
                         return float(o)
-                    return 'array([' + ','.join([str(test(x)) for x in o]) +'])'
+                    return 'array([' + ','.join([unicode(test(x)) for x in o]) +'])'
                 return o.__class__([test(x) for x in o])
             elif isinstance(o,basestring):
                 return '"'+o+'"'

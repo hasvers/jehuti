@@ -19,7 +19,7 @@ class Node(DataItem):
         self.__class__.nid+=1
 
 
-    def __repr__(self):
+    def __str__(self):
         if self.ID!=False:
             return 'Node '+str(self.ID)
         else :
@@ -70,7 +70,7 @@ class Link(DataItem):
         else:
             return oth
 
-    def __repr__(self):
+    def __str__(self):
         return 'Link '+str(tuple(n.ID for n in self.parents))
 
 
@@ -113,10 +113,10 @@ class Subgraph(Data):
         kwargs.setdefault('init_param',[]).append('parent','rule')
         return Data.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
-    def __repr__(self):
+    def __str__(self):
         #if self.name != Graph.Subgraph.name :
-            #return 'Subgraph:'+self.name +'('+str(self.parent)+')'
-        return 'Subgraph('+str(self.parent)+')'
+            #return 'Subgraph:'+self.name +'('+unicode(self.parent)+')'
+        return 'Subgraph('+unicode(self.parent)+')'
 
     #Very suboptimal
     #@property
@@ -210,7 +210,7 @@ class Graph(Data):
     Link= Link
     Subgraph= Subgraph
 
-    def __repr__(self):
+    def __str__(self):
         if self.name:
             return 'Graph:'+self.name
 

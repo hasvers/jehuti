@@ -91,6 +91,9 @@ def image_load(path):
 def fopen(path,*args,**kwargs):
     return open(os.path.normpath(resource_path(path,**kwargs)),*args)
 
+def fremove(path,**kwargs):
+    return os.remove(os.path.normpath(resource_path(path,**kwargs)))
+
 def print_arbor(path):
     for i in olistdir(path):
         np=os.path.join(path,i)
@@ -173,7 +176,7 @@ def get_color(txt):
                 return tup + (255,)
 
         except:
-            return get_color(txt.translate(None,'()[]'))
+            return get_color(txt.translate({ch:'' for ch in '()[]'}))
     else:
         if text in ('r','R','red'):
             return (230,100,100,255)

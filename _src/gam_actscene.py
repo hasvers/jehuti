@@ -19,9 +19,9 @@ class ActsceneSprite(CutsceneSprite):
         ActsceneSprite.SpriteID+=1
         self.type='sprite'
         if self.name==self.dft['name']:
-            self.name+=str(ActsceneSprite.SpriteID)
+            self.name+=unicode(ActsceneSprite.SpriteID)
 
-    def __repr__(self):
+    def __str__(self):
         return self.name
 
 class ActsceneLayer(CutsceneLayer):
@@ -39,7 +39,7 @@ class ActsceneData(CutsceneData):
     datatype='actscene'
     Layer=ActsceneLayer
 
-    def __repr__(self):
+    def __str__(self):
         return 'Actscene {}'.format(self.name)
 
     def klassmake(self,klass,*args):

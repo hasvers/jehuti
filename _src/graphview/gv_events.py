@@ -13,12 +13,12 @@ class Signal(DataBit):
         self.args=args
         self.kwargs=kwargs
 
-    def __repr__(self):
+    def __str__(self):
         if self.source:
             test=self.source+': '
         else :
             test=''
-        return test+ self.type+' '+str(self.args) +' '+str(self.kwargs)
+        return test+ self.type+' '+unicode(self.args) +' '+unicode(self.kwargs)
 
 class EventCommander(object):
     '''
@@ -340,7 +340,7 @@ class EventCommander(object):
             txt= '\033[93m=== Event exec time {} (state {}->{}) === \033[0m'.format(t,oldstate,state)
             wrapper=textwrap.TextWrapper(initial_indent=prel,subsequent_indent=prel,width=90,break_long_words=False,replace_whitespace=False)
             print wrapper.fill(txt)
-            for l in wrapper.wrap(str(evt)):
+            for l in wrapper.wrap(unicode(evt)):
                 print 'evtdebug',l
 
         if evt in self.destination:
@@ -546,8 +546,8 @@ class Event(Signal):
         self.states.add_edge( 0,1 )
 
 
-    def __repr__(self):
-        return self.type+' '+self.desc+' '+str(self.args)# +' '+str(self.kwargs)
+    def __str__(self):
+        return self.type+' '+self.desc+' '+unicode(self.args)# +' '+str(self.kwargs)
 
     def affects(self):
         #list all the entities affected by this event
@@ -717,7 +717,7 @@ class ChangeInfosEvt(Event):
         self.oldinfo={}
 
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} {} {}'.format(self.desc,self.data,self.item,self.kwargs)
 
     @property
@@ -819,7 +819,7 @@ class DeleteInfoEvt(Event):
         self.infos=infos
         self.oldinfos={}
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} {} {}'.format(self.desc,self.data,self.item,self.kwargs)
 
     def duplicate_of(self,evt):
@@ -884,7 +884,7 @@ class AddEvt(Event):
             self.states.add_edge( 1,0 )
             self.states.remove_edge( 0,1 )
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} {} {}'.format(self.desc,self.item,self.data, self.state)
 
     def duplicate_of(self,evt):
@@ -982,7 +982,7 @@ class MoveEvt(Event):
                 return True
         return False
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} {}'.format(self.desc,self.item,self.pos)
 
     def affects(self):

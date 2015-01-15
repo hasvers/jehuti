@@ -68,7 +68,7 @@ class MatchData(Data):
     #def txt_import(self,filename):
         #return Data.txt_import(self,filename)
 
-    def __repr__(self):
+    def __str__(self):
         return 'MatchData {}'.format(self.name)
 
 class MatchState(MatchData):
@@ -115,7 +115,7 @@ class MatchState(MatchData):
             'reactree','turn','time_left','time_allowance','active_region']
         return MatchData.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
-    def __repr__(self):
+    def __str__(self):
         return 'MatchState {}'.format(self.name)
 
 
@@ -321,35 +321,22 @@ class MatchEditor(MatchHandler,SceneEditor):
 
         link=args[0]
         item=link.parents[0]
-        target=link.parents[1]
         data=args[1]
         if hasattr(data,'owner') and data.owner in self.actors:
             owner=data.owner
         else:
             owner=None
-        s=Script()
+        genre=self.canvas.get_info(link,'genre')
+        s=Script(name=genre)
         cond=MatchScriptCondition()
         effect=MatchScriptEffect()
         s.conds.append(cond)
         s.effects.append(effect)
-        addeff={'typ':'Graph','target':target,'owner':owner,'subject':owner,
-                        'evt':'add','info':''}
-        dftmodes={
-            'Include':[{'typ':'Conversation','info':'1'},addeff],
-            'Reveal':[{'typ':'Graph','target':item,'owner':owner,'subject':owner,
-                            'evt':'State','info':'claimed','cond':''},addeff],
-            'Starter':[{'typ':'Conversation','info':'1'},
-                {'typ':'Action','target':item,'actor':owner,
-                        'evt':'claim','info':'cost:0'}]
-            }
-
-        j=self.canvas.get_info(link,'genre')
-        s.name=j
-        if j in dftmodes:
-            print 'Setting',j,dftmodes[j]
-            for k,l in dftmodes[j][0].iteritems():
+        dftmodes=link.dft_modes(owner)
+        if genre in dftmodes:
+            for k,l in dftmodes[genre][0].iteritems():
                 cond.set_attr(k,l)
-            for k,l in dftmodes[j][1].iteritems():
+            for k,l in dftmodes[genre][1].iteritems():
                 effect.set_attr(k,l)
         evt=ChangeInfosEvt(item,data,scripts=[s],additive=True)
         user.evt.do(evt,self,1,ephemeral=True)

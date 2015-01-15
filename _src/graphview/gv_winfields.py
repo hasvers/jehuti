@@ -264,7 +264,7 @@ class TextField(WindowField):
                     return self.img.get_rect()
                 except:
                     return None
-        def __repr__(self):
+        def __str__(self):
             return self.txt
 
         def render(self,**kwargs):
@@ -319,7 +319,7 @@ class TextField(WindowField):
         self.box=graphic_chart['text_boxes']
         self.image=pg.surface.Surface((self.width,self.height),pg.SRCALPHA)
         draw=True
-        if self.val is None or not str(self.val):
+        if self.val is None or not unicode(self.val):
             self.val=''
         for i,j in kwargs.iteritems():
             if i=='selectable' :
@@ -487,7 +487,7 @@ class TextField(WindowField):
 
                     if  w.isalnum() or not w.isspace() :
                         sticky=False
-                        if not str(w).translate(None,',;:!?.'):
+                        if not unicode(w).translate({ch:'' for ch in ',;:!?.'}):
                             sticky='l'
                             if w=='.':
                                 sticky='lr'
@@ -501,7 +501,7 @@ class TextField(WindowField):
                         ls= self.content[-1][-1][-1].sticky
                         if not ls:
                             ls=''
-                        if str(w.txt).isspace() or not (( 'r' in ls )or ('l' in w.sticky)):
+                        if unicode(w.txt).isspace() or not (( 'r' in ls )or ('l' in w.sticky)):
                             self.content[-1].append([])
                         else:
                             toappend=self.content[-1][-1]
@@ -589,6 +589,8 @@ class TextField(WindowField):
         txtcolor=kwargs.get('color',self.base_color())
         if txt is None:
             txt=self.val
+        if not txt is None:
+            txt=unicode(txt)
         #print txt,self.offset, debug.caller_name(),
         #try:
             #print self.index
@@ -597,15 +599,14 @@ class TextField(WindowField):
         if not bgcolor:
             bgcolor=self.bgcolor
         if self.curval!=txt or kwargs.get('force_remake',False):
-            self.make_table(str(txt),**kwargs)
+            self.make_table(txt,**kwargs)
         if not image:
             image=pg.surface.Surface((self.width,self.height),pg.SRCALPHA)
-        if txt is None or not str(txt):
+        if txt is None or not txt:
             image.fill(bgcolor)
             if kwargs.get('return_bb',False):
                 return image,(self.width,self.height)
             return image
-        txt=str(txt)
         pad=array(self.padding[:2]+(0,0))
         pad[:2]+=self.offset
         pos=array( (0,0))

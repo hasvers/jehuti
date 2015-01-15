@@ -230,7 +230,7 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
         if kwargs.get('state',0):
             self.set_state(kwargs['state'],invisible=True)
 
-    def __repr__( self ):
+    def __str__( self ):
         return self.__class__.__name__  + str(hash(self))
 
     @property

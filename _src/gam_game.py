@@ -60,7 +60,7 @@ class GameLink(Link):
         for i in ('match','cutscene','actscene'):
             genretable[ (i,j) ]=('call',)
 
-    def __repr__(self):
+    def __str__(self):
         return '{}: {}'.format(self.name,[i.name for i in self.parents] )
 
 
@@ -263,10 +263,11 @@ class GameHandler(Handler):
             data=CharacterData(Actor(name=name),MatchGraph(),name=name)
         elif genre=='topic':
             data=MatchGraph(name=name)
+        data.name=name
         return data
 
     def create_data(self,node):
-        #Create data for a scene/object that bears the name of the node
+        '''Create data for a scene/object that bears the name of the node'''
         name=node.name
         data=self.blank_data(name,node.genre)
         fout=fopen(name,'wb',filetype=node.genre)
@@ -274,6 +275,13 @@ class GameHandler(Handler):
         fout.close()
         node.data=node.name
         self.dataload(node)
+
+    def delete_data(self,node):
+        '''Delete data bound to a node'''
+        name= self.loaded[node.data].name
+        fremove(name,filetype=node.genre)
+        del self.loaded[node.data]
+
 
     def load_node(self,item):
         #Dynamic loading, useless for now but maybe in the future?
@@ -367,13 +375,20 @@ class GameEditor(CanvasEditor,GameHandler):
             dataname =node.data
             if dataname in self.loaded:
                 struct+=('Open data',lambda t=node: self.signal('open',t)),
+                existing=True
             else:
                 if not dataname:
                     dataname=node.name
                 try:
-                    fopen(dataname,'rb',filetype=node.genre)
+                    existing=fopen(dataname,'rb',filetype=node.genre)
                 except:
-                    struct+=('Create data',lambda t=node: self.create_data(t)),
+                    existing=False
+            if existing:
+                dmeth=lambda t=node: self.delete_data(t)
+                struct+=('Delete data',lambda:self.parent.confirm_menu(dmeth,
+                        legend="Delete data? (IRREVERSIBLE)") ),
+            else:
+                struct+=('Create data',lambda t=node: self.create_data(t)),
             if not ergonomy['edit_on_select']:
                 struct+=( ('Edit node',lambda t=target: self.signal('edit',t)), )
 

@@ -17,7 +17,7 @@ class CutsceneSprite(DataItem):
         if self.name==self.dft['name']:
             self.name+=str(CutsceneSprite.SpriteID)
 
-    def __repr__(self):
+    def __str__(self):
         return self.name
 
 class CutsceneSpriteIcon(BaseCanvasIcon):
@@ -91,7 +91,7 @@ class CutsceneData(PlaceData):
     def klassmake(self,klass,*args):
         return eval(klass)(*args)
 
-    def __repr__(self):
+    def __str__(self):
         return 'Cutscene {}'.format(self.name)
 
 class CutsceneView(PlaceView):

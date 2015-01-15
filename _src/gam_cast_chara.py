@@ -49,7 +49,7 @@ class CharacterData(Data):
         kwargs['add_param']+=['graph','actor','scripts']
         return Data.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
-    def __repr__(self):
+    def __str__(self):
         return 'CharacterData {}'.format(self.name)
 
     def get_info(self,item,info=None,**kwargs):

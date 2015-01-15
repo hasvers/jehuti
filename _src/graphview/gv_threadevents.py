@@ -102,7 +102,7 @@ class ThreadMoveEvt(ThreadEvent):
         self.graph=graph
 
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} {}'.format(self.desc,self.item,self.pos)
 
     def duplicate_of(self,evt):
@@ -144,7 +144,7 @@ class FadeEvt(ThreadEvent):
         self.surface=kwargs.get('surface',None)
         #to xfade to/from an image instead (e.g. splash screen)
 
-    def __repr__(self):
+    def __str__(self):
         return 'Fade {} -> {}'.format(self.mod[0],self.mod[1])
 
     def duplicate_of(self,evt):
@@ -208,7 +208,7 @@ class PanEvt(ThreadEvent):
         self.scene=scene
         self.absolute_mode=kwargs.get('absolute',True)
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} {}'.format(self.desc,self.scene,self.rel)
 
     def duplicate_of(self,evt):
@@ -281,7 +281,7 @@ class ZoomEvt(ThreadEvent):
         self.scene=scene
         self.absolute_mode=kwargs.get('absolute',True)
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} {}'.format(self.desc,self.scene,self.target)
 
     def duplicate_of(self,evt):

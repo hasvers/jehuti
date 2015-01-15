@@ -15,7 +15,9 @@ class Talent(DataBit):
         self.eid=Talent.eid
         Talent.eid+=1
     def __repr__(self):
-        return self.name+' '.join(['{} {},'.format(i,getattr(self,i)) for i in MatchGraph.Node.genres if getattr(self,i) ])
+        return self.name.encode('ascii','replace')+' '.join(
+            ['{} {},'.format(i,getattr(self,i))
+            for i in MatchGraph.Node.genres if getattr(self,i) ])
     def __str__(self):
         return self.name #+ str(id(self))
 
@@ -32,7 +34,7 @@ class ActorReact(DataBit):
         self.type='actreac'
         DataBit.__init__(self,**kwargs)
 
-    def __repr__(self):
+    def __str__(self):
         return self.cond+';'+self.text
 
     def test_cond(self,ag,mode='Agree'):
@@ -95,6 +97,9 @@ class Actor(DataItem):
 
 
     def __repr__(self):
+        return unicode(self.name).encode('ascii','ignore')
+
+    def __str__(self):
         return self.name
 
 class CastData(Data):
@@ -125,24 +130,27 @@ class CastData(Data):
             if other != actor:
                 oinf = self.get_info(other)
                 val=.5
-                if str(other) in baseprox: #USEFUL FOR SAVE/LOAD INDIVIDUAL ACTOR
-                    val =baseprox[str(other)]
-                    del baseprox[str(other)]
+                soth=unicode(other)
+                if soth in baseprox: #USEFUL FOR SAVE/LOAD INDIVIDUAL ACTOR
+                    val =baseprox[soth]
+                    del baseprox[soth]
                 if other in baseprox:
                     val=baseprox[other]
                 self.prox[actor][other]=val#self.rules.init_prox(ainf,oinf)
 
                 othprox= other.prox
                 val=.5
-                if str(actor) in othprox: #USEFUL FOR SAVE/LOAD INDIVIDUAL ACTOR
-                    val =othprox[str(actor)]
-                    del othprox[str(actor)]
+                sact=unicode(actor)
+                if sact in othprox: #USEFUL FOR SAVE/LOAD INDIVIDUAL ACTOR
+                    val =othprox[sact]
+                    del othprox[sact]
                 if actor in othprox:
                     val=othprox[actor]
                 self.prox[other][actor]=val
                 pr={}
                 pr.update(self.prox[other])
                 self.set_info(other,'prox',pr,update=True)
+                print self.prox
         pr={}
         pr.update(self.prox[actor])
         self.set_info(actor,'prox',pr,update=True)

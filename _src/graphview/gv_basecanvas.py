@@ -27,7 +27,7 @@ class BaseCanvasLayer(DataItem):
         DataItem.__init__(self,*args,**kwargs)
         self.type='layer'
 
-    def __repr__(self):
+    def __str__(self):
         return self.name+' '+str(id(self))
 
     #def set_attr(self,i,j):

@@ -70,7 +70,7 @@ class DataWorld(object):
         elif hasattr(item,'name'):
             name=item.name
         else:
-            name=str(item)
+            name=unicode(item)
         if name in self.item:
             name+=str(id(item))
             item.truename=name
@@ -116,7 +116,7 @@ class DataWorld(object):
             managers.append(self.manager[a])
         if managers:
             leg='''Items in the following data structures have changed:\n   '''
-            leg+='\n   '.join([  str(c.name) for c in managers])
+            leg+='\n   '.join([  unicode(c.name) for c in managers])
             leg+="\nDo you want to save them?"
             savmeth=lambda h=managers:[c.save() for c in h]
             user.ui.confirm_menu(savmeth,pos='center',legend=leg)

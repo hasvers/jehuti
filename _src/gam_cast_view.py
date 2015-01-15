@@ -67,15 +67,15 @@ class ActorIcon(UI_Icon):
             if not candidates:
                 candidates = olistdir(database['portraits']+portrait)
 
-            flist=tuple ( [(str(c).split('.')[0],database['portraits']+portrait+str(c)) for c in candidates])
+            flist=tuple ( [(unicode(c).split('.')[0],database['portraits']+portrait+str(c)) for c in candidates])
             for i,j in flist :
                 self.make_faces(i,j)
             return True
         if not source :
             candidates = olistdir(portrait)
             for c in candidates :
-                if face in str(c) :
-                    source = portrait+str(c)
+                if face in unicode(c) :
+                    source = portrait+unicode(c)
 
         images=self.image_sets[face]={}
         img=image_load(source).convert_alpha()

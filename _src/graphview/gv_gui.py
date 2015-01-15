@@ -349,8 +349,9 @@ class BasicUI(UI_Widget):
         v=0
         ext=kwargs.get('ext',database.get(typ+'_ext',''))
         for c in candidates:
-            if ext in str(c):
-                flist.append((str(c),str(c).replace(ext,'') ))
+            cs=str(c)
+            if ext in cs:
+                flist.append((cs,cs.replace(ext,'') ))
         if flist :
             window.add('text',val='Overwrite:',selectable=False,pos=(0,0) )
             v+=1
@@ -370,7 +371,7 @@ class BasicUI(UI_Widget):
         if hasattr(typ_or_list,'__iter__'):
             if 'path' in kwargs:
                 path=kwargs['path']
-                flist= [(str(c),path+str(c)) for c in typ_or_list ]
+                flist= [(unicode(c),path+unicode(c)) for c in typ_or_list ]
             else:
                 flist=typ_or_list
         else:
@@ -379,8 +380,9 @@ class BasicUI(UI_Widget):
             candidates = olistdir(path)
             flist=[]
             for c in candidates:
-                if kwargs.get('ext',database.get(typ+'_ext','')) in str(c):
-                    flist.append((str(c),path+str(c)))
+                strc=unicode(c)
+                if kwargs.get('ext',database.get(typ+'_ext','')) in strc:
+                    flist.append((strc,path+strc))
         window=FloatMenu(self.screen,self,(128,100),oneshot=True,**kwargs)
         window.ask_confirm()
         window.add('text',val='Files:',selectable=False)
@@ -803,7 +805,7 @@ class EditorUI(BasicUI):
                     color=0,0,0,0
                 else:
                     color=ref
-                self.dft={'color'+str(i):color[i] for i in range(4)}
+                self.dft={'color'+unicode(i):color[i] for i in range(4)}
                 for i,j in self.dft.iteritems():
                     setattr(self,i,j)
 

@@ -22,7 +22,7 @@ class GameVariable(DataItem):
         self.name='Variable{}'.format(self.vid)
         DataItem.__init__(self,**kwargs)
         GameVariable.vid+=1
-    def __repr__(self):
+    def __str__(self):
         return '{}: {}'.format(self.name,self.val)
 
 class EditorSM(BasicSM):

@@ -26,7 +26,7 @@ class PlaceSprite(DataItem):
         self.type='sprite'
         if self.name==self.dft['name']:
             self.name+=str(PlaceSprite.SpriteID)
-    def __repr__(self):
+    def __str__(self):
         return self.name
 
 class PlaceSpriteIcon(BaseCanvasIcon):
@@ -87,7 +87,7 @@ class PlaceData(BaseCanvasData):
     def klassmake(self,klass,*args):
         return eval(klass)(*args)
 
-    def __repr__(self):
+    def __str__(self):
         return 'Place {}'.format(self.name)
 
     def add(self,item,**kwargs):

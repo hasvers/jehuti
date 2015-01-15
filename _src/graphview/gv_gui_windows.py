@@ -316,12 +316,12 @@ class EditorMenu(DragWindow):
                     field.sendall=False
                     field.output_method=lambda i,t=a[0] :self.set_info(t,dict(i))
                     for i,j in inf.iteritems() :
-                        val.append ((str(i)+ ': '+str(j),(i,j) ))
+                        val.append ((unicode(i)+ ': '+unicode(j),(i,j) ))
                 else :
                     field.sendall=True
                     field.output_method=lambda i,t=a[0] :self.set_info(t,i)
                     for i in inf :
-                        val.append ((str(i),i))
+                        val.append ((unicode(i),i))
                 if not val:
                     val=[('None','')]
                 field.selectable=True

@@ -85,7 +85,7 @@ class StupidGrammar(TraitGrammar):
         important.append( self.make_random([victim,macguffin]) )
         self.trait_type['innocent']='person_attribute'
         for s in suspects:
-            goal=(s,'is','innocent'), 'Statement',2., 0.2, self.make_infos(str(s)+' is innocent')
+            goal=(s,'is','innocent'), 'Statement',2., 0.2, self.make_infos(unicode(s)+' is innocent')
             motive =self.make_random([s, choice([victim,macguffin]) ],subt=1,magn=4)
             alibi= self.make_random([s],role='alibi' ,subt=1,magn=4)
             important.append(alibi)

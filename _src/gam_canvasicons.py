@@ -241,7 +241,7 @@ class MatchNodeIcon(NodeIcon):
         if eff.val<0:
             z=1
 
-        em.label=str(eff)
+        em.label=unicode(eff)
         em.color=graphic_chart['effect_color'][z]
         em.create(self.parent.group)
         self.add_child(em)

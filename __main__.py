@@ -74,7 +74,7 @@ def keymap(event):
                     hov=None
             lst+= tuple(z.hovering  for l in user.ui.layers if hasattr(l,'view') and l.view!=l  for z in (l.view,)+tuple(l.view.children) )
             lst+= tuple(l.hovering  for l in user.ui.layers if hasattr(l,'hovering'))
-            struct=tuple(( str(i),lambda tgt=i: user.debug(tgt) ) for i in lst if i!=None)
+            struct=tuple(( unicode(i),lambda tgt=i: user.debug(tgt) ) for i in lst if i!=None)
             if struct:
                 user.ui.float_menu(struct)
         if event.type== pg.KEYUP and event.key==pg.K_t and (pres[pg.K_LCTRL] ):

@@ -90,7 +90,7 @@ class TruthCalcEvt(LogicEvent):
         self.ignore_stated=kwargs.get('ignore_stated',False)
         self.changevts={}
 
-    def __repr__(self):
+    def __str__(self):
         item,refgraph,tgtgraph=self.item,self.refgraph,self.tgtgraph
         if refgraph!=tgtgraph:
             return "TruthCalc {} {} {}".format(item,refgraph,tgtgraph)

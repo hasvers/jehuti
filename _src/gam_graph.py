@@ -14,7 +14,7 @@ class EthosEffect(DataBit):
         DataBit.__init__(self,**kwargs)
         self.eid=EthosEffect.eid
         EthosEffect.eid+=1
-    def __repr__(self):
+    def __str__(self):
         val=str(int(round(self.val*database['floatprecision'])))
         if val[0]!='-':
             val='+'+val
@@ -63,7 +63,7 @@ class ConvNodeTest(ConvTest):
         self.cond=cond
         self.truth=truth
 
-    def __repr__(self):
+    def __str__(self):
         return self.cond+' '+self.truth
 
     def event_check(self,evt,item,match):
@@ -112,7 +112,7 @@ class ConvLinkTest(ConvTest):
             return True
         return False
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {} {}'.format(self.cond,self.struth,self.ttruth)
 
 class MatchNode(Graph.Node):
@@ -169,10 +169,10 @@ class MatchSubgraph(Graph.Subgraph):
         kwargs.setdefault('init_param',[]).append('parent')
         return Data.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
-    def __repr__(self):
+    def __str__(self):
         if self.name != Graph.Subgraph.name :
-            return 'Sub:'+self.name# +'('+str(self.parent)+')'
-        return 'Sub{}('.format(self.owner)+str(self.parent)+')'
+            return 'Sub:'+self.name# +'('+unicode(self.parent)+')'
+        return 'Sub{}('.format(self.owner)+unicode(self.parent)+')'
 
 class MatchSubgraph(Graph.Subgraph):
     owner=None
@@ -200,10 +200,10 @@ class MatchSubgraph(Graph.Subgraph):
         kwargs.setdefault('init_param',[]).append('parent')
         return Data.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
-    def __repr__(self):
+    def __str__(self):
         if self.name != Graph.Subgraph.name :
-            return 'Sub:'+self.name# +'('+str(self.parent)+')'
-        return 'Sub{}('.format(self.owner)+str(self.parent)+')'
+            return 'Sub:'+self.name# +'('+unicode(self.parent)+')'
+        return 'Sub{}('.format(self.owner)+unicode(self.parent)+')'
 
 
 class MatchGraph(Graph):
@@ -256,5 +256,5 @@ class Convgraph(MatchGraph.Subgraph):
             ('claimed',
             ),
         }
-    def __repr__(self):
+    def __str__(self):
         return 'Convgraph'

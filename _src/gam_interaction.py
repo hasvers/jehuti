@@ -472,7 +472,7 @@ class Interaction(object):
             self.type=typ
             for i,j in kwargs.iteritems():
                 setattr(self,i,j)
-        def __repr__(self):
+        def __str__(self):
             info=''
             if 'claim' in self.type:
                 if self.item.type=='link':
@@ -489,7 +489,7 @@ class Interaction(object):
             self.type=typ
             for i,j in kwargs.iteritems():
                 setattr(self,i,j)
-        def __repr__(self):
+        def __str__(self):
             return 'Factor:{}'.format(self.type)
 
     def __init__(self):

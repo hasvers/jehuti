@@ -12,7 +12,7 @@ class InputField(TextField):
     def __init__(self,parent,**kwargs):
         kwargs.pop('draw',None)
         TextField.__init__(self,parent,draw=False,**kwargs)
-        self.val=str(self.val)
+        self.val=unicode(self.val)
         self.focusable=True
         self.charlimit=None
         for i, j in kwargs.iteritems() :
@@ -28,7 +28,7 @@ class InputField(TextField):
         self.last_change_timestamp=pg.time.get_ticks()
 
     def set_val(self,val):
-        self.val=str(val)
+        self.val=unicode(val)
         if self.index>len(self.val)+1:
             self.index =-1
         self.moveindex(0)
@@ -139,7 +139,7 @@ class InputField(TextField):
                 self.moveindex(1)
             elif array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():
                 if event.key==pg.K_v:
-                    test=str(clipboard.paste())
+                    test=unicode(clipboard.paste())
                     if test:
                         l =list(self.val)
                         l.insert(self.index, test)
@@ -278,7 +278,7 @@ class MultiTextField(TextField):
         htemp=0
         #img = pg.surface.Surface(graphic_chart['screen_size'],pg.SRCALPHA)
         for v in values:
-            txt=str(v)
+            txt=unicode(v)
             img,size=self.write(txt,return_bb=True)
             if size[0]>wtemp:
                 wtemp=size[0]
@@ -416,7 +416,7 @@ class DragField(WindowField):
         self.image.blit(self.bg,(0,0))
         self.image.blit(self.cursor.image,self.cursor.rect.topleft)
         if self.showval:
-            self.image.blit(pgu_writen(str(self.val),FONTLIB["base"],graphic_chart['text_color_label']),(0,0))
+            self.image.blit(pgu_writen(unicode(self.val),FONTLIB["base"],graphic_chart['text_color_label']),(0,0))
         self.images['idle']=self.image
 
 
@@ -460,10 +460,10 @@ class DragField(WindowField):
             self.image.blit(self.bg,(0,0))
             self.image.blit(self.cursor.image,self.cursor.rect.topleft)
             if self.showval:
-                self.image.blit(pgu_writen(str(self.val),FONTLIB["base"],graphic_chart['text_color_label']),(0,0))
+                self.image.blit(pgu_writen(unicode(self.val),FONTLIB["base"],graphic_chart['text_color_label']),(0,0))
             self.images['idle']=self.image
             if not self.showval:
-                self.mouseover=str(self.val)
+                self.mouseover=unicode(self.val)
             else:
                 self.mouseover=''
             return True
@@ -690,7 +690,7 @@ class ListSelField(MultiTextField):
     selectable=1
     def event(self,event,*args,**kwargs):
         if event.type == pg.MOUSEBUTTONDOWN and event.button==1 :
-            struct= ((str(v),lambda x=v:self.set_val(x,output=1))  for v in self.values )
+            struct= ((unicode(v),lambda x=v:self.set_val(x,output=1))  for v in self.values )
             user.ui.float_menu(struct)
         else:
             return MultiTextField.event(self,event)

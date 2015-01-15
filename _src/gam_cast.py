@@ -126,7 +126,7 @@ class CastHandler(Handler):
         temprox.update(actor.prox)
         for i,j in tuple(actor.prox.iteritems()): #TODO: Is it clever to save prox?
             del temprox[i]
-            temprox[str(i)]=j
+            temprox[unicode(i)]=j
         oldprox=actor.prox
         actor.prox=temprox
         fout=fopen(path,'wb')
@@ -162,7 +162,7 @@ class CastHandler(Handler):
             txt=infos['name']
             for i,j in actor.dft_names.iteritems():
                 if i!='name':
-                    txt += ' | '+j +': ' +str(infos[i])
+                    txt += ' | '+j +': ' +unicode(infos[i])
         return txt
 
 class CastEditor(CastHandler):

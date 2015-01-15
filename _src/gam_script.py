@@ -29,7 +29,7 @@ class FuncWrapper(object):
     def __eq__(self,x): #Potentially dangerous
         return self.item==x
 
-    def __repr__(self):
+    def __str__(self):
         return 'Wrapper {}: {} {}'.format(self.type, self.item,self.priority)
 
 
@@ -55,7 +55,7 @@ class Script(TimedEvent):
         DataBit.__init__(self,**kwargs)
         TimedEvent.__init__(self,**kwargs)
 
-    def __repr__(self):
+    def __str__(self):
         return 'Script:'+self.name
 
     def copy(self):
@@ -465,7 +465,7 @@ class SceneScriptEffect(TimedEvent):
                 #exec(self.text)
             elif self.info=='eval':
                 val=user.world.do_python_script(self,'eval')
-                scene.add_balloon(str( val))
+                scene.add_balloon(unicode( val))
         elif self.typ in ('Cast','Scene') :
             if self.evt in ('anim','emote','state'):
                 if self.typ=='Scene':
@@ -599,7 +599,7 @@ class SceneScriptCondition(DataBit):
         self.type='scriptcond'
         DataBit.__init__(self,**kwargs)
 
-    def __repr__(self):
+    def __str__(self):
         base = self.name+' '+self.typ
         if self.typ=='Event':
             return base+': {} {}'.format(self.evt,self.info)
@@ -746,7 +746,7 @@ class SceneScriptCondition(DataBit):
                     rep-=evt.sinfos(1-evt.state)[self.info][self.key]
             else:
                 rep=info
-            return eval(str(rep)+self.cond)
+            return eval(unicode(rep)+self.cond)
         elif self.typ=='Event' and not evt is None:
             if 'batch' in evt.type:
                 evts=evt.events
