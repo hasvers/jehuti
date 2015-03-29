@@ -499,6 +499,8 @@ class BasicUI(UI_Widget):
                     w=self.window[i]
                     if hasattr(w,'__iter__'):
                         windowseq+=w[::-1]
+                        if i=='balloon':
+                            break
                     elif w:
                         windowseq.append(w)
 

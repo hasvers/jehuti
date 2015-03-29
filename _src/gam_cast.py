@@ -203,7 +203,7 @@ class CastPlayer(CastHandler):
 
     def label(self,actor,info_type=False):
         if info_type=='hover':
-            return "Consider {}'s mental state.".format(self.data.get_info(actor,'name'))
+            return u"Consider {}'s mental state.".format(self.data.get_info(actor,'name'))
         infos={}
         infos.update(actor.dft)
         infos.update(self.get_info(actor))

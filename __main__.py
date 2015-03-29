@@ -88,7 +88,7 @@ def keymap(event):
                 prolog('logs/prolog.dat')#.format(str(pg.time.get_ticks())[:5] ))
                 print 'Stop profiling',time.time()-user.profile_time
                 user.profile_time=time.time()
-        if event.type== pg.KEYUP and event.key==pg.K_l and (pres[pg.K_LCTRL] ):
+        if event.type== pg.KEYUP and event.key==pg.K_l and (pres[pg.K_LCTRL] and pres[pg.K_LSHIFT] ):
             print 'Trigger PIL'
             user.use_pil=1-user.use_pil
 

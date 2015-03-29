@@ -270,7 +270,9 @@ class InteractionRules(object):
         actor=perceived_reac.actor
         demonstr=self.psy[actor].demonstrativeness(ego,self.match.cast)
         agr/=self.psy[ego].perceive_trait(demonstr,actor,self.match.cast)
-        t= (1-agr-2*egotruth)/2/(1-2*egotruth)
+        t= (1-agr-2*egotruth)/2
+        if t>0 and abs(egotruth-.5)>0.000001:
+            t/=(1-2*egotruth)
         return t
 
 
@@ -386,6 +388,7 @@ class InteractionScript(Script):
         self.interaction=inter
 
     def parse_interaction(self,scene):
+        '''Takes an interaction schema and parses it into a script.'''
         inter=self.interaction
         factors=inter.factors
         events=inter.events
@@ -395,6 +398,7 @@ class InteractionScript(Script):
         states={}
         cur=set(roots)
         state=1
+        #With each state is associated a list of interaction stages
         while cur:
             states[state]=[]
             for c in tuple(cur):
@@ -403,18 +407,27 @@ class InteractionScript(Script):
                 cur.remove(c)
             state+=1
         calls=[]
+        autotext={}
+        #For each state, look at the stages associated with that states
+        #then look at the factors associated with those stages
+        #and see if they fulfill conditions for scripts, that should thus
+        #be called by this one.
         for i in states:
             evtcontainer=SceneScriptEffect()
             evtcontainer.typ='container'
             evtcontainer.target=[]
             src=[]
             effects=[evtcontainer]
+            autotext[i]=[]
             for s in states[i]:
                 src.append(s)
                 fac=factors[s]
                 src+=fac
                 if s.type in ('claim','reac'):
-                    for called in scene.canvas.get_info(s.item,'scripts'):
+                    handled=None
+                    infos=scene.canvas.get_info(s.item)
+                    for called in infos['scripts']:
+                        #Node/Link scripts
                         if not called.event_check(s.type,s.item,scene):
                             continue
                         if called in calls:
@@ -423,6 +436,15 @@ class InteractionScript(Script):
                         eff.typ='Call'
                         eff.target=called
                         effects.append(eff)
+                        if hasattr(called,'text') and called.text and s.type=='claim':
+                            autotext[i].append((s,called.text))
+                            handled=True
+                    if not handled and s.type=='claim' and s.item.type=='node':
+                        if infos.get('desc'):
+                            autotext[i].append((s,infos['desc']))
+                        else:
+                            autotext[i].append((s,infos['name']))
+            self.treat_autotext(autotext[i],effects)
             for s in src:
                 for e in events.get(s,()):
                     evtcontainer.target.append(e)
@@ -439,6 +461,17 @@ class InteractionScript(Script):
                     effects.append(eff)
             for e in effects:
                 self.effects.append(e)
+
+    def treat_autotext(self,autotext,effects):
+        for src,txt in autotext:
+            #TODO: proper autotext treatment
+            teff=SceneScriptEffect()
+            teff.typ='Text'
+            teff.text=txt
+            teff.actor=src.ego
+            teff.display='On'
+            effects.append(teff)
+
 
     def total_ethos_effect(self,eth):
         ego={}
@@ -472,7 +505,8 @@ class Interaction(object):
             self.type=typ
             for i,j in kwargs.iteritems():
                 setattr(self,i,j)
-        def __str__(self):
+
+        def __repr__(self):
             info=''
             if 'claim' in self.type:
                 if self.item.type=='link':
@@ -481,7 +515,7 @@ class Interaction(object):
                     info=self.truth
             if 'reac' in self.type:
                 info='A{:.2} E{:.2}'.format(float(self.agreement),self.emotion)
-            return 'Stage:{} {} {}'.format(self.type,self.ego,info)
+            return 'Stage:{} {} {}'.format(self.type,unicode(self.ego).encode('ascii','replace'),info)
 
     class Factor(object):
         typs=InteractionRules.factors

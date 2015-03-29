@@ -302,12 +302,16 @@ class GameHandler(Handler):
         '''Find all possible sources of importable entities in the
         neighborhood of a caller (some scene, identified by its data)'''
         src=[]
+
+        node=None
         for n,s in self.loaded.iteritems():
             if s == caller:
                 node=n
                 break
             elif str(s)==str(caller):
                 print 'ERROR: Get sources --', s,caller, id(s),id(caller)
+        if not node:
+            return src
         for l,nei in self.data.links(node):
             if nei.genre==typ:
                 src.append(self.loaded[nei.data])

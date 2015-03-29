@@ -89,7 +89,8 @@ class ActorIcon(UI_Icon):
         images['ghost']=img.copy()
         images['ghost'].set_alpha(graphic_chart['ghost_alpha'])
         for img in images.values():
-            img.set_colorkey(COLORKEY)
+            if not (img.get_flags() & pg.SRCALPHA):
+                img.set_colorkey(COLORKEY)
         self.set_image(self.state)
         rect=self.image.get_rect()
         self.size=rect.size

@@ -376,11 +376,11 @@ class Data(object):
     def finexport(self,txtdic,typdic,filename):
         #End of the text export procedure
         filename=database.get(self.datatype+'_path', database['basepath']) +filename+'.arc.txt'
-        fd = fopen(filename, "wb")
+        fd = fopen(filename, "w")
         #print typdic
         for typ,keys in typdic.iteritems():
             for key in sorted(keys):
-                fd.write(txtdic[key]+'\n')
+                fd.write(unicode(txtdic[key])+u'\n')
         fd.close()
 
     def testport(self,o,keydic,txtdic,typdic):
@@ -388,7 +388,7 @@ class Data(object):
         if hasattr(o,'txt_export'):
             if not id(o) in keydic:
                 o.txt_export(keydic,txtdic,typdic)
-            return '#{}#'.format(keydic[id(o)])
+            return u'#{}#'.format(keydic[id(o)])
         else:
             test=lambda e:self.testport(e,keydic,txtdic,typdic)
             if hasattr(o,'keys'):
@@ -400,7 +400,7 @@ class Data(object):
                         if o == array(None):
                             return None
                         return float(o)
-                    return 'array([' + ','.join([unicode(test(x)) for x in o]) +'])'
+                    return u'array([' + ','.join([unicode(test(x)) for x in o]) +'])'
                 return o.__class__([test(x) for x in o])
             elif isinstance(o,basestring):
                 return '"'+o+'"'
@@ -426,7 +426,7 @@ class Data(object):
 
             keydic[id(self)]=len(keydic.keys() )
             typdic.setdefault(klassn,[]).append(keydic[id(self)])
-        txt="#{}#\n ##class:{}\n ##initparam:{}\n".format(
+        txt=u"#{}#\n ##class:{}\n ##initparam:{}\n".format(
             keydic[id(self)],klassn,init_param)
         test=lambda e:self.testport(e,keydic,txtdic,typdic)
         dic={}
@@ -449,14 +449,14 @@ class Data(object):
                     pass
                 if not hasattr(i,j) or k!=z:
                     dicinf[i][j]=k2
-        label=['##attr','##infos'] #NB: the label #attr is essentially useless
+        label=[u'##attr',u'##infos'] #NB: the label #attr is essentially useless
         for d in (dic,dicinf):
-            txt+='{}\n'.format(label.pop(0))
+            txt+=u'{}\n'.format(label.pop(0))
             for i in sorted(d):
                 j=d[i]
-                tmp='{}:{}\n'.format(test(i),test(j))
+                tmp=u'{}:{}\n'.format(test(i),test(j))
                 txt+=tmp
-        txt+='##\n'
+        txt+=u'##\n'
         txtdic[keydic[id(self)]]=txt
 
         if starter:
@@ -497,10 +497,10 @@ class Data(object):
 
     def txt_import(self,filename):
         try:
-            fd=fopen(filename,'rb')
+            fd=fopen(filename,'r')
         except:
             filename=database.get(self.datatype+'_path', database['basepath']) +filename+'.arc.txt'
-            fd = fopen(filename, "rb")
+            fd = fopen(filename, "r")
         attrs={}
         infos={}
         chunk={}
@@ -701,16 +701,16 @@ class DataBit(object):
         if not id(self) in keydic:
             keydic[id(self)]=len(keydic.keys() )
             typdic.setdefault(klassn,[]).append(keydic[id(self)])
-        txt="#{}#\n ##class:{}\n ##initparam:{}\n".format(
+        txt=u"#{}#\n ##class:{}\n ##initparam:{}\n".format(
             keydic[id(self)],klassn,init_param)
         test=lambda e:Data().testport(e,keydic,txtdic,typdic)
         for i in set(sorted(self.dft))|set(add_param):
             if not hasattr(self,i):
                 print 'ERROR: {} has no attr {}'.format(self,i)
                 continue
-            tmp='{}:{}\n'.format(test(i),test(getattr(self,i)))
+            tmp=u'{}:{}\n'.format(test(i),test(getattr(self,i)))
             txt+=tmp
-        txt+='##\n'
+        txt+=u'##\n'
         txtdic[keydic[id(self)]]=txt
 
     def txt_import(self):

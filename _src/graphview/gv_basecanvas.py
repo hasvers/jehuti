@@ -176,7 +176,8 @@ class BaseCanvasView(View):
 
         if not hasattr(self,'surface'):
             self.surface = pgsurface.Surface(self.rect.size,self.BaseCanvasflag)
-            self.surface.set_colorkey(COLORKEY)
+            if not (self.surface.get_flags() & pg.SRCALPHA):
+                self.surface.set_colorkey(COLORKEY)
         #self.veil=None
         self.surface.fill(COLORKEY)
         if handler :
@@ -345,28 +346,13 @@ class BaseCanvasView(View):
         except:
             return hover
         if self.mask.get_at(pos) :
-            #try :
-                #hover=pgsprite.spritecollide(user.arrow,
-                    #[n for n in self.group if hasattr(n,'radius')] ,
-                    #False,pgsprite.collide_circle)[-1]
-            #except :
-            try :
-                #print self.handler.active_layer.items, self.handler.active_layer
-                ics=[self.icon[i] for i in layer.items]
-                prelim=pgsprite.spritecollide(user.arrow,
-                    [l for  l in ics if l in self.group],False)
-                while hover == None :
-                    test = prelim.pop()
-                    if pgsprite.collide_mask(user.arrow,test):
-                        hover = test
-                #hover=pgsprite.spritecollide(user.arrow,canvas.links,False,pgsprite.collide_mask)[-1]'''
-                #hover=prelim[-1]
-            except:
-                pass
-            if not hover:
-                tmp=pgsprite.spritecollide(user.arrow,
-                    [t for t in self.tools if t in self.group] ,
-                    False,pgsprite.collide_circle)
+            ics=[self.icon[i] for i in layer.items]
+            prelim= [l  for  l in ics if l in self.group and l.rect.collidepoint(pos)
+                and l.mask.get_at(pos-l.rect.topleft) ]
+            if prelim:
+                hover=prelim[-1]
+            else:
+                tmp= [l  for  l in self.tools if l in self.group and l.rect.collidepoint(pos)]
                 if tmp:
                     self.hover(tmp[-1])
                     return tmp[-1].event(event,**kwargs)

@@ -359,8 +359,12 @@ class MatchEditor(MatchHandler,SceneEditor):
 
     def make_quote(self,item):
         info=self.canvas.get_info(item)
-        name=info['name']
+        if info['desc']:
+            name=info['desc']
+        else:
+            name=info['name']
         name=self.textmaker.quotify(name)
         #quote=ConvNodeScript(truth='+',cond='Alone')
         quote=ConvNodeScript(truth='all',cond='Default',text=name)
+        quote.name='Quote'
         self.canvas.change_infos(item,scripts=[quote],update=True)

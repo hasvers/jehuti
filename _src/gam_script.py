@@ -130,7 +130,7 @@ class Script(TimedEvent):
         starting={}
         startstate={}
         ending={}
-        durs=[]
+        durs=[0]
         #Effects with absolute timing
         #(mostly visual/spatial effects)
 
@@ -139,10 +139,6 @@ class Script(TimedEvent):
             e.clear_children()
             e.prepare((0,1),scene)
             self.states.node[0]['children_states'][e]=0
-            if e.start is '':
-                #TODO removde this
-                e.start='phase'
-                e.duration=0
             if e.start!='phase':
                 starting[e]=e.start
                 ending[e]=e.start+e.duration

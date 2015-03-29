@@ -7,7 +7,7 @@ class LogicCanvas(Canvas):
     Graph=MatchGraph
     NodeIcon=MatchNodeIcon
     LinkIcon={MatchLink:MatchLinkIcon,
-        FlowLink:LinkIcon}
+        FlowLink:FlowLinkIcon}
     def react(self,evt):
         self.handler.react(evt)
         #except:
@@ -106,11 +106,47 @@ class LogicCanvasEditor(CanvasEditor,LogicCanvasHandler):
             logic = 1
         CanvasEditor.start_linkgrabber(self,source,logic=(logic,2,0,0))
 
+
+    def dend_linkgrabber(self,grabber,event):
+        act=self.canvas.active_graph
+        if isinstance(act,FlowGraph):
+            #if not( self.hovering and self.hovering.item.type=='node'):
+                #return False
+            print self.hovering
+            ante=[i for i,j in self.flowgraph.iteritems() if j==act][0]
+            self.canvas.set_active_graph(ante)
+            self.canvas.assess_itemstate()
+            self.test_hovering(event)
+            self.canvas.set_active_graph(act)
+            self.canvas.assess_itemstate()
+            for icon in grabber.ilinks:
+                self.canvas.remove(icon.link)
+                newp=[self.hovering.node if p==grabber else p for p in icon.link.parents]
+                if newp[0]==newp[1]:
+                    continue
+
+                icon.add_to_group(self.canvas.tools)
+                link=act.Link(tuple(newp))
+                evt = AddEvt(link,act,addrequired=True,infos={'val':0,'genre':"Reveal"} )
+                user.evt.do(evt,self)
+                self.signal('add_flow',link,ante)
+            grabber.kill()
+            self.canvas.assess_itemstate()
+            return True
+        else:
+            return self.end_linkgrabber(self,grabber,event)
+
+
+
     def end_linkgrabber(self,grabber,event):
         user.ungrab()
         #newevent=pgevent.Event( pg.MOUSEMOTION,pos=self.mousepos(),rel=(0,0))
         #self.event(newevent)
-        self.test_hovering(event)
+        act=self.canvas.active_graph
+        if hasattr(act,'auto_import') and act.auto_import:
+            self.test_hovering(event,include_ghost=True)
+        else:
+            self.test_hovering(event)
         if isinstance(self.hovering,self.canvas.NodeIcon):
             for i in grabber.ilinks :
                 newp=[self.hovering.node if p==grabber else p for p in i.link.parents]
@@ -125,9 +161,20 @@ class LogicCanvasEditor(CanvasEditor,LogicCanvasHandler):
                         logic=(self.canvas.get_info(i.link,'logic')[0],logic,0,0)
                         infos['logic']=logic
                     self.canvas.remove(i.link)
-                    act=self.canvas.active_graph
-                    evt = AddEvt(act.Link(tuple(newp)),act,infos=infos )
+                    kw={}
+                    if hasattr(act,'auto_import') and act.auto_import:
+                        kw['addrequired']=True
+
+                    if isinstance(act,FlowGraph):
+                        ante=[x for x,y in self.flowgraph.iteritems() if y==act][0]
+                        i.add_to_group(self.canvas.tools)
+                        link=act.Link(tuple(newp))
+                        infos['genre']='Reveal'
+                    evt = AddEvt(act.Link(tuple(newp)),act,infos=infos,**kw )
                     user.evt.do(evt,self)
+                    if isinstance(act,FlowGraph):
+                        self.signal('add_flow',link,ante)
+
 
                     #self.canvas.change_infos(i.link,logic=logic,invisible=True)
                 else :
@@ -261,33 +308,6 @@ class MatchCanvasEditor(LogicCanvasEditor,MatchCanvasHandler):
             for gph in self.parent.handler.data.actorgraph.values():
                 if gph.contains(evt.item):
                     self.truth_calc(evt.item,gph)
-
-    def end_linkgrabber(self,grabber,event):
-        act=self.canvas.active_graph
-        if isinstance(act,FlowGraph):
-            ante=[i for i,j in self.flowgraph.iteritems() if j==act][0]
-            self.canvas.set_active_graph(ante)
-            self.canvas.assess_itemstate()
-            self.test_hovering(event)
-            self.canvas.set_active_graph(act)
-            self.canvas.assess_itemstate()
-            for icon in grabber.ilinks:
-                self.canvas.remove(icon.link)
-                newp=[self.hovering.node if p==grabber else p for p in icon.link.parents]
-                if newp[0]==newp[1]:
-                    continue
-
-                icon.add_to_group(self.canvas.tools)
-                link=act.Link(tuple(newp))
-                evt = AddEvt(link,act,addrequired=True,infos={'val':0,'genre':"Reveal"} )
-                user.evt.do(evt,self)
-                self.signal('add_flow',link,ante)
-            grabber.kill()
-
-            return True
-        else:
-            return LogicCanvasEditor.end_linkgrabber(self,grabber,event)
-
 
     def subgraph_menu(self,target,typ,event=None):
         gph=self.canvas.active_graph

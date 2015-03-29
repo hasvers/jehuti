@@ -278,7 +278,7 @@ class MatchRuleset(LogicRuleset):
                 - the last mentioned'''
 
         option=kwargs.get('option',
-            ['none','all','only_agree','pref_agree','last'][0])
+            ['none','all','only_agree','pref_agree','last'][1])
         if option=='none':
             return []
         canvas=match.canvas

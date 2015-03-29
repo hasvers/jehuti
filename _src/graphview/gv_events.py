@@ -952,7 +952,7 @@ class AddEvt(Event):
                     pass
             return handled
         if state== 0:
-            #print 'ADDEVT',self,state,kwargs.get('traceback','No traceback' )
+            print 'ADDEVT',self,state,kwargs.get('traceback','No traceback' )
             handled= self.data.remove(item)
             return handled
 

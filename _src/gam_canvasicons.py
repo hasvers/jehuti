@@ -57,7 +57,7 @@ class MatchArrow(Arrow):
                 newsize+=suprec
             #if const[1]:
                 #newsize+=suprec
-            img = pgsurface.Surface(newsize,pg.SRCALPHA)
+            img = pgsurface.Surface(newsize,Canvasflag)
             suprec[1]=width
             suprec[0]/=2
             suprec=pgrect.Rect((0,0), suprec)
@@ -286,6 +286,15 @@ class MatchNodeIcon(NodeIcon):
             return True
         return False
 
+
+
+class FlowLinkIcon(LinkIcon):
+
+    def color_mod(self,state):
+        norm=list(graphic_chart.get('link_'+state+'_color_mod',CanvasIcon.color_mod(self,state)))
+        norm[0]*=.6
+        norm[1]*=.6
+        return norm
 
 
 class MatchLinkIcon(LinkIcon):

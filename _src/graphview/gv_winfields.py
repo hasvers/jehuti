@@ -286,7 +286,7 @@ class TextField(WindowField):
                 #font.underline(0)
             txt=self.txt
             style=kwargs.get("style",font.style() )
-            if (txt,font,color) in self.cache:
+            if (txt,font,color,style) in self.cache:
                 rend= self.cache[(txt,font,color,style)]
             else:
                 if graphic_chart['text_borders']:
@@ -295,7 +295,6 @@ class TextField(WindowField):
                     rend=font.render(txt,1,color)
                 ckeys=self.cache.keys()
                 if len(ckeys)>database["word_cache_limit"]:
-                    print sys.getsizeof(self.cache)
                     del self.cache[ckeys[0]]
                 self.cache[(txt,font,color,style)]=rend
                         #TODO render on rect with height given by font.get_linesize()

@@ -18,6 +18,9 @@ class Canvas():
         self.motion=[]
         self.rect = pg.rect.Rect((0,0),ergonomy['default_canvas_size'])
         self.handler=handler=None
+
+        self.labels={} #Permanent labels of icons
+        self.helpers={'label':False} #View helpers
         self.make()
         self.dft_graph_states=deepcopy(Canvas.dft_graph_states)
         graph= self.Graph()
@@ -35,9 +38,10 @@ class Canvas():
 
         if not hasattr(self,'surface'):
             self.surface = pgsurface.Surface(self.rect.size,Canvasflag)
-            self.surface.set_colorkey(COLORKEY)
+            if not (self.surface.get_flags() & pg.SRCALPHA):
+                self.surface.set_colorkey(COLORKEY)
         self.surface.fill(COLORKEY)
-        self.static_surface=self.surface.convert_alpha()
+        #self.static_surface=self.surface.convert_alpha()
         if handler :
             self.set_handler(handler)
 
@@ -334,6 +338,7 @@ class Canvas():
             if array( [i in evt.infos for i in ('val','genre') ]).any():
                 target=evt.item
                 self.icon_update(target)
+                self.handler.make_label(target)
         if 'add' in evt.type or 'rem' in evt.type:
             item= evt.item
             layer= evt.data
@@ -445,13 +450,13 @@ class Canvas():
         if user.evt.moving:
             return False
         self.surface.fill(COLORKEY)
-        self.static_surface.fill((0,0,0,0) )
+        #self.static_surface.fill((0,0,0,0) )
         if self.handler :
             for g in self.current_groups():
                 for s in g :
                     #if s.rect.colliderect(self.handler.viewport.rect.move(self.handler.viewport.offset)):
                         self.surface.blit(s.image,s.rect)
-                        self.static_surface.blit(s.image,s.rect)
+                        #self.static_surface.blit(s.image,s.rect)
         else :
             for g in self.current_groups():
                 g.draw(self.surface)
@@ -572,7 +577,7 @@ class CanvasHandler(UI_Widget):
     _surface = None
     select_opt=deepcopy(UI_Widget.select_opt)
     select_opt['auto_unselect']=True  #unselect selected by clicking anywhere else
-    paint_all=True #For now, keep true
+    paint_all=True #For now, keep true (should accelerate by not reblitting whole cnvas, requires static surface)
 
     def __init__(self,canvas,parent,size=None):
         self.view= self #TODO: reorganize canvas into handler (data gestion, layers) and handler.view= widget (icons and UI events)
@@ -585,7 +590,6 @@ class CanvasHandler(UI_Widget):
             self.canvas = canvas
         else :
             self.surface=pg.surface.Surface(parent.rect.size)
-        #self.surface.set_colorkey(COLORKEY)
         self.bg=None
         self.hovering=None
         self.selected=None
@@ -658,10 +662,10 @@ class CanvasHandler(UI_Widget):
                     if s.rect.colliderect(viewrect):
                         surface.blit(s.image,s.rect.move(offset))
      #           g.draw(self.surface)
-        else:
-            #TODO: Make this work properly
-            surface.blit(self.canvas.static_surface,(0,0),viewrect)
-            self.paint_animated(surface,viewrect,offset)
+        #else:
+            ##TODO: Make this work properly
+            #surface.blit(self.canvas.static_surface,(0,0),viewrect)
+            #self.paint_animated(surface,viewrect,offset)
 
     def paint_animated(self,surface,viewrect,offset):
         for g in self.canvas.animated:
@@ -698,11 +702,13 @@ class CanvasHandler(UI_Widget):
             #print hover, self.label(hover)
             self.signal('hover',hover,label=self.label(hover),affects=(self,hover.item))
             if self.label(hover):
-                if hover.item.type=='node':
-                    mopos=array(self.abspos(hover)) + (hover.rect.w*3/4,0)
-                else:
-                    mopos=None
-                user.set_mouseover(self.label(hover),pos=mopos)
+                if (not hover.item in self.canvas.labels or
+                      not self.canvas.labels[hover.item] in self.canvas.group):
+                    if hover.item.type=='node':
+                        mopos=array(self.abspos(hover)) + (hover.rect.w*3/4,0)
+                    else:
+                        mopos=None
+                    user.set_mouseover(self.label(hover),pos=mopos)
                 info=self.canvas.active_graph.get_info(hover.item)
                 if not info:
                     info= self.label(hover)
@@ -758,32 +764,18 @@ class CanvasHandler(UI_Widget):
                 pos=self.mousepos()
         user.setpos(pos)
         hover = None
+        pos=array(pos)
         if canvas.mask.get_at(pos) :
-            if not hover:
-                tmp=pgsprite.spritecollide(user.arrow,
-                    [t for t in canvas.tools if t in canvas.group] ,
-                    False,pgsprite.collide_circle)
-                if tmp:
-                    self.hover(tmp[-1])
-                    return tmp[-1].event(event,**kwargs)
-            try :
-                hover=pgsprite.spritecollide(user.arrow,
-                    [n for n in canvas.nodes if n in canvas.group] ,
-                    False,pgsprite.collide_circle)[-1]
-            except :
-                try :
-                    prelim=pgsprite.spritecollide(user.arrow,
-                        [l for l in canvas.links if l in canvas.group],False)
-                    while hover == None :
-                        test = prelim.pop()
-                        if pgsprite.collide_mask(user.arrow,test):
-                            hover = test
-                    #hover=pgsprite.spritecollide(user.arrow,canvas.links,False,pgsprite.collide_mask)[-1]'''
-                    #hover=prelim[-1]
-                except:
-                    pass
+            for group in canvas.tools, canvas.nodes, canvas.links:
+                prelim= [l  for  l in group if l in canvas.group and l.rect.collidepoint(pos) ]
+                prelim=[ l for l in prelim if ( hasattr(l,'radius') and
+                    hypot(*(pos- l.rect.center))<l.radius )
+                    or l.mask.get_at(pos-l.rect.topleft) ]
+                if prelim:
+                    hover=prelim[-1]
+                    break
 
-            if hover and not hover.is_ghost :
+            if hover and (not hover.is_ghost or kwargs.get('include_ghost',0)) :
                 self.hover(hover)
             else :
                 self.unhover()
@@ -966,6 +958,7 @@ class CanvasHandler(UI_Widget):
                 self.canvas.set_layer()
                 return True
 
+
         if event.key in (pg.K_DOWN,pg.K_UP,pg.K_LEFT,pg.K_RIGHT):
             delta=ergonomy['key_graph_move_rate']
             offset=array(0)
@@ -983,7 +976,8 @@ class CanvasHandler(UI_Widget):
         if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():
             if event.key==pg.K_n and self.canvas.active_graph==self.canvas.graph:
                 self.add_node(None,None,pos=self.mousepos())
-
+            if event.key==pg.K_l:
+                self.toggle_labels()
         return False
 
     def set_offset(self,offset,additive=True):
@@ -1037,6 +1031,39 @@ class CanvasHandler(UI_Widget):
         elif item.type=='link':
             return '(L'+str(item.ID)+') ' + infos['name'] + ': '+ infos['desc']
 
+    def toggle_labels(self):
+        '''Show/Hide all labels'''
+        icons=self.canvas.icon
+        labels=self.canvas.labels
+
+        if self.canvas.helpers['label']:
+            self.canvas.helpers['label']=False
+        else:
+            self.canvas.helpers['label']=True
+
+        for i in icons:
+            if i.type in ('node',):
+                if not i in labels or self.label(i)!= labels[i].contents[0]:
+                    self.make_label(i)
+                else:
+                    label=labels[i]
+                    if self.canvas.helpers['label']:
+                        label.rem_from_group(self.canvas.group)
+                    else:
+                        label.add_to_group(self.canvas.group)
+
+    def make_label(self,i):
+        labels=self.canvas.labels
+        if i in labels:
+            labels[i].kill()
+        icon=self.canvas.icon[i]
+        label=Emote([self.label(i) ])
+        label.create(self.canvas.group)
+        labels[i]=label
+        icon.add_child(label,(icon.rect.w,0))
+        icon.update()
+        if not self.canvas.helpers['label']:
+            label.rem_from_group(self.canvas.group)
 
 
 class CanvasEditor(CanvasHandler):

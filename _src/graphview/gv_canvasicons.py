@@ -399,6 +399,7 @@ class LinkGrabber(NodeIcon):
 
     def event(self,event,**kwargs):
         if event.type == pg.MOUSEBUTTONDOWN:
+            print 'yay',user.grabbed
             return self.canvas.handler.end_linkgrabber(self,event)
         if event.type == pg.MOUSEMOTION:
             pos = self.canvas.handler.mousepos()

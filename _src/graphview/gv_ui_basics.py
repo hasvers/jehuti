@@ -211,6 +211,22 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
     #OPTIMIZATION: Clear modimg if necessary to improve runtime performance, however will cause storing many more pictures
     modimg=('base','hover','select','ghost')#states that translate as simple modifiers such as hover, select
     base_image=False #image of the current base state before modifiers
+    maskable=False
+
+    mutable=False #For icons that can be rotated, mirrored or resized
+    for i in ('angle','mirrorx','mirrory', 'zoom'):
+        exec('_'+i+'''=False
+@property
+def '''+i+'''(self):
+    return self._'''+i+'''
+
+@'''+i+'''.setter
+def '''+i+'''(self,val):
+    if val!=self._'''+i+''':
+        self._'''+i+'''=val
+        self.mutate()
+        ''')
+
 
     def __init__(self,**kwargs):
         self.images={}
@@ -348,7 +364,7 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
         return tuple(array(user.mouse_pos())-array(self.abspos(child)))
 
 
-    def set_image(self,state):
+    def set_image(self,state,**kwargs):
         #print 'set image',self,state
         ## Comments with ## = potential breaking change, 2013-08-05
         if not self.images:
@@ -434,7 +450,42 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
             gv_effects.blur(blimg,**self.blur_mode)
             self.images['blur']=self.image=blimg
         self.image=image
+        if self.maskable:
+            self.mask=pg.mask.from_surface(image)
+        if kwargs.get('mutate',True):
+            self.mutate()
         return self.image
+
+
+    def mutate(self):
+        if self.mutable: #and self.state in self.images :
+            img=self.ref_image
+            if not img:
+                return False
+            #img=self.images[self.state]
+            if self.zoom :
+                img=pg.transform.scale(img,tuple(int(x) for x in array(self.size)*self.zoom))
+            elif img.get_rect().size != self.size:
+                img=pg.transform.scale(img,self.size)
+            if self.angle :
+                img=pg.transform.rotate(img,self.angle)
+            if self.mirrorx or self.mirrory:
+                img=pg.transform.flip(img,self.mirrorx,self.mirrory)
+            self.image=img
+            sz=img.get_rect().size
+            if sz!=self.rect.size:
+                old=self.rect.center
+                self.rect.size=img.get_rect().size
+                self.rect.center=old
+            if self.maskable:
+                self.mask=pg.mask.from_surface(self.image)
+            return True
+        if False:
+            for c in self.children :
+                c.rect.center=self.abspos(c)
+                c.mutate()
+        return False
+
 
     def set_state(self,state,force_redraw=False,**kwargs):
         #print 'set state',self,state,force_redraw
@@ -447,8 +498,7 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
             for i in self.states.keys():
                 if i!='base':
                     self.states[i] = False
-            self.set_image(state)
-
+            self.set_image(state,mutate=True)
             return True
         if state in self.states and self.states[state] and not force_redraw:
             #TODO : check whether 'and not force_redraw' messed something up! (added aug 2013)
@@ -468,10 +518,7 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
             self.state=state
             force_redraw=True
         if force_redraw :
-            #try :
-            self.set_image(state)
-            #except:
-            #    pass
+            self.set_image(state,mutate=True)
             return 'visible'
         else:
             return True
@@ -481,7 +528,7 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
             return False
         self.states[state]=False
         if state in self.modimg or force_redraw:
-            self.set_image(self.state)
+            self.set_image(self.state,mutate=True)
         if kwargs.get('recursive',False):
             for c in self.children:
                 c.rm_state(state,**kwargs)
@@ -491,7 +538,7 @@ class UI_Item(pg.sprite.DirtySprite): #Base item for state management
                 if j and self.priority[i]> self.priority[self.state] :
                         self.state =i
 
-            self.set_image(self.state)
+            self.set_image(self.state,mutate=True)
             return 'visible'
         else :
             return True
@@ -633,7 +680,10 @@ class UI_Widget(UI_Item):
                     self.unhover()
             if  newhover:# or self.unhover() :
                 self.update()
-            if not hovering and self.hovering:
+            if not hovering and self.hovering and children==self.children:
+                #Important: the condition children==self.children is here
+                #to guarantee that this does not happen when I'm testing
+                #separately e.g. scrollbars
                 self.unhover()
 
         elif event.type==pg.KEYDOWN:
