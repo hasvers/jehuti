@@ -238,6 +238,7 @@ class NodeIcon(CanvasIcon):
             self.canvas.pos[self.node]=array(self.canvas.pos[self.node])+array([int(i) for i in rel])
         [l.follow_anchors() for l in self.ilinks]
         self.update()
+        self.canvas.dirty=1
 
     def anchor(self,genre,pos):
         #where should a link attach itself on the node, depending on the link's
@@ -396,6 +397,7 @@ class LinkGrabber(NodeIcon):
         if bound.contains(rect):
             self.rect.move_ip(rel)
         [l.follow_anchors() for l in self.ilinks]
+        self.canvas.dirty=1
 
     def event(self,event,**kwargs):
         if event.type == pg.MOUSEBUTTONDOWN:

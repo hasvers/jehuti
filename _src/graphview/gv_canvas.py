@@ -70,6 +70,7 @@ class Canvas():
         if icon.item in self.pos:
             return self.pos[icon.item]+array(icon.rect.topleft)-icon.rect.center
         else:
+            #Normal for links and other elements whose position depends on something else
             return icon.rect.topleft
 
     def set_handler(self,handler):
@@ -446,21 +447,36 @@ class Canvas():
                         pass
         return glist
 
-    def update(self,*args):
+    def update(self,*args,**kwargs):
         if user.evt.moving:
             return False
         self.surface.fill(COLORKEY)
         #self.static_surface.fill((0,0,0,0) )
+
+        full=True
+        if user.grabbed and user.grabbed in self.group:
+            full=False
+        if kwargs.get('fast',False):
+            full=False
+
         if self.handler :
+            handler=self.handler
+            offset=array(handler.offset)
+            if handler.zoom and handler.zoom!=1:
+                viewrect=handler.viewport.move(offset*handler.zoom)
+                viewrect.size=(array(viewrect.size)/handler.zoom).astype('int')
+            else:
+                viewrect=handler.viewport.move(offset)
             for g in self.current_groups():
                 for s in g :
-                    #if s.rect.colliderect(self.handler.viewport.rect.move(self.handler.viewport.offset)):
+                    if full or s.rect.colliderect(viewrect):
                         self.surface.blit(s.image,s.rect)
                         #self.static_surface.blit(s.image,s.rect)
         else :
             for g in self.current_groups():
                 g.draw(self.surface)
-        self.mask=pg.mask.from_surface(self.surface)
+        if full:
+            self.mask=pg.mask.from_surface(self.surface)
 
 
     def add_subgraph(self,subgraph=None,**kwargs):
@@ -601,7 +617,8 @@ class CanvasHandler(UI_Widget):
     def update(self):
         if self.canvas.animated :
             self.canvas.animated.update()
-        if self.canvas.dirty:
+        if 0 and self.canvas.dirty:
+            #Now overruled by event()
             self.canvas.dirty=False
             self.canvas.update()
 
@@ -643,7 +660,18 @@ class CanvasHandler(UI_Widget):
     def pos(self):
         return self.canvas.pos
 
-    def paint(self,surface=None):
+
+    def paint(self,surface=None,pos=(0,0)):
+        if not surface:
+            return
+        surf=self.canvas.surface
+        if self.zoom and self.zoom!=1:
+            surf=pg.transform.scale(surf,(array(surf.get_rect().size)*self.zoom).astype("int"))
+            surface.blit(surf,pos-(array(self.offset)*self.zoom).astype("int"))
+        else:
+            surface.blit(surf,pos-array(self.offset))
+
+    def oldpaint(self,surface=None):
         if not surface:
             surface=self.surface
             if not self.bg:
@@ -666,6 +694,42 @@ class CanvasHandler(UI_Widget):
             ##TODO: Make this work properly
             #surface.blit(self.canvas.static_surface,(0,0),viewrect)
             #self.paint_animated(surface,viewrect,offset)
+
+    def semiold_paint(self,surface=None,pos=(0,0)):
+
+        if not surface:
+            surface=self.surface
+            if not self.bg:
+                self.surface.fill(COLORKEY)
+
+        #self.surface.set_clip(self.viewport.get_abs_rect())
+
+        offset=array(self.offset)
+        if self.zoom and self.zoom!=1:
+            viewrect=self.viewport.move(offset*self.zoom)
+            viewrect.size=(array(viewrect.size)/self.zoom).astype('int')
+        else:
+            viewrect=self.viewport.move(offset)
+        if self.bg :
+            #surface.blit(self.bg,offset)
+            surf=self.bg.copy()
+        else:
+            surf=pg.surface.Surface(viewrect.size,pg.SRCALPHA)
+        if self.paint_all:
+            for g in self.canvas.current_groups():
+                for s in g :
+                    if s.rect.colliderect(viewrect):
+                        surf.blit(s.image,s.rect.topleft)#s.rect.move(offset))
+     #           g.draw(self.surface)
+        #else:
+            ##TODO: Make this work properly
+            #surface.blit(self.canvas.static_surface,(0,0),viewrect)
+            #self.paint_animated(surface,viewrect,offset)
+        if self.zoom and self.zoom!=1:
+            surf=pg.transform.smoothscale(surf,(array(surf.get_rect().size)*self.zoom).astype("int"))
+        surface.blit(surf,pos-offset)
+
+
 
     def paint_animated(self,surface,viewrect,offset):
         for g in self.canvas.animated:
@@ -783,6 +847,9 @@ class CanvasHandler(UI_Widget):
 
 
     def event(self,event,**kwargs):
+        if event.type==30 and self.canvas.dirty:
+            self.canvas.update()
+            self.canvas.dirty=False
         if event.type==30 and self.canvas.motion:
             m=self.canvas.motion[0]
             dist=array(m)-self.offset

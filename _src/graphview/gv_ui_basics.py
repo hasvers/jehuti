@@ -361,7 +361,13 @@ def '''+i+'''(self,val):
                 return self.rect.topleft
 
     def mousepos(self,child=None):
-        return tuple(array(user.mouse_pos())-array(self.abspos(child)))
+        if self.parent:
+            mousepos=self.parent.mousepos()
+        else:
+            mousepos=user.mouse_pos()
+        if self.zoom and self.zoom!=1:
+            return tuple((array(mousepos )/self.zoom-self.abspos(child)).astype('int'))
+        return tuple(mousepos-array(self.abspos(child)))
 
 
     def set_image(self,state,**kwargs):
@@ -663,11 +669,13 @@ class UI_Widget(UI_Item):
             hovering=False
             for c in children[::-1] :
                 if c.rect.collidepoint(pos):
-                    hovering=True
                     relpos=pos-array(c.rect.topleft)
                     if (hasattr(c,'mask') and not c.mask.get_at(relpos)):
-                        print 'MASK_TEST',c
+                        #print 'MASK_TEST',c, pg.time.get_ticks()
+                        if c==self.hovering:
+                            self.unhover()
                     else:
+                        hovering=True
                         if c.event(event) :
                             self.dirty=1
                             return True

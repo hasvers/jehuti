@@ -439,8 +439,6 @@ class BasicUI(UI_Widget):
                 self.window[i] = None
                 j.kill()
 
-    def abspos(self,child=None,**kwargs):
-        return UI_Widget.abspos(self,child,**kwargs)
 
     def paint(self,**kwargs):
         if not self.bg:

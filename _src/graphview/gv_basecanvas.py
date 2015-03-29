@@ -650,6 +650,7 @@ class BaseCanvasHandler(Handler):
 
 
     def react(self,evt):
+
         if 'move' in evt.type:
             inf= self.data.get_info(self.active_layer)
             self.view.icon[evt.item].set_pos(array(evt.graph.pos[evt.item])*inf['zoom']+inf['offset'])
@@ -680,7 +681,8 @@ class BaseCanvasHandler(Handler):
                         [self.view.icon[s].set_state('ghost') for s in evt.item.items ]
                 else:
                         [self.view.icon[s].rm_state('ghost')  for s in evt.item.items ]
-        if ('add' in evt.type or 'rem' in evt.type)  and evt.item in self.data.infos :
+
+        if ('add' in evt.type or 'rem' in evt.type):#  and evt.item in self.data.infos :
             item=None
             if 'layer' in evt.item.type:
                 self.set_layer(evt.item,len(self.layers))

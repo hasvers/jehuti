@@ -137,9 +137,11 @@ class FieldContainer(UI_Widget):
         elif self._maxsize:
             size= self._maxsize
         if size is None:
-            try :
+            if hasattr(self.parent,'active_rect'):
+                size=self.parent.active_rect.size
+            elif hasattr(self.parent, 'maxsize') :
                 size= self.parent.maxsize
-            except:
+            else:
                 size= self.parent.rect.size
         if self.fixsize:
             if self.fixsize=='v':
@@ -275,12 +277,12 @@ class FieldContainer(UI_Widget):
 
     def event(self,*args,**kwargs):
         kwargs.setdefault('children',[c for c in self.children if not c in self.decor] )
-        if UI_Widget.event(self,*args,**kwargs) :
-            self.draw()
-            return True
-        elif self.decor and UI_Widget.event(self,*args,refpos=self.abspos(),children=self.decor) :
+        if self.decor and UI_Widget.event(self,*args,refpos=self.abspos(),children=self.decor) :
             self.draw()
             user.focus_on(self)
+            return True
+        elif not self.hovering in self.decor and UI_Widget.event(self,*args,**kwargs) :
+            self.draw()
             return True
         event= args[0]
         if self.scrollable:
@@ -593,6 +595,7 @@ class FieldContainer(UI_Widget):
             return None
 
     def compute_pos(self,margin=None,active_rect=None):
+        '''The core method in arranging the positions of fields in the container.'''
         self.dirty=1
         multisp=None
         if not active_rect :
@@ -801,7 +804,10 @@ class FieldContainer(UI_Widget):
                         self.rect_update()
                     if field in self.decor:
                         self.decor.remove(field)
-
+        if [i for i in self.decorgroup]:
+            print id(self),self.minsize,self._minsize,self.maxsize
+        if [i for i in self.children if hasattr(i,'decorgroup')]:
+            print 'yay',self.col_width, self.active_rect,self.rect,width
         self.update()
         if self.parent and hasattr(self.parent,'newfields'):
             #renew parent layout too

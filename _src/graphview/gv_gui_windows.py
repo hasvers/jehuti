@@ -76,7 +76,7 @@ class NodeList(Window):
             key=lambda e: e[1].ID )
         self.hide=self.add('text',val='Close',selectable=True,
             output_method=lambda:self.interface.hide(self.name ))
-        self.field=FieldList(self,self.list,w=self.width,
+        self.field=FieldList(self,self.list,
             output_method=self.node_select ,scrollable='v')#,output_method=interface.canvas.set_view)
         self.add(self.field)
         self.make_dependencies()

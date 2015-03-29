@@ -14,6 +14,7 @@ class View(UI_Widget):
     bg=False
     viewport=None
     name=''
+    offset=(0,0)
 
     def __init__(self,handler,parent=None):
         super(View, self).__init__()

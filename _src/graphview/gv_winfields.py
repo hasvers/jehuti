@@ -93,6 +93,7 @@ class WindowField(UI_Item):
 
     def stop_output(self):
         self.parent.rem_from_queue(self)
+        return True
 
     def bind_command(self,method,vals=None,**kwargs):
         if vals == None :

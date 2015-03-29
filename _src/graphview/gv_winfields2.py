@@ -339,7 +339,7 @@ class DragField(WindowField):
     keyincrements=ergonomy['dragfield_keyincrements']
     #number of times a key must be pressed to cover whole span
     cursorstate='idle'
-    showval=1 #Show the value in large print within the bar (else it is shown in mouseover)
+    showval=1 #Show the value in large print within the bar (-1 = it is shown in mouseover)
     focusable=True
     reverse_dir=0 #for things increasing when you go down (e.g. scrollbars)
     design=1 #0= scrollbar, 1=skeuomorphic slider
@@ -410,7 +410,7 @@ class DragField(WindowField):
             else :
                 self.cursor.image.fill(color)
             if self.cursorstate=='grabbed':
-                self.cursor.image.fill((55,55,155,100))
+                self.cursor.image.fill(graphic_chart['window_decor_dragged'])
 
         self.set_val(kwargs.get('val',self.val))
         self.image.blit(self.bg,(0,0))
@@ -462,7 +462,7 @@ class DragField(WindowField):
             if self.showval:
                 self.image.blit(pgu_writen(unicode(self.val),FONTLIB["base"],graphic_chart['text_color_label']),(0,0))
             self.images['idle']=self.image
-            if not self.showval:
+            if  self.showval==-1:
                 self.mouseover=unicode(self.val)
             else:
                 self.mouseover=''

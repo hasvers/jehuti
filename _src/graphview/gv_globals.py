@@ -51,7 +51,7 @@ clock = pg.time.Clock()
         #pickle.Pickler.save(self, obj)
 
 pretty= True
-RGBACanvas=False
+RGBACanvas=True
 if RGBACanvas :
     COLORKEY =(0,0,0,0)
     Canvasflag=pg.SRCALPHA
