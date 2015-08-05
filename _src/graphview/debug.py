@@ -1,5 +1,8 @@
 import inspect
 
+# Public Domain, i.e. feel free to copy/paste
+# Considered a hack in Python 2
+
 def caller_name(skip=2):
     """Get a name of a caller in the format module.class.method
     `skip` specifies how many levels of stack to skip while getting caller

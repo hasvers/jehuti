@@ -60,7 +60,7 @@ class CutsceneData(PlaceData):
     dft=deepcopy(PlaceData.dft)
     dft['name']='cutscene'
     infotypes=deepcopy(PlaceData.infotypes)
-    infotypes['sprite']=('name','bound')
+    infotypes['sprite']=('name','bound','layer')
     datatype='cutscene'
     Layer=CutsceneLayer
 
@@ -79,7 +79,7 @@ class CutsceneData(PlaceData):
         self.scripts=[]
         self.queue=[]
         self.idx=0
-        self.add(self.Layer() )
+        #self.add(self.Layer() )
         for l in self.layers:
             l.source=self
 
@@ -87,9 +87,6 @@ class CutsceneData(PlaceData):
         kwargs.setdefault('add_param',[])
         kwargs['add_param']+=['cast','setting','scripts']
         return PlaceData.txt_export(self,keydic,txtdic,typdic,**kwargs)
-
-    def klassmake(self,klass,*args):
-        return eval(klass)(*args)
 
     def __str__(self):
         return 'Cutscene {}'.format(self.name)

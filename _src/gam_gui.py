@@ -13,7 +13,7 @@ class StartMenuUI(MenuUI):
         self.bg=pg.transform.smoothscale(image_load(database['image_path']+database['title_bg']),self.rect.size).convert()
 
 
-        gcand = filter(lambda e: database['game_ext'] in e,olistdir(database['game_path']))
+        gcand = filter(lambda e: database['game_ext'] in e and not '~' in e,olistdir(database['game_path']))
         savcand={}
         for g in gcand:
             savcand[g] = filter(lambda e: database['save_ext'] in e,olistdir(database['game_path']+g.split('.')[0]))
@@ -43,7 +43,7 @@ class StartMenuUI(MenuUI):
             spl=lambda e,c=savcand:savloadscreen(e,c)
             savmenu=lambda e=spl:self.load_menu('game',e,new=None)
         elif len(gcand)==1:
-            game=gcand[0].replace(database['game_ext'],'')
+            game=gcand[0].split('/')[-1].replace(database['game_ext'],'')
             edmenu=lambda game=game, u=user: u.set_ui(gedit(screen,game))
             plmenu=lambda game=game,u=user: u.set_ui( gui(screen,game))
             savcand=savcand[gcand[0]]
@@ -146,6 +146,8 @@ class GameEditorUI(EditorUI):
 
     def launch(self):
         EditorUI.launch(self)
+        for n in self.game.data.graph.nodes:
+            self.game.dataload(n)
         if ergonomy["editor_memory"]:
             nam=None
             try:
@@ -156,11 +158,9 @@ class GameEditorUI(EditorUI):
                             break
                 if not nam is None:
                     self.open_editor(nam)
-                    print 'Loading last map:',nam
+                    print 'Loading last map:',world.database[world.object[nam].dataID]
             except:
                 pass
-        for n in self.game.data.graph.nodes:
-            self.game.dataload(n)
 
     @property
     def components(self):
@@ -210,15 +210,18 @@ class GameEditorUI(EditorUI):
         return handled or EditorUI.keymap(self,event)
 
     def open_editor(self,item):
-        self.game.load_node(item) #in case node is not loaded yet
-        data= self.game.loaded[item]
+        '''Given a node, open the editor of the data linked to that node'''
+        #If we receive a trueID instead:
+        if isinstance(item,basestring):
+            item=world.object[item]
+        data= world.database[item.dataID]
+        #Log the trueID of the currently open scene
         with fopen('logs/.editor_last','w') as last :
-            last.write(item)
-        node=self.game.data.get_node(item)
+            last.write(item.trueID)
         if data in self.children_ui:
             user.set_ui(self.children_ui[data])#,no_launch=True)
         else:
-            genre=node.genre
+            genre=item.genre
             if genre=='match':
                 edit=MatchEditorUI
             elif genre=='cutscene':
@@ -238,7 +241,7 @@ class GameEditorUI(EditorUI):
 
     def react(self,evt,**kwargs):
         if 'open' in evt.type:
-            self.open_editor(evt.args[0].data )
+            self.open_editor(evt.args[0])
         if 'start_game' in evt.type :
             return user.set_ui(GameUI(self._screen,self.game.data),False )
             #item=self.editor.data.first
@@ -262,8 +265,10 @@ class GameUI(BasicUI):
                 path='{}{}{}'.format(path,gamedata,database['game_ext'])
             else:
                 path=gamedata
-            gfin=fopen(path,'rb')
-            gamedata=pickle.load(gfin)
+            #gfin=fopen(path,'rb')
+            gamedata=GameData()
+            gamedata.txt_import(path)
+            #gamedata=pickle.load(gfin)
         gamestate= kwargs.get('gamestate',None)
         if isinstance(gamestate,basestring):
             path='{}{}/'.format(database['game_path'],gamedata.name)
@@ -271,8 +276,10 @@ class GameUI(BasicUI):
                 path='{}{}{}'.format(path,gamestate,database['save_ext'])
             else:
                 path=gamestate
-            gfin=fopen(path,'rb')
-            gamestate=pickle.load(gfin)
+            gamestate=GameState()
+            gamestate.txt_import(path)
+            #gfin=fopen(path,'rb')
+            #gamestate=pickle.load(gfin)
         self.game= GamePlayer(self,data=gamedata,gamestate=gamestate)
 
     def launch(self):
@@ -298,9 +305,8 @@ class GameUI(BasicUI):
                 #current.match.freeze()
             #except:
                 #current.scene.freeze()
-        self.game.load_node(node)
         genre=node.genre
-        state= self.game.gamestate.node_state.get(node.data,None)
+        state= self.game.gamestate.node_state.get(node,None)
         if state:
             data=state
         else:

@@ -804,10 +804,10 @@ class FieldContainer(UI_Widget):
                         self.rect_update()
                     if field in self.decor:
                         self.decor.remove(field)
-        if [i for i in self.decorgroup]:
-            print id(self),self.minsize,self._minsize,self.maxsize
-        if [i for i in self.children if hasattr(i,'decorgroup')]:
-            print 'yay',self.col_width, self.active_rect,self.rect,width
+        #if [i for i in self.decorgroup]:
+            #print id(self),self.minsize,self._minsize,self.maxsize
+        #if [i for i in self.children if hasattr(i,'decorgroup')]:
+            #print 'yay',self.col_width, self.active_rect,self.rect,width
         self.update()
         if self.parent and hasattr(self.parent,'newfields'):
             #renew parent layout too

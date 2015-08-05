@@ -457,7 +457,7 @@ def '''+i+'''(self,val):
             self.images['blur']=self.image=blimg
         self.image=image
         if self.maskable:
-            self.mask=pg.mask.from_surface(image)
+            self.mask=pg.mask.from_surface(image,1)
         if kwargs.get('mutate',True):
             self.mutate()
         return self.image
@@ -484,7 +484,7 @@ def '''+i+'''(self,val):
                 self.rect.size=img.get_rect().size
                 self.rect.center=old
             if self.maskable:
-                self.mask=pg.mask.from_surface(self.image)
+                self.mask=pg.mask.from_surface(self.image,1)
             return True
         if False:
             for c in self.children :

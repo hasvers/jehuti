@@ -137,7 +137,7 @@ class EditorMenu(DragWindow):
         if not self.infosource:
             self.infosource=infosource
 
-        self.make()
+        self.made=0
         if 'ref' in kwargs :
             self.set_ref(kwargs['ref'])
 
@@ -184,6 +184,7 @@ class EditorMenu(DragWindow):
 
     def make(self,**kwargs):
         self.clear()
+        self.made=1
         v=0
         self.add('text',val=self.title,pos=(v,0),width=100,height=30,colspan=2)
         if not self.confirm:
@@ -280,6 +281,8 @@ class EditorMenu(DragWindow):
         self.interface.depend.add_dep(self,self.infosource)
 
     def set_ref(self,ref,renew=True):
+
+
         for i,j in self.listsel.iteritems() :
             #for listsels that need to be updated with each change of ref
             try:
@@ -290,6 +293,8 @@ class EditorMenu(DragWindow):
         if self.ref :
             user.ui.depend.rem_dep(self,ref)
         self.ref=ref
+        if not self.made:
+            self.make()
         self.make_dependencies()
         if renew:
             self.renew_chgevts()
@@ -457,15 +462,20 @@ class EditorMenu(DragWindow):
         user.evt.do(evt,self,1,ephemeral=self.ephemeral)
 
     def refresh_delfields(self):
+        desc={a[0]:a[2] for a in self.attrs}
         for a in self.delfield:
             field=self.delfield[a]
             self.rem_command(field)
             meth =lambda t=a: self.del_info(t)
             field.bind_command(meth)
-            if not self.ref in self.data.infos or not a in self.data.infos[self.ref]:
+            if not self.ref in self.data.infos or not a in self.data.get_info(
+                                            self.ref,transparent=False):
                 field.set_state('disabled')
             else:
                 field.rm_state('disabled')
+                self.delevt[a]=DeleteInfoEvt(self.ref,self.data,[a],
+                    source='editor'+str(id(self)))
+                self.delevt[a].desc='Delete '+desc[a].lower()
 
 
     def refresh_fields(self):
@@ -522,10 +532,11 @@ class EditorMenu(DragWindow):
         if not self.interface.view.get(self.name,False):
             return
         if ('change' in evt.type or 'rem_info' in evt.type) and evt.item==self.ref :
-            if not self.queue: #prevents destruction of queued changes
+            if not self.queue and not evt.source=='editor'+str(id(self)): #prevents destruction of queued changes
                 self.set_ref(self.ref,False)
-        if 'rem_info' in evt.type and evt.item==self.ref:
-            self.refresh_delfields()
+
+
+
         #if 'select' in evt.type:
             #for field in self.extsel:
                 #if field.is_selected:

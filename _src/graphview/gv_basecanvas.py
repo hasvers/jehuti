@@ -24,7 +24,10 @@ class BaseCanvasLayer(DataItem):
         return item in self.items
 
     def __init__(self,*args,**kwargs):
-        DataItem.__init__(self,*args,**kwargs)
+        DataItem.__init__(self,*args[1:],**kwargs)
+        self.canvas=args[0]
+        #self.items=DataList(args[0])
+        #self.children=DataList(args[0])
         self.type='layer'
 
     def __str__(self):
@@ -39,6 +42,13 @@ class BaseCanvasLayer(DataItem):
             #for c in j:
                 #c.parent= self
         #DataItem.set_attr(self,i,j)
+
+    def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
+        kwargs.setdefault('add_param',[])
+        kwargs['add_param']+=['canvas']
+        kwargs.setdefault('init_param',[])
+        kwargs['init_param']+=['canvas']
+        return DataItem.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
 class BaseCanvasData(Data):
     #This should be a Data so as to memorize the exact configuration
@@ -206,7 +216,7 @@ class BaseCanvasView(View):
         self.animated=pgsprite.Group()
         self.pos={}
         self.icon={}
-        self.layers=[]
+        self.layers=DataList(self)
 
     def order_layers(self):
         for nl,l in enumerate(self.data.layers):
@@ -489,7 +499,7 @@ class BaseCanvasHandler(Handler):
         Handler.__init__(self,parent,**kwargs)
         self.dft_layer_states=deepcopy(BaseCanvasHandler.dft_layer_states)
         if not self.data.layers:
-            self.data.add(self.data.Layer() )
+            self.data.add(self.data.Layer(self.data) )
         self.set_layer(self.data.layers[0])
         self.view.rect = pg.rect.Rect((0,0),self.data.size)
         self.make_icons()
@@ -665,7 +675,7 @@ class BaseCanvasHandler(Handler):
                 self.set_background(self.data.bg)
             if 'size' in evt.infos:
                 self.view.rect = pg.rect.Rect((0,0),self.data.size)
-        if ('change' in evt.type or 'rem_info' in evt.type)  and evt.item in self.data.infos  :
+        if ('change' in evt.type or 'rem_info' in evt.type)  and evt.item in self.data  :
             item=evt.item
             if array( [i in evt.infos for i in ('val','genre','set') ]).any():
                 self.view.icon_update(item)
@@ -682,7 +692,7 @@ class BaseCanvasHandler(Handler):
                 else:
                         [self.view.icon[s].rm_state('ghost')  for s in evt.item.items ]
 
-        if ('add' in evt.type or 'rem' in evt.type):#  and evt.item in self.data.infos :
+        if ('add' in evt.type or 'rem' in evt.type):#  and evt.item in self.data
             item=None
             if 'layer' in evt.item.type:
                 self.set_layer(evt.item,len(self.layers))
@@ -785,6 +795,8 @@ class BaseCanvasHandler(Handler):
         layer=kwargs.get('layer',None)
         if not layer:
             layer=self.active_layer
+        elif isinstance(layer,basestring):
+            layer=world.object[layer]
         view=self.view
         if item in view.icon :
             if  not layer in view.icon[item].image_sets:
@@ -818,11 +830,9 @@ class BaseCanvasHandler(Handler):
             view.items[icon.id]=icon
             view.icon[item]=icon
         if not self.data.multi_belong:
-            if not 'layer' in self.data.infotypes[item.type]:
-                 self.data.infotypes[item.type] += ('layer',)
             self.data.set_info(item,'layer',layer)
         else:
-            print 'Not tested yet'
+            print 'Basecanvas: Not tested yet'
             if not self.data.get_info(item,'layer'):
                 self.data.set_info(item,'layer',[layer])
             else:
@@ -911,7 +921,7 @@ class BaseCanvasEditor(BaseCanvasHandler):
         if layer in self.data.layers:
             return 0
         if layer is None:
-            layer= self.data.Layer()
+            layer= self.data.Layer(self.data)
             self.depend.add_dep(self,layer)
         return user.evt.do(AddEvt(layer,self.data,**kwargs))
 

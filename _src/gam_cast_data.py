@@ -64,7 +64,6 @@ class Actor(DataItem):
         'color':(0,0,0,255),
         'control':'human',
         'status':'Unknown',
-        'prox':(),
         'react':[],
         'patterns':database['link_patterns'],
         }
@@ -87,7 +86,7 @@ class Actor(DataItem):
 
     def __init__(self,**kwargs):
         Actor.ActID+=1
-        self.prox={} #stored proximity to other actors
+        #self.prox={} #stored proximity to other actors
         for dfti in (self.dft_attr,self.dft_res,self.dft_prop):
             self.dft.update(dfti)
         self.dft['color']=graphic_chart['player_colors'][Actor.ActID%len (graphic_chart['player_colors'])]
@@ -113,7 +112,24 @@ class CastData(Data):
     def __init__(self,*args,**kwargs):
         self.infotypes['actor']=tuple(i for i in Actor().default_infos.keys())
         super(CastData, self).__init__(*args,**kwargs)
-        self.prox=sparsemat(0.)
+        self.prox={}#DataMat(self,0.)
+
+    def get_info(self,item,info_type=None,**kwargs):
+        #Hijack info read to add proximity information if available
+        if info_type=='prox' and item.trueID in self.prox:
+            return self.prox[item.trueID]
+        info=Data.get_info(self,item,info_type,**kwargs)
+        if info_type==None:
+            prox=self.get_info(item,'prox',**kwargs)
+            info['prox']=prox
+        return info
+
+    def set_info(self,item,ityp,val,**kwargs):
+        if ityp=='prox' and item.trueID in self.prox:
+            self.prox[item.trueID]=val
+            return True
+        return Data.set_info(self,item,ityp,val,**kwargs)
+
 
     def make_prox(self,actor=None,other=None):
         if not actor:
@@ -121,8 +137,10 @@ class CastData(Data):
                 self.make_prox(actor,other)
             return
 
-        baseprox=actor.prox #Recover proximity stored in the actor himself (pickle)
+        #baseprox=actor.prox #Recover proximity stored in the actor himself (pickle)
+        baseprox={}
         ainf=self.get_info(actor)
+        self.prox.setdefault(actor.trueID,{})
         others=[other]
         if not other:
             others = self.actors
@@ -130,30 +148,29 @@ class CastData(Data):
             if other != actor:
                 oinf = self.get_info(other)
                 val=.5
-                soth=unicode(other)
-                if soth in baseprox: #USEFUL FOR SAVE/LOAD INDIVIDUAL ACTOR
-                    val =baseprox[soth]
-                    del baseprox[soth]
-                if other in baseprox:
-                    val=baseprox[other]
-                self.prox[actor][other]=val#self.rules.init_prox(ainf,oinf)
+                #soth=unicode(other)
+                #if soth in baseprox: #USEFUL FOR SAVE/LOAD INDIVIDUAL ACTOR
+                    #val =baseprox[soth]
+                    #del baseprox[soth]
+                #if other in baseprox:
+                    #val=baseprox[other]
+                self.prox[actor.trueID][other.trueID]=val#self.rules.init_prox(ainf,oinf)
 
-                othprox= other.prox
+                #othprox= other.prox
                 val=.5
-                sact=unicode(actor)
-                if sact in othprox: #USEFUL FOR SAVE/LOAD INDIVIDUAL ACTOR
-                    val =othprox[sact]
-                    del othprox[sact]
-                if actor in othprox:
-                    val=othprox[actor]
-                self.prox[other][actor]=val
-                pr={}
-                pr.update(self.prox[other])
-                self.set_info(other,'prox',pr,update=True)
-                print self.prox
-        pr={}
-        pr.update(self.prox[actor])
-        self.set_info(actor,'prox',pr,update=True)
+                #sact=unicode(actor)
+                #if sact in othprox: #USEFUL FOR SAVE/LOAD INDIVIDUAL ACTOR
+                    #val =othprox[sact]
+                    #del othprox[sact]
+                #if actor in othprox:
+                    #val=othprox[actor]
+                self.prox[other.trueID][actor.trueID]=val
+                #pr=DataDict(self)
+                #pr.update(self.prox[other])
+                #self.set_info(other,'prox',pr,update=True)
+        #pr=DataDict(self)
+        #pr.update(self.prox[actor])
+        #self.set_info(actor,'prox',pr,update=True)
 
     def add(self,actor,*args,**kwargs):
         handled = super(CastData, self).add(actor,*args,**kwargs)
@@ -167,13 +184,21 @@ class CastData(Data):
 
     def remove(self,actor):
         for oth,info in self.infos.iteritems():
-            if actor in info['prox']:
-                del info['prox'][actor]
+            if actor.trueID in info['prox']:
+                del info['prox'][actor.trueID]
         return super(CastData, self).remove(actor)
+
+    def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
+        kwargs.setdefault('add_param',[])
+        kwargs['add_param']+=['prox']
+        return Data.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
 class LocCastData(CastData):
     overwrite_item=False
     transparent=True
+    infotypes={}
+    infotypes.update(CastData.infotypes)
+    infotypes['actor']+=('exporter',)
 
 class CastState(Data):
 

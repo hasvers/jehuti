@@ -56,17 +56,14 @@ class MatchData(Data):
         return set(self.scripts)#+ list(fl for j in self.actorgraph.values()
            # for k,l in j.infos.iteritems() for fl in l.get('cflags',() ) if isinstance(fl,CFlag)))
 
-    def klassmake(self,klass,*args):
-        #print klass, args
-        return eval(klass)(*args)
-
     def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
         kwargs.setdefault('add_param',[])
         kwargs['add_param']+=['graph','cast','setting','scripts','actorgraph','music']
         return Data.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
-    #def txt_import(self,filename):
-        #return Data.txt_import(self,filename)
+    def txt_import(self,filename):
+        tmp= Data.txt_import(self,filename)
+        return tmp
 
     def __str__(self):
         return 'MatchData {}'.format(self.name)
@@ -102,6 +99,7 @@ class MatchState(MatchData):
             sub.owner=actor
             sub.name=self.cast.get_info(actor,'name')
             sub.import_from(par,rule='all',infos=par.infos)
+            print sub.infos
 
     def renew(self):
         MatchData.renew(self)

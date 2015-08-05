@@ -678,11 +678,12 @@ class ExploreEvt(MatchEvent):
         pos= kwargs.get('pos',self.pos)
         if pos==None:
             pos = match.canvas.handler.mousepos()
-        match.canvas.add(self,pos=pos,icon=icon)
+        self.fakenode=match.canvas.graph.Node()
+        match.canvas.add(self.fakenode,pos=pos,icon=icon)
         return True
 
     def prep_uninit(self,match,**kwargs):
-        match.canvas.remove(self)
+        match.canvas.remove(self.fakenode)
 
     def prep_do(self,match):
 
@@ -690,7 +691,7 @@ class ExploreEvt(MatchEvent):
         actinf=match.cast.get_info(player)
         sub=match.data.actorsubgraphs[player][player]
         actg=match.data.actorgraph[player]
-        icon=match.canvas.icon[self]
+        icon=match.canvas.icon[self.fakenode]
         nodes= [ n for n in icon.find_neighbors() if actg.contains(n)]
         links=[l for n in nodes for l in actg.links[n] if not sub.contains(l)  ]
         linkp=[n for l in links for n in l.parents ]
@@ -711,8 +712,7 @@ class ExploreEvt(MatchEvent):
             added.append(n)
             if len(added)>= match.ruleset.discovery_threshold(actinf,self.cost):
                 break
-        match.canvas.remove(self)
-        del match.canvas.pos[self]
+        match.canvas.remove(self.fakenode)
         #for l in match.canvas.layers:
             #try:
                 #del l.pos[self]

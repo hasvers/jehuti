@@ -118,11 +118,6 @@ class Subgraph(Data):
             #return 'Subgraph:'+self.name +'('+unicode(self.parent)+')'
         return 'Subgraph('+unicode(self.parent)+')'
 
-    #Very suboptimal
-    #@property
-    #def nodes(self):
-        #return [i  for i in self.infos.keys() if i in self.parent.nodes]
-
     def renew(self):
         Data.renew(self)
         self.links={}
@@ -266,10 +261,11 @@ class Graph(Data):
 #            return done
         if item.type=='node':
             del self.links[item]
+            del self.pos[item]
             done = True
         elif item.type =='link':
             for p in item.parents :
-                if p in self.links :
+                if p in self.links and item in self.links[p]:
                     self.links[p].remove(item)
             done = True
         if done :
@@ -301,39 +297,4 @@ class Graph(Data):
         kwargs.setdefault('add_param',[])
         kwargs['add_param']+=['pos']
         return Data.txt_export(self,keydic,txtdic,typdic,**kwargs)
-
-
-    def old_txt_import(self,filename,additive=False):
-        print 'TXT_IMPORT GRAPH'
-        if not additive:
-            self.renew()
-
-        if not database['match_ext'] in filename:
-            filename=database['graph_path']+filename+database['graph_ext']
-
-        fs = fopen(filename, "rb")
-        print 'Importing from '+filename
-
-        tab={}
-        nfs=[]
-        for l in fs:
-            if not l:
-                continue
-            if l[0]=='#':
-                nfs.append([l[1:]])
-            else:
-                nfs[-1].append([i.strip() for i in l.split(':')])
-
-        for l in nfs:
-            if 'N' == l[0][0]:
-                n=self.Node()
-                tab[l[0].strip('#')]=n
-                self.add(n,**dict(l[1:]))
-        for l in nfs :
-            if 'L'==l[0][0]:
-                tu=eval(l[0][1:])
-                n1,n2= (tab[n] for n in tu)
-                infos=dict(l[1:])
-                self.add(self.Link((n1,n2)),**infos)
-        fs.close()
 

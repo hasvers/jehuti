@@ -116,10 +116,11 @@ class MatchRuleset(LogicRuleset):
         return self.match.setting
 
     def init_prox(self,act1,act2):
-        #compute starting match proximity act1 to act2 from their info sets
+        '''Compute starting match proximity of act1 to act2 from their info sets,
+        taking into account their base prox value and the setting.'''
         ainf=self.cast.get_info(act1)
         oinf = self.cast.get_info(act2)
-        base=ainf['prox'][act2]
+        base=ainf['prox'][act2.trueID]
         setting =self.setting
         return base
 
@@ -185,10 +186,12 @@ class MatchRuleset(LogicRuleset):
         return rad
 
     def politeness_effects(self,typ,*args,**kwargs):
-        src=args[0]
-        srcinf=self.cast.get_info(src)
-        tgt=args[1]
-        tgtinf=self.cast.get_info(tgt)
+        src_actor=args[0]
+        srcinf=self.cast.get_info(src_actor)
+        tgt_actor=args[1]
+        src=src_actor.trueID
+        tgt=tgt_actor.trueID
+        tgtinf=self.cast.get_info(tgt_actor)
         val=args[2]
         if typ == 'overtime' and src!=tgt:
             val*=0.05
@@ -233,7 +236,7 @@ class MatchRuleset(LogicRuleset):
 
     def concede_effects(self,giver,receiver,iteminfo):
         effects={}
-        effects[(receiver,'prox')]={giver:+0.05}
+        effects[(receiver,'prox')]={giver.trueID:+0.05}
         magn=iteminfo['val']
         effects[(receiver,'face')]=rfloat(0.1*magn)
         return effects
@@ -257,7 +260,7 @@ class MatchRuleset(LogicRuleset):
         nbact=0
         for act in self.cast.actors :
             if act!=actor:
-                totprox+= self.cast.get_info(act,'prox')[actor]
+                totprox+= self.cast.get_info(act,'prox')[actor.trueID]
                 nbact+=1
         dist=ergonomy['canvas_typical_dist']
         if not nbact:
@@ -344,7 +347,7 @@ class MatchRuleset(LogicRuleset):
         return max(0,min(1,baseval+diff*(1-ainf['perc'])*rnd.uniform(-1,1)))
 
     def accept_truth(self,baseval,actor,oinf):
-        prox = oinf['prox'][actor]
+        prox = oinf['prox'][actor.trueID]
         agreement=int(round(prox*3 -1))
         effects=[]
         return 0.5 + (baseval-0.5)*prox, effects,agreement

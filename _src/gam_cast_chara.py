@@ -18,8 +18,8 @@ class CharacterData(Data):
         super(CharacterData, self).__init__()
 
         self.actor=actor
-        if not hasattr(actor,'truename'):
-            actor.truename='Actor'+str(id(actor))
+        #if not hasattr(actor,'truename'):
+            #actor.truename='Actor'+str(id(actor))
         self.graph=graph
         self.belief=graph.Subgraph(graph,rule='all')
         self.belief.owner=actor
@@ -34,15 +34,12 @@ class CharacterData(Data):
         self.actor=Actor()
         graph=self.graph=MatchGraph()
         self.belief=graph.Subgraph(graph,rule='all')
-        self.belief.owner=actor
+        self.belief.owner=self.actor
         self.scripts=[]
 
     def all_scripts(self):
         return set(self.scripts)#+ list(fl for k,l in self.graph.infos.iteritems()
             #for fl in l.get('cflags',() ) if isinstance(fl,CFlag)))
-
-    def klassmake(self,klass,*args):
-        return eval(klass)(*args)
 
     def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
         kwargs.setdefault('add_param',[])
@@ -55,13 +52,22 @@ class CharacterData(Data):
     def get_info(self,item,info=None,**kwargs):
         '''Specialization of Data.get_info that redirects queries
         toward the belief graph or the Actor item.'''
-        if item.type=='actor' and item==self.actor:
+        if info=='prox':
+            return {}
+        if item.type=='actor' and item.trueID==self.actor.trueID:
             if info==None:
                 return {f:getattr(self.actor,f) for f in self.actor.dft}
             return getattr(self.actor,info)
         elif item.type in ('link','node'):
             return self.belief.getinfotypes(itemtype)
         return Data.get_info(self,item,info,**kwargs)
+
+    #def set_info(self,item,itype,info):
+        #if item.type=='actor' and item.trueID==self.actor.trueID:
+            #return setattr(self.actor,itype,info)
+        #elif item.type in ('link','node'):
+            #return self.belief.getinfotypes(itemtype)
+        #return Data.get_info(self,item,info,**kwargs)
 
     def get_infotypes(self,itemtype,**kwargs):
         if itemtype=='actor':
@@ -91,11 +97,6 @@ class CharacterEditor(MatchEditor):
     master=True
     name='CharacterEditor'
     handlername='Editor'
-
-    update_truename=False
-    #Potentially dangerous option: change the truename of the character and
-    #thus of all connected avatars. Requires that said avatars be in
-    #loaded data, and that said data be saved afterward.
 
     @property
     def actors(self):
@@ -189,15 +190,6 @@ class CharacterEditor(MatchEditor):
         for l in (self.cast,self.canvas.handler)  :
             struct+=tuple(l.menu(event))
         return struct
-
-    def save_to_file(self,*args,**kwargs):
-        tname=self.data.get_info(self.data.actor,'name')
-        #It's a bad idea to change the truename of something frequently
-        if self.update_truename and self.data.actor.truename!= tname:
-            print 'Updating Truename of',self.data.actor
-            self.game.world.update_name(self.data,self.data.actor,tname)
-            self.data.actor.truename= tname
-        MatchHandler.save_to_file(self,*args,**kwargs)
 
 class CharacterEditorUI(MatchEditorUI,SceneUI):
     CanvasEditor=MatchCanvasEditor

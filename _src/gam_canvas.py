@@ -278,7 +278,7 @@ class LogicCanvasEditor(CanvasEditor,LogicCanvasHandler):
         if item.type=='node':
             desc='N{}: {}'.format(item.ID,infos['name']) #+ ' T:'+str(infos.get('terr',0))#+ ': '+ infos['desc']
             if infos['cflags']:
-                desc +=' {}'.format(infos['cflags'])
+                desc +=' {}'.format([str(o) for o in infos['cflags']])
             return  desc
         elif item.type=='link':
             if 'pattern' in infos:
@@ -563,7 +563,7 @@ class FogOfWar(pg.sprite.DirtySprite):
 
     def update(self):
 
-        self.mask =pg.mask.from_surface(self.image)
+        self.mask =pg.mask.from_surface(self.image,1)
 
 
     def event(self,event,*args,**kwargs):

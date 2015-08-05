@@ -52,7 +52,7 @@ class PlaceLayer(BaseCanvasLayer):
 class PlaceData(BaseCanvasData):
     dft={'name':'place','music':'','panrange':(0,0,0,0),'bg':''}
     infotypes=deepcopy(BaseCanvasData.infotypes)
-    infotypes['sprite']=('name',)
+    infotypes['sprite']=('name','layer')
     datatype='place'
     Layer=PlaceLayer
 
@@ -75,7 +75,7 @@ class PlaceData(BaseCanvasData):
     def renew(self):
         BaseCanvasData.renew(self)
         self.idx=0
-        self.add(self.Layer() )
+        #self.add(self.Layer() )
         for l in self.layers:
             l.source=self
 
@@ -83,9 +83,6 @@ class PlaceData(BaseCanvasData):
         kwargs.setdefault('add_param',[])
         kwargs['add_param']+=['music','bg','panrange']
         return BaseCanvasData.txt_export(self,keydic,txtdic,typdic,**kwargs)
-
-    def klassmake(self,klass,*args):
-        return eval(klass)(*args)
 
     def __str__(self):
         return 'Place {}'.format(self.name)
@@ -95,9 +92,13 @@ class PlaceData(BaseCanvasData):
             #all below should be useless
             if item.type=='sprite':
                 if kwargs.get('layer',None):
-                    if not kwargs['layer'] in self.layers:
-                        print 'Missing layer', kwargs['layer']
-                        self.add(kwargs['layer'])
+                    layer=kwargs['layer']
+                    if isinstance(layer,basestring): #If layer given as trueID
+                        if not kwargs['layer'] in world.object:
+                            #print 'Missing layer trueID in world', kwargs['layer']
+                            return True
+                        #layer=world.object[layer]
+                        #self.add(kwargs['layer'])
                     if not item in kwargs['layer'].items:
                         kwargs['layer'].items.append(item)
                     else:

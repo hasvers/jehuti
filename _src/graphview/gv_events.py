@@ -747,7 +747,7 @@ class ChangeInfosEvt(Event):
 
     def affects(self):
         if hasattr(self.data,'precursors'):
-            prec=self.data.precursors
+            prec=self.data.precursors(self.item)
         else:
             prec=()
         return (self.item,self.data)+prec
@@ -833,9 +833,9 @@ class DeleteInfoEvt(Event):
 
     def prepare(self,edge,*args,**kwargs):
         if edge == (0,1):
-            if not self.item in self.data.infos:
+            if not self.item in self.data:
                 return False
-            old=self.data.infos[self.item]
+            old=self.data.get_info(self.item,transparent=False)
             for a in self.infos:
                 if not a:
                     continue
@@ -843,20 +843,22 @@ class DeleteInfoEvt(Event):
 
     def run(self,state,*args,**kwargs):
         if state==1:
-            if not self.item in self.data.infos:
+            if not self.item in self.data:
                 return False
-            cur=self.data.infos[self.item]
+            cur=self.data.get_info(self.item,transparent=False)
             for a in self.infos:
                 if not a in cur:
                     return False
-                del self.data.infos[self.item][a]
+
+                self.data.rem_info(self.item,a)
+
             return True
         if state==0:
             #Reinstate the info
-            if not self.item in self.data.infos:
+            if not self.item in self.data:
                 return False
             for a in self.infos:
-                self.data.infos[self.item][a]=self.oldinfos[a]
+                self.data.set_info(self.item,a,self.oldinfos[a],transparent=False)
             return True
         return False
 
@@ -899,7 +901,7 @@ class AddEvt(Event):
         if edge == (0,1):
             if self.kwargs.get('addrequired',False):
                 for i in self.item.required:
-                    if not i in self.data.infos and not i in self.states.node[1]['children_states'] :
+                    if not i in self.data and not i in self.states.node[1]['children_states'] :
                         evt = AddEvt(i,self.data, inverted=self.inverted,**self.kwargs)
                         self.add_sim_child( evt )
                         #required are first to come, last to go
@@ -912,10 +914,10 @@ class AddEvt(Event):
             for c in self.temp:#residues from previous undo/redo
                 self.rem_child(c)
 
-            for i in self.data.infos.keys():
+            for i in self.data.objects():
                 if self.item in i.required:
                     #remove (and re-add upon redo) all dependent items
-                    infos =self.data.infos[i]
+                    infos =self.data.get_info(i,transparent=False)
                     evt=AddEvt(i,self.data,infos=infos, inverted=self.inverted,**self.kwargs)
                     self.add_sim_child( evt)
                     self.temp.append(evt)
@@ -924,12 +926,12 @@ class AddEvt(Event):
                     self.states.node[0]['priority'][evt]=1
 
             if not self.infos:
-                self.infos=self.data.infos[self.item]
+                self.infos=self.data.get_info(self.item,transparent=False)
             subs=False
             for c in self.data.children:
-                if self.item in c.infos:
+                if self.item in c:
                     subs=True
-                    infos=c.infos[self.item]
+                    infos=c.get_info(self.item,transparent=False)
                     kwarg={}
                     kwarg.update(self.kwargs)
                     evt=AddEvt(self.item,c,infos=infos,inverted=self.inverted,**kwarg)
@@ -944,7 +946,8 @@ class AddEvt(Event):
     def run(self,state,*args,**kwargs):
         item=self.item
         if state == 1:
-            handled = self.data.add(item,rule=self.kwargs.get('rule','none'),**self.infos)
+            handled = self.data.add(item,rule=self.kwargs.get('rule','none'),
+                **self.infos)
             if handled and 'pos' in self.kwargs:
                 try:
                     self.data.pos[item]=self.kwargs['pos']
@@ -954,6 +957,11 @@ class AddEvt(Event):
         if state== 0:
             #print 'ADDEVT',self,state,kwargs.get('traceback','No traceback' )
             handled= self.data.remove(item)
+            if handled and 'pos' in self.kwargs:
+                try:
+                    del self.data.pos[item]
+                except:
+                    pass
             return handled
 
 class SelectEvt(Event):

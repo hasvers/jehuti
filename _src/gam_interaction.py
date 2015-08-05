@@ -49,7 +49,7 @@ class PsychologyModel(object):
         '''Eagerness to please actor, rescaled in [0,1].
         Depends on the difference between prox[ego][actor] and prox[actor][ego].'''
         ego=self.ego
-        eag=infosrc.get_info(ego,'prox')[actor]- infosrc.get_info(actor,'prox')[ego]
+        eag=infosrc.get_info(ego,'prox')[actor.trueID]- infosrc.get_info(actor,'prox')[ego.trueID]
         return (eag+1.)/2
 
     def difface(self,actor,infosrc):
@@ -170,7 +170,7 @@ class PsychologyModel(object):
         '''
         ego=self.ego
         infosrc=match.cast
-        prox=infosrc.get_info(ego,'prox')[actor]
+        prox=infosrc.get_info(ego,'prox')[actor.trueID]
         eagerness=self.eagerness(actor,infosrc)
         authority=infosrc.get_info(actor,'face')
         bias = self.perceive_bias(actor,match)
@@ -186,7 +186,7 @@ class PsychologyModel(object):
             return 1.
         egoinf=self.cast.get_info(ego)
         actorinf=self.cast.get_info(actor)
-        prox=egoinf['prox'][actor]
+        prox=egoinf['prox'][actor.trueID]
         return .5*(prox)*(2-actorinf['terr'])
 
 
@@ -1069,7 +1069,7 @@ class InteractionModel(object):
                 for e2 in tuple(tcalc):
                     if e2==e1:
                         continue
-                    if e1.tgtgraph in e2.tgtgraph.precursors:
+                    if e1.tgtgraph in e2.tgtgraph.precursors():
                         tcalc.remove(e2)
                         e1.add_sim_child(e2,priority="enclosed")
             evts+=tcalc
@@ -1098,7 +1098,7 @@ class InteractionModel(object):
                 psy=self.rules.psy[f.ego].ethos_effects([f]).iteritems()
                 for i,j in psy:
                     if i=='prox':
-                        j={f.actor:j}
+                        j={f.actor.trueID:j}
                     effect[(f.ego,i)]=j
 
                 effects.append( effect)

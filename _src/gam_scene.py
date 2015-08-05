@@ -29,17 +29,19 @@ class SceneHandler(Handler):
 
     def plug_game(self,game):
         self.game=game
+        #self.cast.data.add_context(game.world)
         #self.cast.upd_actors()
 
     def unplug_game(self):
-        self.cast.data.rem_context(game.world)
+        pass
+        #self.cast.data.rem_context(game.world)
 
-    def import_actor(self,act):
-        self.cast.add_actor(self.game.world.avatar(act))
+    def import_actor(self,act,source):
+        self.cast.add_actor(act,infos={'exporter':source})
         #do prox
 
     def import_setting(self,data):
-        self.setting.set_data(self.game.world.avatar(data))
+        self.setting.set_data(data)
         #do prox
 
     def return_to_editor(self):
@@ -56,12 +58,12 @@ class SceneEditor(SceneHandler):
         srcs= self.game.get_sources_for(self.data,'character')
         exactors=[]
         if srcs:
-            exactors+=[c.actor for c in srcs]
+            exactors+=[(c,c.actor) for c in srcs]
         if exactors:
-            flist=tuple( (a.name, lambda act=a:self.import_actor(act) )
-                 for a in exactors)
+            flist=tuple( (act.name, lambda a=act,s=src:self.import_actor(a,s) )
+                 for src,act in exactors)
             struct+=('Import actor',lambda s=struct,f=flist:user.ui.float_menu(f) ),
-        places=[]# self.game.get_sources_for(self.data,'place')
+        places= self.game.get_sources_for(self.data,'place')
         if places:
             flist2=tuple( (p.name, lambda sc=p:self.import_setting(sc) )
                  for p in places)

@@ -299,6 +299,8 @@ class LinkIcon(CanvasIcon):
             self.set = infosource
 
         val=infosource.get_info(self.link,'val')
+        if not val:
+            val=0
         self.wid=wid= self.width(val)
         #for c in self.children :
         #    c.kill()
@@ -374,6 +376,8 @@ class LinkGrabber(NodeIcon):
     layer = 0
     ID=None
     def __init__(self,canvas):
+        self.trueID='LinkGrabber'
+        self.name='LinkGrabber'
         self.image_sets={}
         self.set=None
         UI_Item.__init__(self)
@@ -401,7 +405,6 @@ class LinkGrabber(NodeIcon):
 
     def event(self,event,**kwargs):
         if event.type == pg.MOUSEBUTTONDOWN:
-            print 'yay',user.grabbed
             return self.canvas.handler.end_linkgrabber(self,event)
         if event.type == pg.MOUSEMOTION:
             pos = self.canvas.handler.mousepos()

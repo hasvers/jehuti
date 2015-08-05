@@ -9,6 +9,14 @@ pgdisplayflags={'full':pg.FULLSCREEN|pg.DOUBLEBUF|pg.HWSURFACE,'window':0}
 if database['resizable_window']:
     pgdisplayflags['window'] |=pg.RESIZABLE
 
+
+
+def klassmake(self,klass,*args):
+    return eval(klass)(*args)
+
+Data.klassmake=klassmake
+
+
 def windowed_size():
     w,h=graphic_chart['screen_size']
     wmax,hmax=pg.display.list_modes()[0]
@@ -101,7 +109,7 @@ def main():
     user.screen= screen.copy()
 
     pg.display.set_caption(database['title'])
-    pg.init()
+    #pg.init()
     pg.scrap.init()
     user.set_ui(StartMenuUI(None))
     scale_vec=user.scale_vec
@@ -194,9 +202,9 @@ main()
 
 if user.recording:
     user.trigger_video()
-print 'Quitting...',[pgmixer.Channel(x).get_busy() for x in range(pgmixer.get_num_channels() )]
-[pgmixer.Channel(x).stop()  for x in range(pgmixer.get_num_channels() )]
-print 'Done.',[pgmixer.Channel(x).get_busy() for x in range(pgmixer.get_num_channels() )]
+#print 'Quitting...',[pgmixer.Channel(x).get_busy() for x in range(pgmixer.get_num_channels() )]
+#[pgmixer.Channel(x).stop()  for x in range(pgmixer.get_num_channels() )]
+#print 'Done.',[pgmixer.Channel(x).get_busy() for x in range(pgmixer.get_num_channels() )]
 
 myMixer.quit()
 pg.quit()

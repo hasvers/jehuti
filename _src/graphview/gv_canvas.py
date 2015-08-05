@@ -105,7 +105,7 @@ class Canvas():
                 self.add(link,rule ='None')
 
         for c in graph.children :
-            for item in c.infos.keys():
+            for item in c.objects():
                 self.add(item,layer=c)
 
         self.set_layer(graph,0)
@@ -118,12 +118,14 @@ class Canvas():
 
     def set_graph_from_file(self,filename):
         print 'Set graph from', filename
-        if not database['graph_ext'] in filename:
-            fin = fopen(database['graph_path']+filename+database['graph_ext'], "rb" )
-        else :
-            fin = fopen(filename, "rb")
-        graph = pickle.load( fin)
-        fin.close()
+        #if not database['graph_ext'] in filename:
+            #fin = fopen(database['graph_path']+filename+database['graph_ext'], "rb" )
+        #else :
+            #fin = fopen(filename, "rb")
+        #graph = pickle.load( fin)
+        #fin.close()
+        graph=self.Graph()
+        graph.txt_import(filename)
         if not hasattr(graph,'nodes'):
             raise Exception('Not a valid graph file')
             return False
@@ -135,16 +137,17 @@ class Canvas():
 
     def save_graph_to_file(self,filename):
         print 'Saving graph as',filename
-        if not database['graph_ext'] in filename:
-            fout = fopen(database['graph_path']+filename+database['graph_ext'], "wb" )
-        else :
-            fout = fopen(filename, "wb" )
+        #if not database['graph_ext'] in filename:
+            #fout = fopen(database['graph_path']+filename+database['graph_ext'], "wb" )
+        #else :
+            #fout = fopen(filename, "wb" )
 
         self.graph.pos=self.pos
 
         self.handler.signal('save_graph')
-        pickle.dump( self.graph,fout  )
-        fout.close()
+        #pickle.dump( self.graph,fout  )
+        #fout.close()
+        self.graph.txt_export(filename=filename)
 
     def new_graph(self,*args):
         graph=self.graph
@@ -201,6 +204,7 @@ class Canvas():
             for i,j in kwargs.iteritems():
                 if i=='pos':
                     self.pos[item]=j
+                    self.graph.pos.setdefault(item,j)
                 if i=='state' :
                     icon.set_state(j)
             if item in self.pos :
@@ -476,7 +480,7 @@ class Canvas():
             for g in self.current_groups():
                 g.draw(self.surface)
         if full:
-            self.mask=pg.mask.from_surface(self.surface)
+            self.mask=pg.mask.from_surface(self.surface,1)
 
 
     def add_subgraph(self,subgraph=None,**kwargs):

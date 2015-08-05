@@ -42,9 +42,6 @@ class ActsceneData(CutsceneData):
     def __str__(self):
         return 'Actscene {}'.format(self.name)
 
-    def klassmake(self,klass,*args):
-        return eval(klass)(*args)
-
 class ActsceneSpriteIcon(CutsceneSpriteIcon):
     pass
 
@@ -227,6 +224,7 @@ class ActsceneEditorUI(CutsceneEditorUI):
         wintypes=kwargs.pop('wintypes',dict((  ('statusbar',lambda e,s=self:
                             StatusBar(e,menu=  [ ('Menu', s.statusmenu)] )),
                         ('sidepanel',lambda e,s=self:SidePanel(e,s.scene)),
+                        ('placepanel',lambda e,s=self: SettingPanel(e,s.scene.data,itemwrite=True)),
                         ('actscenepanel',lambda e,s=self: ActscenePanel(e,s.scene.data,itemwrite=True)),
                         ('spritepanel',lambda e,s=self: ActsceneSpritePanel(e,s.scene)),
                         ('layerpanel',lambda e,s=self: ActsceneLayerPanel(e,s.scene.data)),

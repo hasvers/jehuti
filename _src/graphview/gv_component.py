@@ -195,12 +195,17 @@ class Handler(object):
         path=database['{}_path'.format(genre)]
         ext=database['{}_ext'.format(genre)]
         print 'Setting {} from'.format(genre),filename
-        if not ext in filename:
-            fin = fopen(path+filename+ext, "rb" )
-        else :
-            fin = fopen(filename, "rb")
-        data = pickle.load( fin)
-        fin.close()
+        #if not ext in filename:
+            #fin = fopen(path+filename+ext, "rb" )
+        #else :
+            #fin = fopen(filename, "rb")
+        #data = pickle.load( fin)
+        try:
+            data=self.data()
+        except:
+            data=self.data.__class__()
+        data.txt_import(filename)
+        #fin.close()
         if kwargs.get('initial',False):
             self.data=data
         else:

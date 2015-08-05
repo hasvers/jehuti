@@ -79,10 +79,10 @@ class CastHandler(Handler):
         return False
 
 
-    def add_actor(self,actor):
+    def add_actor(self,actor,**kwargs):
         if actor in self.data.actors:
             return False
-        evt=AddEvt(actor,self.data)
+        evt=AddEvt(actor,self.data,**kwargs)
         user.evt.do(evt,self)
 
     def upd_actors(self):
@@ -107,42 +107,6 @@ class CastHandler(Handler):
         evt=AddEvt(actor,self.data)
         if user.evt.do(evt,self):
             self.upd_actors()
-
-    def save_actor(self,actor,filename):
-        fil = database['cast_path']+filename+database['cast_ext']
-        if not database['cast_ext'] in filename:
-            path = database['cast_path']+filename+database['cast_ext']
-        else :
-            path = filename
-        #import shutil
-        #try:
-            #shutil.copy2(path,path+'.arc')
-        #except:
-            #pass
-        infs= self.data.get_info(actor)
-        #for i,j in infs.iteritems():
-            #setattr(actor,i,j)
-        temprox={}
-        temprox.update(actor.prox)
-        for i,j in tuple(actor.prox.iteritems()): #TODO: Is it clever to save prox?
-            del temprox[i]
-            temprox[unicode(i)]=j
-        oldprox=actor.prox
-        actor.prox=temprox
-        fout=fopen(path,'wb')
-        pickle.dump( actor,fout  )
-        actor.prox=oldprox
-        fout.close()
-
-    def add_actor_from_file(self,filename):
-        if not database['cast_ext'] in filename:
-            fin = fopen(database['cast_path']+filename+database['cast_ext'], "rb" )
-        else :
-            fin = fopen(filename, "rb")
-        actor = pickle.load( fin)
-        print 'Loading', actor.name
-        fin.close()
-        self.add_actor(actor)
 
     def select(self,actor):
         if not self.view.icon[actor].is_selected:
@@ -180,11 +144,6 @@ class CastEditor(CastHandler):
         if not ergonomy['edit_on_select']:
             struct +=( ('Edit',lambda e=actor: self.signal('edit',e)), )
 
-        if 0:
-            lama= lambda f,e=actor:self.save_actor(e,f)
-            nam=self.data.get_info(actor,'name')
-            lams=lambda n=nam,l=lama: self.parent.parent.save_menu('cast',l,default=n)
-            struct+=('Save', lams),
         struct+= ('Remove',lambda e=actor: self.rem_actor(e)),
         return struct
 
@@ -215,8 +174,9 @@ class CastPlayer(CastHandler):
         else :
             oinf = self.data.get_info(self.parent.active_player)
             txt=infos['name'] +' '+ str(infos['face'])+' '+str(infos['terr'])
-            if actor in oinf['prox']:
-                 txt+= ' '+str(oinf['prox'][actor])
+            aid=actor.trueID
+            if aid in oinf['prox']:
+                 txt+= ' '+str(oinf['prox'][aid])
         return txt
 
     def set_active(self,actor):
@@ -260,13 +220,14 @@ class CastPlayer(CastHandler):
 
     def analyze(self,actor,ana):
         info=self.data.get_info(ana)
+        aid=actor.trueID
         prox=info['prox']
         terr=info['terr']
         face=info['face']
-        if prox[actor]<1./3.:
+        if prox[aid]<1./3.:
             padj='angry'
             pc='#cr#[Low empathy]##'
-        elif prox[actor] <2./3.:
+        elif prox[aid] <2./3.:
             padj='cold'
             pc='#cy#[Med empathy]##'
         else:

@@ -215,15 +215,6 @@ class SceneScriptEffect(TimedEvent):
         self.add_state(2,pred=1)
         self.block_thread=kwargs.get('block_thread',0)
 
-    #def __setattr__(self, name, value):
-        #In case the script effect is of Python type, it has to be
-        #declared to the user.world to update the ames automatically
-        #object.__setattr__(self, name, value)
-        #if name=='typ':
-            #if value =='Python':
-                #user.world.declare_python_script(self)
-            #else:
-                #user.world.undeclare_python_script(self)
 
     def copy(self):
         new=self.__class__()
@@ -304,13 +295,13 @@ class SceneScriptEffect(TimedEvent):
 
         if game:
             variables=game.variables
-            scenename=scene.data.filename()#name+database['{}_ext'.format(scene.data.datatype) ]
-            links=game.links(scenename)
+            #OBSOLETE scenename=scene.data.filename()#name+database['{}_ext'.format(scene.data.datatype) ]
+            links=game.links(scene.data.trueID)
             calls=['title','END',]
             for l,other in links:
                 if l.genre !='call':
                     continue
-                calls.append(other.data)
+                calls.append(other.dataID)
             temps={'save': ( ('info','input',{'legend':'Name'}) , )}
             if calls:
                 transitions=('None','Fade','XFade')

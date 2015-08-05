@@ -16,11 +16,12 @@ import os
 from PIL import Image as pilImage, ImageEnhance as pilImageEnhance
 from PIL import ImageOps as pilImageOps, ImageFilter as pilImageFilter
 import shutil
+import inspect
 
 from itertools import chain as iterchain
 
 pg.font.init()
-pgmixer.init(44100)
+#pgmixer.init(44100)
 colorconverter=matcolors.ColorConverter()
 profiler=cProfile.Profile()
 
@@ -231,8 +232,8 @@ def rftoint(nb):
 def shallow_nested(item,make_new=0,**kwargs):
     exclude=kwargs.get('exclude',() )
     #Makes shallow copies of all containers at all levels while conserving all non-containers
-    if hasattr(item,'nested_copy'):
-        if not item.nested_copy:
+    if hasattr(item,'immutable'):
+        if not item.immutable:
             #Tricky: I want databits to be duplicable (e.g. script effect)
             # but not dataitems that serve as reference (e.g. node),
             # neither fields contained in those dataitems
@@ -268,7 +269,7 @@ def shallow_nested(item,make_new=0,**kwargs):
                 if isinstance(j,nx.Graph):
                     print 'Shallow_nested: Cannot replicate networkx.Graph securely.'
                     new.__dict__[i]=j.__class__()
-                if True in [hasattr(j,k) for k in ('iteritems','nested_copy','__iter__')]:
+                if True in [hasattr(j,k) for k in ('iteritems','immutable','__iter__')]:
                     new.__dict__[i]=shallow_nested(j,make_new,**kwargs)
         return new
     if 'meth' in kwargs:

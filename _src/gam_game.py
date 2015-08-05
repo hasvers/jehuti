@@ -5,7 +5,7 @@ from gam_cutscene import *
 from gam_actscene import *
 from gam_cast_chara import *
 
-from gam_world import DataWorld
+#from gam_world import DataWorld
 
 class GameNode(Node):
     klass_name='GameSceneGraph.Node'
@@ -13,8 +13,9 @@ class GameNode(Node):
     dft={'name':'scene',
         'genre':'cutscene',
         'desc':'',
-        'data':None, #static data
-        'state':None, #dynamic data (evolving during play)
+        'filename':None, #static data - filename
+        'dataID':None, #static data - ID
+        'state':None, #dynamic data (evolving during play) - ID
         'val':1.
         }
 
@@ -82,7 +83,7 @@ class GameSceneGraph(Graph):
 
 
     infotypes={
-        'node':('name','genre','desc','val','data'),
+        'node':('name','genre','desc','val','filename','dataID'),
         'link':('name','genre','genres','desc','val'),
         }
     def __init__(self,**kwargs):
@@ -93,14 +94,14 @@ class GameSceneGraph(Graph):
     def refresh_dict(self):
         self.data_to_node={}
         for n in self.nodes:
-            if n.data in self.data_to_node:
-                print 'ERROR: The same data is already attached to another node',n.data
+            if n.dataID and n.dataID in self.data_to_node:
+                print 'ERROR: The same data is already attached to another node',n.dataID,self.data_to_node[n.dataID],n
                 continue
-            self.data_to_node[n.data]=n
+            self.data_to_node[n.dataID]=n
 
     def remove(self,item):
         if item.type=='node':
-            del self.data_to_node[item.data]
+            del self.data_to_node[item.dataID]
         return Graph.remove(self,item)
 
     def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
@@ -134,10 +135,6 @@ class GameData(Data):
         kwargs['add_param']+=['graph','first']
         return Data.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
-
-    def klassmake(self,klass,*args):
-        return eval(klass)(*args)
-
     def links(self,node_or_data):
         g=self.graph
         if node_or_data in g.data_to_node:
@@ -151,12 +148,10 @@ class GameData(Data):
             return [(l,l.other_parent(n)) for l in g.links[n]]
         return []
 
-    def get_node(self,node):
-        return self.graph.data_to_node[node]
-        #for g in self.graphs:
-            #if node in g.data_to_node:
-                #n=g.data_to_node[node]
-                #return n
+    def get_node(self,data):
+        if hasattr(data,'dataID'):
+            data=data.dataID
+        return self.graph.data_to_node[data]
 
 
 class GameState(Data):
@@ -178,16 +173,12 @@ class GameState(Data):
         Data.__init__(self,**kwargs)
         self.vargraph=nx.DiGraph() #evolving variable graph
         #TODO: how to export vargraph?
-        self.node_state={}
+        self.node_state={}#DataDict()
 
     def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
         kwargs.setdefault('add_param',[])
         kwargs['add_param']+=['node_state','current']
         return Data.txt_export(self,keydic,txtdic,typdic,**kwargs)
-
-    def klassmake(self,klass,*args):
-        return eval(klass)(*args)
-
 
 class GameCanvas(Canvas):
     Graph=GameData
@@ -198,23 +189,24 @@ class GameCanvas(Canvas):
     def react(self,evt):
         handled=0
         if ('change' in evt.type or 'rem_info' in evt.type)  and evt.item.type=='node':
-            if False and 'genre' in evt.infos:
-                #If I change the genre of a node, I should set its attached data to None
-                if not 'data' in evt.infos:
-                    evt.oldinfo['data']=self.get_info(evt.item,'data')
-                    evt.kwargs['data']=''
-                    evt.item.data=''
-            if 'data' in evt.infos:
+            if not 'dataID' in evt.infos and 'genre' in evt.infos:
+                #If I change the genre of a node, I should set its attached dataID to None
+                evt.oldinfo['dataID']=self.get_info(evt.item,'dataID')
+                evt.kwargs['dataID']=None
+                evt.item.dataID=None
+            if 'filename' in evt.infos:
                 #If I change the data, I have to change data_to_node
                 #First remove association with previous dataname
                 self.graph.refresh_dict()
+                self.handler.dataload(evt.item)
+        if 'add' in evt.type  and evt.item.type=='node':
+                self.handler.dataload(evt.item)
         return handled or Canvas.react(self,evt)
 
 
 class GameHandler(Handler):
     def __init__(self,parent=None,*args,**kwargs):
         Handler.__init__(self,parent=None,**kwargs)
-        self.world=DataWorld()
         self.loaded={}
 
     def set_data(self,data):
@@ -226,29 +218,31 @@ class GameHandler(Handler):
 
     def dataload(self,node):
         genre=node.genre
-        if not node.data in self.loaded:
+        if not node.filename:
+            return None
+        if not node.filename in self.loaded:
+            for l, nei in self.data.links(node):
+                if l.genre=='in' and node==l.parents[1]:
+                    self.dataload(nei)
+            print 'loading',node.filename
             try:
-                fin=fopen(node.data,'rb',filetype=genre)
-                data=pickle.load(fin)
+                fin=fopen(node.filename,'rb',filetype=genre)
             except Exception as e:
-                print "Couldn't load {}".format(node.data),e
-                try:
-                    data=self.blank_data(node.name,genre)
-                    data.txt_import(node.name)
-                except:
-                    return None
-            self.loaded[node.data]=data
-            if genre=='character':
-                self.world.declare(data,data.actor)
-            if genre=='place':
-                self.world.declare(data,data)
+                print "Couldn't load {}".format(node.filename),e
+                return None
+            data=self.blank_data(node.name,genre)
+            data.txt_import(node.filename)
+            self.loaded[node.filename]=data
+            self.data.graph.set_info(node,'dataID',data.trueID)
             self.data.graph.refresh_dict()
-            for c in list(data.components)+[data]:
-                c.add_context(self.world)
-                self.world.detect_avatars(c,data)
         else:
-            data=self.loaded[node.data]
+            data=self.loaded[node.filename]
         return data
+
+    def datarem(self,node):
+        if node.filename in self.loaded:
+            del self.loaded[node.filename]
+        self.data.graph.set_info(node,'dataID',None)
 
     def blank_data(self,name,genre):
         if genre=='match':
@@ -270,51 +264,35 @@ class GameHandler(Handler):
         '''Create data for a scene/object that bears the name of the node'''
         name=node.name
         data=self.blank_data(name,node.genre)
-        fout=fopen(name,'wb',filetype=node.genre)
-        pickle.dump(data,fout)
-        fout.close()
-        node.data=node.name
+        #fout=fopen(name,'wb',filetype=node.genre)
+        #pickle.dump(data,fout)
+        data.txt_export(filename=name )
+        #fout.close()
+        self.data.graph.set_info(node,'filename',node.name)
         self.dataload(node)
 
     def delete_data(self,node):
         '''Delete data bound to a node'''
-        name= self.loaded[node.data].name
-        fremove(name,filetype=node.genre)
-        del self.loaded[node.data]
-
-
-    def load_node(self,item):
-        #Dynamic loading, useless for now but maybe in the future?
-        if isinstance(item,basestring):
-            dataname=item
-            node = self.data.get_node(dataname)
-        else:
-            node=item
-            dataname=item.data
-        if not dataname in self.loaded:
-            self.dataload(node)
-        for l,n2 in self.data.links(node):
-            if not n2 in self.loaded:
-                self.dataload(n2)
-        return self.loaded[dataname]
+        fremove(node.filename,filetype=node.genre)
+        self.datarem(node)
 
     def get_sources_for(self,caller,typ):
         '''Find all possible sources of importable entities in the
         neighborhood of a caller (some scene, identified by its data)'''
         src=[]
-
-        node=None
-        for n,s in self.loaded.iteritems():
-            if s == caller:
-                node=n
-                break
-            elif str(s)==str(caller):
-                print 'ERROR: Get sources --', s,caller, id(s),id(caller)
-        if not node:
-            return src
-        for l,nei in self.data.links(node):
+        #print caller,typ
+        #node=None
+        #for n,s in self.loaded.iteritems():
+            #if s == caller:
+                #node=n
+                #break
+            #elif str(s)==str(caller):
+                #print 'ERROR: Get sources --', s,caller, id(s),id(caller)
+        #if not node:
+            #return src
+        for l,nei in self.data.links(caller.trueID):
             if nei.genre==typ:
-                src.append(self.loaded[nei.data])
+                src.append(world.database[nei.dataID])
         return src
 
 
@@ -376,15 +354,15 @@ class GameEditor(CanvasEditor,GameHandler):
 
         if typ == 'node':
             node=target.item
-            dataname =node.data
-            if dataname in self.loaded:
+            dataname =node.filename
+            #print dataname, node.dataID, world.database
+            if node.dataID in world.database:
                 struct+=('Open data',lambda t=node: self.signal('open',t)),
                 existing=True
             else:
-                if not dataname:
-                    dataname=node.name
                 try:
                     existing=fopen(dataname,'rb',filetype=node.genre)
+                    #print dataname, existing
                 except:
                     existing=False
             if existing:
@@ -524,8 +502,9 @@ class GamePlayer(GameHandler):
             self.gamestate.current=kwargs['current']
         fname='{}{}/{}{}'.format(database['game_path'],self.data.name,self.gamestate.name,database['save_ext'])
         print 'Saving state', fname
-        fout=fopen(fname,'wb')
-        pickle.dump(self.gamestate,fout)
+        #fout=fopen(fname,'wb')
+        #pickle.dump(self.gamestate,fout)
+        self.gamestate.txt_export(filename=fname)
         return
 
 
@@ -535,10 +514,10 @@ class GamePlayer(GameHandler):
                 del self.gamestate.node_state[self.gamestate.current]
             except:
                 pass
-        self.gamestate.current=node.data
-        if not node.data in self.gamestate.node_state:
+        self.gamestate.current=node.dataID
+        if not node.dataID in self.gamestate.node_state:
             state=user.ui.scene.data
-            self.gamestate.node_state[node.data]=state
+            self.gamestate.node_state[node]=state
         #if isinstance(node,basestring):
             #node=self.data.is_data_to_node(node)
         #genre,data=node.genre,self.dataload(node)
@@ -557,7 +536,7 @@ class GamePlayer(GameHandler):
 class GameNodePanel(NodePanel):
     attrs=(('name','input','Name',80,{'charlimit':20}),
             ('genre','listsel','Genre',120,{'values':GameSceneGraph.Node.genres}),
-            ('data','listsel','Data',120,{'values':(None,) }),
+            ('filename','listsel','Data',120,{'values':(None,) }),
             ('val','drag', 'Magnitude',80,{'minval':.5,'maxval':2.}),
             ('desc','input','Description',190,{'height':140,'wrap':True}),)
 
@@ -570,7 +549,7 @@ class GameNodePanel(NodePanel):
         cand =[c.replace( database['{}_ext'.format(genre)],'') for c in cand ]
         if cand == self.attrs[1][4]['values']:
             return False
-        data=self.ref.data
+        data=self.ref.filename
         if not data in cand:
             data=''
             #self.ref.data=data
@@ -580,7 +559,7 @@ class GameNodePanel(NodePanel):
         self.attrs=(
             ('name','input','Name',80,{'charlimit':20}),
             ('genre','listsel','Genre',120,{'val':genre,'values':GameSceneGraph.Node.genres,'remake':True}),
-            ('data','listsel','Data',120,{'val':data,'values':['']+cand}),#,'typecast':lambda e:e}),
+            ('filename','listsel','Data',120,{'val':data,'values':['']+cand}),#,'typecast':lambda e:e}),
             ('val','drag', 'Magnitude',80,{'minval':.5,'maxval':2.}),
             ('desc','input','Description',190,{'height':140,'wrap':True}),
         )

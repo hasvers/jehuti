@@ -143,7 +143,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
         for other in self.actors:
             if other != actor:
                 oinf = self.cast.get_info(other)
-                proxystart[other]=self.ruleset.init_prox(actor,other)
+                proxystart[other.trueID]=self.ruleset.init_prox(actor,other)
 
         self.cast.set_info(actor,'prox',proxystart)
         self.cast.set_info(actor,'path',0)

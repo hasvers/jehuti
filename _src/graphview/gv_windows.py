@@ -133,7 +133,7 @@ class Window(FieldContainer):
             exe=True
             allcom=com[source]
         else :
-            queue=self.queue
+            queue=self.queue[:]
             self.exe_command('queue')
             allcom=com[source]+com['always']
 
@@ -141,7 +141,8 @@ class Window(FieldContainer):
             queue+=[source]
 
         if 'cancel' in allcom :
-            self.queue=queue=[]
+            self.queue=[]
+            queue=[]
             if 'cancel' in com :
                 queue+=['cancel']
             exe=True
@@ -154,7 +155,7 @@ class Window(FieldContainer):
                         queue+=met"""
 
             if 'confirm' in com and not 'confirm' in self.queue:
-                self.queue+=['confirm']
+                queue+=['confirm']
             exe=True
 
         if exe:
@@ -181,6 +182,7 @@ class Window(FieldContainer):
                     else :
                         if i[0]:
                             i[0](*i[1])
+            self.queue=[]
 
     def add(self,field,**kwargs):
         no_paint=kwargs.pop('no_paint',False) #Do not update graphics

@@ -1,6 +1,222 @@
 # -*- coding: utf-8 -*-
 
+from collections import MutableMapping
+from itertools import imap as itertools_imap
 from gv_globals import *
+import weakref
+
+
+
+
+class World(object):
+    '''ECS-style World: Contains the list of trueIDs representing objects,
+    dictionaries pointing to the truest object corresponding to a given trueID
+    (i.e. the one given by the most authoritative source, typically its creator)
+    and to all references to a given trueID in databases'''
+
+    def __init__(self):
+        self.instances={} #for each trueID, list of databases that refer to it
+        self.object=weakref.WeakValueDictionary() #Python object corresponding to each trueID for targets of info
+            #(must be uploaded to the world from individual database as they create objects)
+        self.database=weakref.WeakValueDictionary() #Same thing with Data objects (containers of info)
+        self.reference={} #Database that holds the reference data on one dataobject
+
+    def add_instance(self,ID,data):
+        self.database.setdefault(data.trueID,data)
+        self.instances.setdefault(ID,set() ).add(data.trueID)
+
+    def record(self,obj,ref=None,force=False):
+        if not hasattr(obj,'trueID'):
+            return
+        if ref and (force or not obj.trueID in self.reference) :
+            self.reference[obj.trueID]=ref.trueID
+        if not force:
+            self.object.setdefault(obj.trueID,obj)
+        else:
+            self.object[obj.trueID]=obj
+
+    def add_database(self,db):
+        self.database[db.trueID]=db
+
+    def rem_database(self,db):
+        if db.trueID in self.database:
+            del self.database[db.trueID]
+
+world=World()
+
+
+class DataContainer(object):
+    '''Base class for DataList, DataDict and variants
+    Identifies objects by their trueID, and fetches them'''
+
+    def conv_key(self,key):
+        '''If the key is an object, record its trueID instead'''
+        if hasattr(key,'trueID'):
+            return key.trueID
+        return key
+
+    def inverse_conv_key(self,key):
+        '''Inverse conversion: retrieve nearest object associated with trueID'''
+        return self.database.get_object(key)
+
+    @property
+    def database(self):
+        db=self._database
+        if isinstance(db,basestring):
+            return world.database[db]
+        return db
+
+class DataList(list,DataContainer):
+    '''List form of the DataContainer'''
+
+    def __init__(self,database,*args):
+        list.__init__(self,*args)
+        self._database=database #Parent
+
+    def __getitem__(self,key):
+        return self.inverse_conv_key(list.__getitem__(self,key))
+
+    def __setitem__(self,key,val):
+        val=self.conv_key(val)
+        world.add_instance(val,self.database)
+        return list.__setitem__(self,key,val)
+
+    def __getslice__(self,*args):
+        return map(self.inverse_conv_key,list.__getslice__(self,*args))
+
+    def __setslice__(self,i,j,val):
+        val=self.conv_key(val)
+        world.add_instance(val,self.database)
+        return list.__setslice__(self,key,val)
+
+    def __contains__(self,key):
+        key=self.conv_key(key)
+        return list.__contains__(self,key)
+
+    def __iter__(self):
+        return itertools_imap(self.inverse_conv_key,list.__iter__(self))
+
+    def __repr__(self):
+        vals=[i for i in self]
+        if vals:
+            return "DataList({},{})".format(self.database,vals)
+        else:
+            return "DataList({})".format(self.database)
+
+
+class DataDict(dict,DataContainer):
+    '''Special class of dictionary
+     E.g. dic[obj] fetches dic[obj.trueID].
+    Possibility of setting a default value.
+    If default==None, throws an error for missing keys like normal dict'''
+
+    def __init__(self,database, default=None,update=None):
+        dict.__init__(self)
+        self._database=database #Parent
+        self.default=default
+        if update:
+            self.update(dict(update))
+
+    def __missing__(self, key):
+        if self.default is None:
+            exc= 'Missing key {} in {}'.format(key,self)
+            raise KeyError(exc)
+        return self.default
+
+    def __getitem__(self,key):
+        key=self.conv_key(key)
+        return dict.__getitem__(self,key)
+
+    def __setitem__(self,key,val):
+        key=self.conv_key(key)
+        world.add_instance(key,self.database)
+        return dict.__setitem__(self,key,val)
+
+    def __delitem__(self,key):
+        key=self.conv_key(key)
+        return dict.__delitem__(self,key)
+
+    def __contains__(self,key):
+        key=self.conv_key(key)
+        return dict.__contains__(self,key)
+
+    def keys(self):
+        return [self.inverse_conv_key(k) for k in dict.keys(self) ]
+
+    def iterkeys(self):
+        return itertools_imap(self.inverse_conv_key,dict.iterkeys(self))
+
+    def __iter__(self):
+        return self.iterkeys()
+
+    def get(self,key,other=None):
+        if key in self:
+            return self[key]
+        else:
+            return other
+
+    def setdefault(self,key,dft):
+        if key in self:
+            return self[key]
+        else:
+            self[key]=dft
+            return self[key]
+
+    def __repr__(self):
+        vals=dict((i,j) for i,j in self.iteritems())
+        if vals:
+            return "DataDict({},update={})".format(self.database,vals)
+        else:
+            return "DataDict({})".format(self.database)
+
+class DataMat(DataDict):
+    '''Two-dimensional equivalent of DataDict'''
+
+    def __init__(self, database,default=None,update=None):
+        dict.__init__(self)
+        self._database=database #Parent
+        self.default=default
+        self.dummy=DataDummy(default, self)
+        if update:
+            self.update(dict(update))
+
+    def __missing__(self, key):
+        if self.default is None:
+            exc= 'Missing key {} in {}'.format(key,self)
+            raise KeyError(exc)
+        self.dummy.miskey=key
+        return self.dummy
+
+    def __repr__(self):
+        vals=dict((i,j) for i,j in self.iteritems())
+        rpr="DataMat({},default={}".format(self.database,self.default)
+        if vals:
+            return rpr+",update={})".format(self.database,vals)
+        else:
+            return rpr+')'
+        return
+
+
+class DataDummy(MutableMapping):
+    '''Exists temporarily to create a new row in a DataMat'''
+    def __init__(self, default=0, parent=None):
+        self.default=default
+        self.parent=parent
+        self.miskey=None
+    def __getitem__(self, key):
+        return self.default
+    def __setitem__(self, key, value):
+        newrow=DataDict(self.parent.database,self.default)
+        newrow[key] = value
+        self.parent[self.miskey]=newrow
+    def __delitem__(self, key):
+        return False
+    def __iter__(self):
+        return iter([])
+    def __len__(self):
+        return 0
+
+
 
 class Data(object):
     #can contain only objects susceptible of pickling, ie  independent objects recoverable as such
@@ -13,17 +229,47 @@ class Data(object):
     overwrite_item= False #All infos that may be are inserted into the item
     _precursors=() #precursors include parent and are conceptually like it but only serve as info source
     contexts=() #contexts are precursors that should not be saved (e.g. gamewide variables)
-    nested_copy=0 #see DataBit
+    immutable=0 #see DataBit
 
-    @property
-    def precursors(self):
+
+    def precursors(self,item=None,mode='r'):
+        prec=self._precursors+self.contexts
         if not self.parent is None:
-            return (self.parent,)+self._precursors+self.contexts
-        else:
-            return self._precursors+self.contexts
+            prec= (self.parent,)+prec
+        if item and item.trueID in self.infos and mode=='r':
+            #Look if item has been imported from somewhere,
+            #only if you are trying to READ its properties (not write)
+            imported_from= self.infos[item.trueID].get('exporter',None)
+            if imported_from in world.database:
+                imported_from=world.database[imported_from]
+                prec=(imported_from,) + prec
+            #Reference database i.e. source of info where item was created
+            #(last resort if info is found nowhere)
+            #try:
+                #ref=world.database[world.reference[item.trueID]]
+                #if ref!=self:
+                    #prec=prec+(ref,)
+            #except:
+                #pass
+        return prec
+
+    def get_object(self,ID):
+        if not isinstance(ID,basestring):
+            #Temporary objects e.g. LinkGrabber and DataDict used as normal dict
+            return ID
+        if ID in self.obj_by_ID:
+            return self.obj_by_ID[ID]
+        for p in self.precursors():
+            o=p.get_object(ID)
+            if not o is None:
+                return o
+        return world.object[ID]
 
     def __init__(self,**kwargs):
+        self.trueID='#{}{}{}#'.format(self.__class__.__name__,id(self), int(time.time()*1000))
+        world.add_database(self)
         self.infos={}
+        self.obj_by_ID={}
         self.infotypes=deepcopy(self.infotypes)
         self.typID=dict((i,1) for i in self.infotypes.keys())
         self.parent=None
@@ -56,6 +302,9 @@ class Data(object):
 
 
     def save(self):
+        self.txt_export(filename=self.name)
+        return
+        #Obsolete===========================================================
         genre=self.datatype
         print 'Saving {} as'.format(genre),self.name
         fpath=resource_path(self.name,filetype=genre)
@@ -99,26 +348,29 @@ class Data(object):
             if hasattr(item,info_type):
                 return False
         else:
-            for p in self.precursors:
+            for p in self.precursors(item):
                 if info_type in p.get_infotypes(item.type):
                     return False
             return True
 
     def get_info(self,item,info_type=None,**kwargs):
+        iid=item.trueID
         if self.transparent and kwargs.get('transparent',True):
+            #If transparent, look up info in precursors i.e. more general databases
+
             if info_type == None :
                 tmp = {}
-                for p in self.precursors:
+                for p in self.precursors(item):
                     info= p.get_info(item,info_type)
                     if info:
                         tmp.update(info)
-                tmp.update(self.infos.get(item,{}))
+                tmp.update(self.infos.get(iid,{}))
                 return tmp
-            if item in self.infos and info_type in self.infos[item] :
-                #print item,info_type, self.infos[item][info_type]
-                return self.infos[item][info_type]
+            if iid in self.infos and info_type in self.infos[iid] :
+                #print item,info_type, self.infos[iid][info_type]
+                return self.infos[iid][info_type]
             else :
-                for p in self.precursors:
+                for p in self.precursors(item):
                     info= p.get_info(item,info_type)
                     if info!=None:
                         return info
@@ -126,28 +378,37 @@ class Data(object):
 
         if info_type != None and not info_type in self.infotypes[item.type]:
             return None
-        if not item in self.infos :
+        if not iid in self.infos :
             if not info_type:
                 return {}
             else :
                 return None
-        if not info_type in self.infos[item] :
+        if not info_type in self.infos[iid] :
             if info_type == None :
-                return self.infos[item]
+                return self.infos[iid]
             return None
-        return self.infos[item][info_type]
+        return self.infos[iid][info_type]
 
-#           keep in mind: storing some info in the items themselves ?
-#            try :
-#                self.infos[item][info] = getattr(item,info)
-#            except :
+    def rem_info(self,item,info_type,**kwargs):
+        if item.trueID in self.infos:
+            if info_type in self.infos[item.trueID]:
+                del self.infos[item.trueID][info_type]
+
+    def objects(self):
+        return [world.object[iid] for iid in self.infos]
 
 
     def set_info(self,item,ityp,val,**kwargs):
         rec=kwargs.get('recursive',False)
 
+        ##Crucial: replace mutable objects by  something containing only
+        # their trueID when they are used as value
+        if hasattr(val,'trueID') and not val.immutable:
+            val=val.trueID#WeakDataRef(val.trueID)
+
         #print self, item, ityp, val, self.infotypes[item.type]
         if ityp in self.infotypes[item.type]:
+            iid=item.trueID
 
             # transfer value to object itself
             if hasattr(item,ityp) and (self.overwrite_item or kwargs.get('overwrite_item',False)) :
@@ -157,22 +418,23 @@ class Data(object):
                     getattr(item,ityp).update(val)
 
 
-            if not item in self.infos :
-                self.infos[item]={}
-            if ityp in self.infos[item] and kwargs.get('update',False):
-                if hasattr(self.infos[item][ityp],'update') :
-                    self.infos[item][ityp].update(val)
-                elif hasattr(self.infos[item][ityp],'__iter__') and not hasattr(self.infos[item][ityp],'__hash__'):
-                    self.infos[item][ityp]+=val
+            if not iid in self.infos :
+                self.infos[iid]={}
+            infos=self.infos[iid]
+            if ityp in infos and kwargs.get('update',False):
+                if hasattr(infos[ityp],'update') :
+                    infos[ityp].update(val)
+                elif hasattr(infos[ityp],'__iter__') and not hasattr(self.infos[item][ityp],'__hash__'):
+                    infos[ityp]+=val
                 else:
-                    self.infos[item][ityp]=val
+                    infos[ityp]=val
             else :
-                self.infos[item][ityp]=val
+                infos[ityp]=val
             if not rec:
                 return True
 
         if self.transparent or rec:
-            for p in self.precursors:
+            for p in self.precursors(item,mode='w'):
                 info= p.set_info(item,ityp,val)
                 if info:
                     return info
@@ -196,22 +458,30 @@ class Data(object):
         else:
             types=list(self.infotypes[item_type])
             pos = 0
-            for p in self.precursors:
+            for p in self.precursors():
                 for t in p.infotypes[item_type]:
                     if not t in types :
                         types.insert(pos,t)
                     else:
                         pos = types.index(t)+1
                 return types
+        return []
 
     def add(self,item,**kwargs):
+        #If the trueID does not already exist in World, add it
+        if not kwargs.get('exporter',False):
+            world.record(item,self) #Record self as reference
+        else:
+            if not 'exporter' in self.infotypes[item.type]:
+                self.infotypes[item.type]+=('exporter',)
+            world.record(item)
+
         ityp= item.type
         added=False
-        if not item in self.infos:
-            #even if it is already in the infos, do not bail out, try adding to children
+        if not item.trueID  in self.infos:
             if not ityp in self.infotypes.keys():
                 return False
-            if item.required and False in (p in self.infos for p in item.required):
+            if item.required and False in ( self.contains(p) for p in item.required):
                 if kwargs.get('addrequired',False):
                     [self.add(x) for x in item.required]
                 else:
@@ -221,7 +491,7 @@ class Data(object):
                 lst=getattr(self,ityp+'s')
                 if isinstance(lst,list):
                     if item in lst:
-                        print 'ERROR DIAGNOSIS',item, self, ityp+'s', lst,self.infos.keys()
+                        print 'ERROR DIAGNOSIS',item, self, ityp+'s', lst,self.objects()
                         raise Exception('Item in list but not in infos.')
                     lst.append(item)
                 if hasattr(item, 'ID') and not item.ID is None:
@@ -235,21 +505,25 @@ class Data(object):
                     item.ID=self.typID[ityp]
                     self.typID[ityp]+=1
             added=True
-            self.infos[item]={}
+            self.infos[item.trueID]={}
 
             if not item in self.new_items:
                 self.new_items.append(item)
 
+            if 'exporter' in kwargs:
+                self.set_info(item,'exporter',kwargs['exporter'])
+                #Set exporter first to test if this is sole source
+
             baseinfos={}
             for i in self.infotypes[item.type]:
-                if hasattr(item,i):
+                if hasattr(item,i) and self.overwrite_item:
                     baseinfos[i]=getattr(item,i)
-                elif i in item.default_infos:
+                elif self.is_sole_source(i,item) and i in item.default_infos:
                     baseinfos[i]= deepcopy(item.default_infos[i])
 
             if self.transparent: #do not cover parent's infos with default infos !
                 for j in iterchain(p.get_infotypes(item.type,force_opaque=1)
-                             for p in self.precursors if p):
+                             for p in self.precursors(item) if p):
                     for typ in j:
                         try:
                             del baseinfos[typ]
@@ -261,6 +535,7 @@ class Data(object):
                 if i in self.infotypes[item.type] :
                     self.set_info(item,i,j)
 
+        #even if it is already in the infos, do not bail out, try adding to children
         rule = kwargs.pop('rule',None)
         for c in self.children :
             if c.should_contain(item,rule):
@@ -274,7 +549,7 @@ class Data(object):
                 getattr(self,item.type+'s').remove(item)
             except:
                 pass
-            del self.infos[item]
+            del self.infos[item.trueID]
             try:
                 self.new_items.remove(item)
             except:
@@ -304,7 +579,7 @@ class Data(object):
                     item+=getattr(data,i+'s')
                 except:
                     pass
-            items += [i for i in data.infos.keys() if not i in items]
+            items += [i for i in data.objects() if not i in items]
         moved=[]
         while items :
             i=items.pop(0)
@@ -315,8 +590,8 @@ class Data(object):
             sc=self.should_contain(i,rule)
             if sc:
                 opt={}
-                if 'infos' in kwargs and i in kwargs['infos']:
-                    opt.update(kwargs['infos'][i])
+                if 'infos' in kwargs and i.trueID in kwargs['infos']:
+                    opt.update(kwargs['infos'][i.trueID])
                 if hasattr(sc,'keys'):
                     opt.update(sc)
                 #print self, i, opt
@@ -355,10 +630,12 @@ class Data(object):
         return rule(item)
 
     def contains(self,item):
-        return item in self.infos
+        return item.trueID in self.infos
+    def __contains__(self,item):
+        return item.trueID in self.infos
 
     def renew(self,renewinfotypes=True):
-        self.infos={}
+        self.infos={}#DataDict(self)
         for i in self.infotypes:
             #empty typedlists
             try:
@@ -374,8 +651,10 @@ class Data(object):
         self.new_items=[]
 
     def finexport(self,txtdic,typdic,filename):
+        '''Utility function that finalizes the text export procedure:
+Opens the file and writes the items to it. '''
         #End of the text export procedure
-        filename=database.get(self.datatype+'_path', database['basepath']) +filename+'.arc.txt'
+        filename=resource_path(filename,filetype=self.datatype)
         fd = fopen(filename, "w")
         #print typdic
         for typ,keys in typdic.iteritems():
@@ -383,18 +662,26 @@ class Data(object):
                 fd.write(unicode(txtdic[key])+u'\n')
         fd.close()
 
-    def testport(self,o,keydic,txtdic,typdic):
+    def txt_extract(self,o,keydic,txtdic,typdic):
+        '''Utility function for the text export procedure:
+Recursively explores data and replaces any reference to a game object by their key.'''
         #Recursive exploration and annotation
         if hasattr(o,'txt_export'):
+            #Data or Databit
             if not id(o) in keydic:
                 o.txt_export(keydic,txtdic,typdic)
-            return u'#{}#'.format(keydic[id(o)])
+            return u'{}'.format(keydic[id(o)])
         else:
-            test=lambda e:self.testport(e,keydic,txtdic,typdic)
+            #Other data structure, to be explored
+            test=lambda e:self.txt_extract(e,keydic,txtdic,typdic)
             if hasattr(o,'keys'):
+                if isinstance(o,DataDict):
+                    o.update({test(x):test(y) for x,y in o.iteritems()}  )
+                    return o
                 return o.__class__( (  (test(x),test(y)) for x,y in o.iteritems() ) )
             elif hasattr(o,'__iter__'):
                 if 'array' in o.__class__.__name__ :
+                    #Solves problems with numpy arrays
                     if not o.shape:
                         print 'ERROR: 0D array',o
                         if o == array(None):
@@ -408,6 +695,13 @@ class Data(object):
                 return o
 
     def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
+        '''Export an object as text. Called recursively, passing down:
+            keydic
+            txtdic
+            typdic
+        Accepts as keyword arguments:
+            init_param: names of attributes that are needed at initialization
+            add_param: names of attributes that must be exported'''
         #Export as text
         init_param=kwargs.pop('init_param',[])
         add_param=set(kwargs.pop('add_param',[]))#receive from subclasses specific attributes to save
@@ -423,19 +717,21 @@ class Data(object):
         else:
             klassn=self.__class__.__name__
         if not id(self) in keydic:
-
-            keydic[id(self)]=len(keydic.keys() )
+            keydic[id(self)]=self.trueID
             typdic.setdefault(klassn,[]).append(keydic[id(self)])
-        txt=u"#{}#\n ##class:{}\n ##initparam:{}\n".format(
+        txt=u"{}\n ##class:{}\n ##initparam:{}\n".format(
             keydic[id(self)],klassn,init_param)
-        test=lambda e:self.testport(e,keydic,txtdic,typdic)
+        test=lambda e:self.txt_extract(e,keydic,txtdic,typdic)
+        #Store attributes of this object
         dic={}
         for i in add_param:
             j=getattr(self,i)
             dic[i]=j
+        #Store infos on other objects
         dicinf={}
         for i in self.infos:
             dicinf[i]={}
+            test(world.object[i])
             for j,k in self.infos[i].iteritems():
                 if isinstance(k,ndarray):
                     k,k2=tuple(k),k
@@ -458,7 +754,6 @@ class Data(object):
                 txt+=tmp
         txt+=u'##\n'
         txtdic[keydic[id(self)]]=txt
-
         if starter:
             return self.finexport(txtdic,typdic,kwargs['filename'])
         else:
@@ -482,6 +777,9 @@ class Data(object):
                 o=eval(o)
         test=lambda e:self.testrev(e,itemdic,secondrun)
         if hasattr(o,'keys'):
+            if isinstance(o,DataDict):
+                o.update({test(x):test(y) for x,y in o.iteritems()}  )
+                return o
             return o.__class__( (  (test(x),test(y)) for x,y in o.iteritems() ) )
         elif hasattr(o,'__iter__'):
             if 'array' in o.__class__.__name__:
@@ -490,23 +788,20 @@ class Data(object):
         else:
             return o
 
-    def klassmake(self,klass,*args):
-        #paste in subclasses to use the namespace of the file they live in
-        #certainly a better way to do this
-        return eval(klass)(*args)
 
     def txt_import(self,filename):
-        try:
-            fd=fopen(filename,'r')
-        except:
-            filename=database.get(self.datatype+'_path', database['basepath']) +filename+'.arc.txt'
-            fd = fopen(filename, "r")
+        '''Overwrite content of this object with information imported from filename,
+        which should contain this object as #0#, then its dependents as #n#.'''
+        world.rem_database(self) #remove this object's 'trueID from world
+        #Prepare
+        fd=fopen(filename,filetype=self.datatype)
         attrs={}
         infos={}
         chunk={}
         items={}
         klasses={}
         initparams={}
+        trueID={}
         lastid=None
         mode='attr'
         lines=[]
@@ -515,7 +810,9 @@ class Data(object):
             if len(l)>2 and l[0]==l[-1]=='#':
                 items[l]=l
             lines.append(l)
+        #Read lines
         for l in lines:
+            #chunk = series of lines belonging to the same object
             if not l:
                 continue
             if l=='##':
@@ -527,6 +824,7 @@ class Data(object):
                 mode='attr'
             elif '##info' in l:
                 attrs[lastid]=chunk
+                #trueID[lastid]=chunk['trueID']
                 chunk={}
                 mode='info'
             elif 'class:' in l:
@@ -539,8 +837,8 @@ class Data(object):
                 key,val=[self.testrev(x.strip(),items) for x in l.split(':',1)]
                 chunk[key]=val
 
-        candidates=[]
-        to_init_last=[]
+        candidates=[] #Candidates to be this object
+        to_init_last=[] #Objects that refer to others and must thus be initialized after
         if hasattr(self,'klass_name'):
             klassn=self.klass_name
         else:
@@ -584,35 +882,42 @@ class Data(object):
                 to_init_last.append(i)
             else:
                 items[i]=self.klassmake(klass,*args)
-
         self.renew()
+        #Attributes
         for i,j in attrs.iteritems():
             item=items[i]
             for k,v in j.iteritems():
                 key,val=[self.testrev(x,items,1) for x in (k,v)]
                 if key=='infotypes':
+                    #Check whether infotypes have changed
                     old=getattr(item,key)
                     diff=[(k,set(val.get(k,()))^set(old.get(k,() ) )) for k in set(val)|set(old) ]
-                    diff=[k for k in diff if k[1]]
+                    diff=[str('on {}: infotypes {}'.format(k[0],list(k[1]))) for k in diff if k[1]]
                     if diff:
-                        print 'Change in TxtImport:',item.__class__, diff
+                        print 'Change in TxtImport: ',item.__class__, ' ; '.join(diff)
                 else:
                     setattr(item,key,val)
+            item.trueID=i
+
+        #Infos
         for i,j in infos.iteritems():
             item=items[i]
             for k,v in j.iteritems():
                 key,val=[self.testrev(x,items,1) for x in (k,v)]
                 added=item.add(key,addrequired=True, **val)
                 if not added:
-                    if key in item.infos:
-                        item.infos[key].update(val)
+                    if key in item:
+                        item.infos[key.trueID].update(val)
                         #for x,y in val.iteritems()
                             #item.set_info(key,x,y)
                     else:
                         print 'Not added:', item, key, val
                         raise Exception('Adding error')
-        fd.close()
 
+
+
+        fd.close()
+        world.add_database(self)
     #def context_trans(self,item,dic):
         ##translates objects between contexts
         #if not hasattr(item,'truename'):
@@ -625,22 +930,9 @@ class Data(object):
         but should not be saved together with this data object (e.g. because
         it comes from the database of the entire game)
         '''
-
-        #rcontext=context.__class__()
-        #rcontext.context_origin=context
-        #dic={i.truename:i for i in self.infos if hasattr(i,'truename') }
-        #for j in context.infos:
-            #rcontext.infos[j]=shallow_nested(context.infos[j],
-                        #meth=lambda e,d=dic:self.context_trans(e,d))
-            #ref=None
-            #for iname,i in dic.iteritems():
-                #if iname==j.truename:
-                    #rcontext.infos[i]=rcontext.infos[j]
-        #self.contexts+= rcontext,
         self.contexts+= context,
 
     def rem_context(self,context):
-        #self.contexts=(c for c in self.contexts if c.context_origin!=context)
         self.contexts=(c for c in self.contexts if c!=context)
 
 
@@ -648,7 +940,7 @@ class DataBit(object):
     '''Urstructure of DataItem, cannot be the subject of information in a datastructure
     (i.e. is a pure value, never used as reference)'''
     dft={}
-    nested_copy=1
+    immutable=1
     #If I make a copy of some object with this DataBit as one of its fields,
     #create instead a copy of the DataBit (i.e. behaves like tuple rather than list)
     #Set to 1 only if this DataBit is #never# used as reference
@@ -656,6 +948,7 @@ class DataBit(object):
 
 
     def __init__(self,**kwargs):
+        self.trueID='#{}{}{}#'.format(self.__class__.__name__,id(self), int(time.time()*1000))
         if not hasattr(self,'type'):
             self.type='databit'
         self.default_infos={}
@@ -693,17 +986,18 @@ class DataBit(object):
         init_param=kwargs.pop('init_param',[])
         add_param=set(kwargs.pop('add_param',[]))
         add_param.update(set(['type']))
+        #add_param.add('trueID')
         if hasattr(self,'klass_name'):
             klassn=self.klass_name
         else:
             klassn=self.__class__.__name__
 
         if not id(self) in keydic:
-            keydic[id(self)]=len(keydic.keys() )
+            keydic[id(self)]=self.trueID
             typdic.setdefault(klassn,[]).append(keydic[id(self)])
-        txt=u"#{}#\n ##class:{}\n ##initparam:{}\n".format(
+        txt=u"{}\n ##class:{}\n ##initparam:{}\n".format(
             keydic[id(self)],klassn,init_param)
-        test=lambda e:Data().testport(e,keydic,txtdic,typdic)
+        test=lambda e:Data().txt_extract(e,keydic,txtdic,typdic)
         for i in set(sorted(self.dft))|set(add_param):
             if not hasattr(self,i):
                 print 'ERROR: {} has no attr {}'.format(self,i)
@@ -716,11 +1010,12 @@ class DataBit(object):
     def txt_import(self):
         pass
 
+
 class DataItem(DataBit):
 
     required=() #=This dataitem can exist in a data structure only if all the required items are already there
     ID=None #ID given to it by the data structure
-    nested_copy=0
+    immutable=0
     def __init__(self,**kwargs):
         if not hasattr(self,'type'):
             self.type='dataitem'
@@ -730,7 +1025,10 @@ class DataItem(DataBit):
         kwargs.setdefault('add_param',[])
         kwargs['add_param']=set(kwargs['add_param'])
         kwargs['add_param'].update(set(['required','ID']))
-        if hasattr(self,'truename'):
-            kwargs['add_param'].add('truename')
         DataBit.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
+    def __setattr__(self,name,value):
+        dname=debug.caller_name()
+        if not True in [x  in  dname for x in ('txt_import','set_info',str(self.__class__.__name__ ))]:
+            print "DataItem: set_attr called by", dname, name, value
+        return DataBit.__setattr__(self,name,value)

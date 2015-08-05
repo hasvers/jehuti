@@ -194,8 +194,8 @@ class SoundMaster(object):
         self.channels={}
         #self.channel.set_volume(self.defaultvol)
         SoundMaster.SMid+=1
-        if channel>pg.mixer.get_num_channels():
-            raise Exception('Not enough audio channels')
+        #if channel>pg.mixer.get_num_channels():
+            #raise Exception('Not enough audio channels')
 
     def play(self,snd,vol=None, **kwargs):
         if self.mute:
@@ -246,10 +246,10 @@ class SoundMaster(object):
 
     def trigger(self):
         if not self.mute:
-            pg.mixer.pause()
+            self.mixer.pause()
             self.mute=1
         else:
-            pg.mixer.unpause()
+            self.mixer.unpause()
             self.mute=0
 
 class MusicMaster(object):

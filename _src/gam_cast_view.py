@@ -210,14 +210,12 @@ class ActorPanel(SidePanel):
 
 
     def __init__(self,interface,infosource,ref=None,**kwargs):
-        if not ref:
-            ref=Actor()
         self.ref=ref
         self.infosource=infosource
         self.interface=interface
-        for dft in (ref.dft_attr,ref.dft_res):
+        for dft in (Actor.dft_attr,Actor.dft_res):
             for i, j in dft.iteritems():
-                self.attrs=self.attrs+((i,'drag',ref.dft_names[i],80,{'minval':0.,'maxval':1.}),)
+                self.attrs=self.attrs+((i,'drag',Actor.dft_names[i],80,{'minval':0.,'maxval':1.}),)
         self.attrs+=(('prof','inputlist','Proficiencies',120,{'add':True,'menu':{'type':'talent'} }),
             )
         SidePanel.__init__(self,interface,infosource,**kwargs)

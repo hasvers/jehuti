@@ -436,8 +436,9 @@ class MatchUI(BasicUI,SceneUI):
         return super(MatchUI, self).event(event,wseq=wseq,**kwargs)
 
     def save_state(self,savename):
-        self.game_ui.game.gamestate.node_state[self.match.data.parent.name+database['match_ext']]=self.match.data
-        self.game_ui.game.save_state(savename)
+        game=self.game_ui.game
+        game.gamestate.node_state[game.data_to_node(self.match.data.trueID)]=self.match.data
+        game.save_state(savename)
 
     def statusmenu(self):
         struct=()
