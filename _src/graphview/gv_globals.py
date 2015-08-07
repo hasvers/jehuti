@@ -16,7 +16,6 @@ import os
 from PIL import Image as pilImage, ImageEnhance as pilImageEnhance
 from PIL import ImageOps as pilImageOps, ImageFilter as pilImageFilter
 import shutil
-import inspect
 
 from itertools import chain as iterchain
 
@@ -37,9 +36,20 @@ def prolog(fname):
 
 class Clipboard(object):
     def copy(self,txt):
-        pg.scrap.put('TEXT',txt)
+        dft='TEXT'
+        for typ in pg.scrap.get_types():
+            if 'utf8' in typ.lower():
+                dft=typ
+                break
+        pg.scrap.put(dft,txt.encode('utf-8'))
     def paste(self):
-        return pg.scrap.get('TEXT')
+        dft='TEXT'
+        for typ in pg.scrap.get_types():
+            if 'utf8' in typ.lower():
+                dft=typ
+                break
+        txt=pg.scrap.get(dft)
+        return txt.decode('utf-8')
 
 clipboard=Clipboard()
 
@@ -77,14 +87,27 @@ def resource_path(relative,**kwargs):
         return os.path.join(sys._MEIPASS, path ,relative)
     return os.path.join(path,relative)
 
-def olistdir(path,ext=None):
+def olistdir(path='',ext=None,with_path=False,filetype=None):
     '''OS-agnostic directory listing, restricted to files with extension ext.'''
+
+    if filetype:
+        if not ext and filetype+'_ext' in database:
+            ext=database[filetype+'_ext']
+        fpath=filetype+'_path'
+        if fpath in database and not database[fpath] in path :
+            path = os.path.join(database[fpath],path)
     if ext:
         if isinstance(ext,basestring):
             ext=[ext]
         ext=[e if e[0]=='.' else '.'+e for e in ext]
-    return sorted([i for i in os.listdir( os.path.normpath(resource_path(path) )) if i[0]!='~'
+
+    path=os.path.normpath(resource_path(path) )
+    tmp= sorted([i for i in os.listdir( path) if i[0]!='~'
         and (not ext or True  in [i.endswith(e) for e in ext]) ])
+    if with_path:
+        tmp=[os.path.join(path,i) for i in tmp]
+    return tmp
+
 
 def image_load(path):
     return pg.image.load(os.path.normpath(resource_path(path)) )

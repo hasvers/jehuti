@@ -205,8 +205,7 @@ class ReactEvt(MatchEvent):
         try:
             received_truth = self.kwargs['truth']
         except:
-            print act,evt,evt.args,evt.kwargs
-            raise Exception()
+            raise Exception('No truth {} {} {} {}'.format(act,evt,evt.args,evt.kwargs) )
 
         for c in evt.subclaims:
             sub=ReactEvt(c.source,act,c,**c.decl.kwargs)
@@ -260,24 +259,6 @@ class ReactEvt(MatchEvent):
         self.child_add(item,sao,**saokwargs)
 
 
-        if 0:#not database['demo_mode']:
-            #mostly obsolete (logicevt interferes with automatic computing done by canvas handler
-            #might be useful only for ConcedeEvents
-
-            if self.is_discovery or item.type=='node' and not 'claim' in self.parent.type :
-                #SETS INITIAL TRUTH IN DISCOVERY
-                #useful also when node truth change comes from script or other
-                #extraneous effect (when it comes from a link, appropriate logicevt
-                #will be created as a children of the link's)
-                if self.is_discovery or match.ruleset.truth_disagreement(believed_truth,
-                                match.data.actorgraph[act].get_info(item,'truth')):
-                    levt=LogicEvt(self.source,act,item)
-                    levt.parent=self
-                    self.add_sim_child(levt,priority=-1 )
-            if item.type=='link':
-                levt=LogicEvt(self.source,act,item)
-                levt.parent=self
-                self.add_sim_child(levt ,priority=-1)
         self.kwargs['agreement']=agreement
         self.effects=effects #Let the batch deal with them
 
@@ -448,10 +429,10 @@ class LogicEvt(MatchEvent):
                 owner=sub.get_info(target,'claimed')
                 if not owner:
                     return
-                actcause=match.cast.actor_by_id[owner]
+                actcause=world.get_object(owner)
                 if act == actcause:
                     print 'Receiving logical consequence of own claim! (i.e. analyzing own react, not good)', act
-                if tinf['claimed'] == act.ID and act!=actcause and prevtruth != truth:
+                if tinf['claimed'] == act.trueID and act!=actcause and prevtruth != truth:
                     if match.ruleset.concede_test(act,actcause,tinf,prevtruth,truth):
                         print act, 'concedes', target, 'to', actcause
                         self.add_sim_child(ConcedeEvt(self,act,actcause,target))
@@ -583,9 +564,9 @@ class ClaimEvt(MatchEvent):
         nevt.parent=self
 
 
-#        self.signal(evt.type,'change_infos_canvas',evt.item,claimed=evt.actor.ID,evoked=match.turn)
+#        self.signal(evt.type,'change_infos_canvas',evt.item,claimed=evt.actor,evoked=match.turn)
         grp=match.data.actorsubgraphs[self.actor][self.actor]
-        self.child_chginfo(item,grp,claimed=evt.actor.ID,priority=-1)
+        self.child_chginfo(item,grp,claimed=evt.actor,priority=-1)
         for act in match.actors:
             actinf=match.cast.get_info(act)
             sub=match.data.actorsubgraphs[act][act]
@@ -624,13 +605,13 @@ class ConcedeEvt(MatchEvent):
     def prep_do(self,match,*args,**kwargs):
         item=self.item
         iti = match.canvas.get_info(item)
-        if  iti['claimed'] !=self.actor.ID :
+        if  iti['claimed'] !=self.actor.trueID :
             return False
 #        acti = match.cast.get_info(self.actor)
         self.effects=match.ruleset.concede_effects(self.actor,self.receiver,iti)
         self.turn = match.turn
         grp=match.data.convgraph
-        self.child_chginfo(item,grp,claimed=self.receiver.ID)
+        self.child_chginfo(item,grp,claimed=self.receiver.trueID)
         for act in match.actors:
             actinf=match.cast.get_info(act)
             for key,eff in actinf['effects'].iteritems():
@@ -955,7 +936,6 @@ class BatchEvt(MatchEvent):
                 True
 
         if 'reveal' in sgn:
-#            print 'yay', signal
             self.canvas.active_graph.add(sarg[0])
             self.canvas.add(sarg[0])
             self.canvas.catch_new()

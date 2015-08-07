@@ -144,7 +144,7 @@ class MatchRuleset(LogicRuleset):
 
     def actor_selfgraph_init_rule(self,actor,item):
         # Should an item belong to the initial actor graph ?
-        iti= self.match.actorgraph[actor].get_info(item)
+        iti= self.match.actorgraph[actor.trueID].get_info(item)
         act=self.cast.get_info(actor)
         if 'cflags' in iti:
             if True in [i in iti['cflags'] for i in ('Include','Starter','Doxa')]:
@@ -159,8 +159,8 @@ class MatchRuleset(LogicRuleset):
 
     def actor_othergraph_init_rule(self,actor,other,item):
         # Should an item belong to the initial other graph ?
-        iti= self.match.actorgraph[actor].get_info(item)
-        oti= self.match.actorgraph[other].get_info(item)
+        iti= self.match.actorgraph[actor.trueID].get_info(item)
+        oti= self.match.actorgraph[other.trueID].get_info(item)
         act=self.cast.get_info(actor)
         oth=self.cast.get_info(other)
         if 'cflags' in iti:
@@ -260,7 +260,7 @@ class MatchRuleset(LogicRuleset):
         nbact=0
         for act in self.cast.actors :
             if act!=actor:
-                totprox+= self.cast.get_info(act,'prox')[actor.trueID]
+                totprox+= self.cast.get_info(act,'prox')[actor]
                 nbact+=1
         dist=ergonomy['canvas_typical_dist']
         if not nbact:

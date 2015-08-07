@@ -189,11 +189,28 @@ class Handler(object):
 
         return False
 
+    def get_from_file(self,filename,**kwargs):
+        genre=kwargs.get('datatype',self.data.datatype)
+        klass=kwargs.get('klass',self.data.__class__.__name__)
+        items=world.explore_file(resource_path(filename,filetype=genre))
+        for i in items:
+            if world.future_data[i]['klass']== klass:
+                data=world.make_data(i)
+                break
+        return data
 
     def set_from_file(self,filename,**kwargs):
-        genre=self.data.datatype
-        path=database['{}_path'.format(genre)]
-        ext=database['{}_ext'.format(genre)]
+        data=self.get_from_file(filename,**kwargs)
+        if kwargs.get('initial',False):
+            self.data=data
+            return None
+        else:
+            return self.set_data(data)
+
+    def old_set_from_file(self,filename):
+        genre=kwargs.get('datatype',self.data.datatype)
+        #path=database['{}_path'.format(genre)]
+        #ext=database['{}_ext'.format(genre)]
         print 'Setting {} from'.format(genre),filename
         #if not ext in filename:
             #fin = fopen(path+filename+ext, "rb" )

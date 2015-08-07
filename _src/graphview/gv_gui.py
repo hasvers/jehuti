@@ -236,10 +236,8 @@ class BasicUI(UI_Widget):
         #ballpos=
 
     def close_balloon(self,ball):
-        try:
+        if ball in self.balloons.get(ball.anchor,()):
             self.balloons[ball.anchor].remove(ball)
-        except:
-            pass
         self.close(ball)
 
     def trigger_view(self,widget):
@@ -542,10 +540,8 @@ class BasicUI(UI_Widget):
 
         if event.type==pg.KEYDOWN :
             if user.focused_on and  user.focused_on.event(event) :
-                try:
+                if hasattr(user.focused_on,'parent'):
                     user.focused_on.parent.dirty=1
-                except:
-                    pass
                 return True
             elif self.balloons and event.key in (pg.K_SPACE, pg.K_RETURN):
                 for b in tuple(self.balloons):

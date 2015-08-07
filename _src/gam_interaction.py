@@ -49,7 +49,9 @@ class PsychologyModel(object):
         '''Eagerness to please actor, rescaled in [0,1].
         Depends on the difference between prox[ego][actor] and prox[actor][ego].'''
         ego=self.ego
-        eag=infosrc.get_info(ego,'prox')[actor.trueID]- infosrc.get_info(actor,'prox')[ego.trueID]
+        if world.get_object(ego) == world.get_object(actor):
+            raise Exception("Self eagerness!")
+        eag=infosrc.get_info(ego,'prox')[actor]- infosrc.get_info(actor,'prox')[ego]
         return (eag+1.)/2
 
     def difface(self,actor,infosrc):
@@ -170,7 +172,7 @@ class PsychologyModel(object):
         '''
         ego=self.ego
         infosrc=match.cast
-        prox=infosrc.get_info(ego,'prox')[actor.trueID]
+        prox=infosrc.get_info(ego,'prox')[actor]
         eagerness=self.eagerness(actor,infosrc)
         authority=infosrc.get_info(actor,'face')
         bias = self.perceive_bias(actor,match)
@@ -186,7 +188,7 @@ class PsychologyModel(object):
             return 1.
         egoinf=self.cast.get_info(ego)
         actorinf=self.cast.get_info(actor)
-        prox=egoinf['prox'][actor.trueID]
+        prox=egoinf['prox'][actor]
         return .5*(prox)*(2-actorinf['terr'])
 
 
@@ -384,7 +386,7 @@ class InteractionScript(Script):
 
     def __init__(self,inter,**kwargs):
         Script. __init__(self,**kwargs)
-        self.by_actor={}
+        self.by_actor=DataDict()
         self.interaction=inter
 
     def parse_interaction(self,scene):
@@ -533,7 +535,7 @@ class Interaction(object):
         self.events={} #All the events of a stage
         self.event_source={} #The stages which are involved in shaping an event
         self.ethos={}
-        self.by_actor={}
+        self.by_actor=DataDict()
         #Important: order in which stages are run
         self.stage_priority={}
 
@@ -664,7 +666,7 @@ class InteractionModel(object):
         Stage=self.Stage
         match=self.match
 
-        claimant=claimevt.actor
+        claimant=world.get_object(claimevt.actor)
 
         #Process claims and reactions in parallel
         #First do subclaims by priority order
@@ -888,7 +890,7 @@ class InteractionModel(object):
                     shift= self.rules.interpret_truth_change(actor,dif,datinf)
                     if shift:
                         #Consequences of opinion shift
-                        if self.match.canvas.get_info(item,'claimed')==actor.ID :
+                        if self.match.canvas.get_info(item,'claimed')==actor.trueID :
                             #Concession
                             facs.append(Fac('concede',item=item,**facinfos))
                         facs.append(Fac(shift,item=item,dif=dif,**facinfos))
@@ -1084,7 +1086,7 @@ class InteractionModel(object):
                 ego=f.ego
                 actor=f.actor
                 infos=match.canvas.get_info(item)
-                evt=ChangeInfosEvt(item,match.data.convgraph,claimed=actor.ID)
+                evt=ChangeInfosEvt(item,match.data.convgraph,claimed=actor.trueID)
 
             inter.events[f]+=evts
 
@@ -1118,9 +1120,9 @@ class InteractionModel(object):
         info = match.canvas.get_info(evt.item)
         effects={}
         if evt.type=='concede':
-            ego=evt.actor #the person who is conceded TO is ego
+            ego=world.get_object(evt.actor) #the person who is conceded TO is ego
         else:
-            ego=evt.ego
+            ego=world.get_object(evt.ego)
         for e in info.get('effects',()):
             targets=e.target
             if targets=='claimer':

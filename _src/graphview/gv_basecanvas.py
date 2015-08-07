@@ -44,9 +44,9 @@ class BaseCanvasLayer(DataItem):
         #DataItem.set_attr(self,i,j)
 
     def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
-        kwargs.setdefault('add_param',[])
+        for c in ('add','init'):
+            kwargs.setdefault(c+'_param',[])
         kwargs['add_param']+=['canvas']
-        kwargs.setdefault('init_param',[])
         kwargs['init_param']+=['canvas']
         return DataItem.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
@@ -90,13 +90,14 @@ class BaseCanvasData(Data):
             self.infotypes['layer']+=('order',)
         for il,l in enumerate(self.layers):
             self.set_info(l,'order',il)
-        Data.txt_export(self,*args,**kwargs)
+        return Data.txt_export(self,*args,**kwargs)
 
     def txt_import(self,*args,**kwargs):
-        Data.txt_import(self,*args,**kwargs)
+        handl=Data.txt_import(self,*args,**kwargs)
         for l in tuple(self.layers):
             self.layers.remove(l)
             self.layers.insert(self.get_info(l,'order'),l)
+        return handl
 
 class BaseCanvasIcon(UI_Icon):
     state_list=('idle','hover','select','ghost')
@@ -216,7 +217,7 @@ class BaseCanvasView(View):
         self.animated=pgsprite.Group()
         self.pos={}
         self.icon={}
-        self.layers=DataList(self)
+        self.layers=DataList()
 
     def order_layers(self):
         for nl,l in enumerate(self.data.layers):
@@ -796,7 +797,7 @@ class BaseCanvasHandler(Handler):
         if not layer:
             layer=self.active_layer
         elif isinstance(layer,basestring):
-            layer=world.object[layer]
+            layer=world.get_object(layer)
         view=self.view
         if item in view.icon :
             if  not layer in view.icon[item].image_sets:

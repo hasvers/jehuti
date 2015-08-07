@@ -43,7 +43,7 @@ class LogicCanvasHandler(CanvasHandler):
 
         truth=match.ruleset.calc_truth(item,graph,sub,extrapolate=0)
         prevtruth=sub.get_info(item,'truth')
-        #print 'glappy:', item,graph.name,sub.name,truth,prevtruth
+        #print 'TRUTH:', item,graph.name,sub.name,truth,prevtruth
         if truth==prevtruth and track:
             #If there is no track yet, we are looking at the original item
             #We may want to see if its change has had consequences
@@ -168,9 +168,9 @@ class LogicCanvasEditor(CanvasEditor,LogicCanvasHandler):
                     if isinstance(act,FlowGraph):
                         ante=[x for x,y in self.flowgraph.iteritems() if y==act][0]
                         i.add_to_group(self.canvas.tools)
-                        link=act.Link(tuple(newp))
                         infos['genre']='Reveal'
-                    evt = AddEvt(act.Link(tuple(newp)),act,infos=infos,**kw )
+                    link=act.Link(tuple(newp))
+                    evt = AddEvt(link,act,infos=infos,**kw )
                     user.evt.do(evt,self)
                     if isinstance(act,FlowGraph):
                         self.signal('add_flow',link,ante)
@@ -295,7 +295,8 @@ class MatchCanvasEditor(LogicCanvasEditor,MatchCanvasHandler):
 
     def __init__(self,*args,**kwargs):
         LogicCanvasEditor.__init__(self,*args,**kwargs)
-        self.flowgraph={}
+
+        self.flowgraph={} #Flowgraph associated with a canvas graph
 
     def keymap(self,event,**kwargs):
         if event.key==pg.K_f:
@@ -329,7 +330,7 @@ class MatchCanvasEditor(LogicCanvasEditor,MatchCanvasHandler):
                     #lamb=lambda:self.canvas.change_infos(target,truth=t)
                     #struct+= ('Derive logic',lamb),
             struct+=(
-                        ('Add flow',lambda: self.make_flow_link(target)),
+                        ('Add flow',lambda: self.start_flow_link(target)),
             )
         if typ=='bg':
             struct += ( ('Hide flow',self.trigger_flow ),
@@ -345,7 +346,7 @@ class MatchCanvasEditor(LogicCanvasEditor,MatchCanvasHandler):
             logic = target.typ_area(array(self.mousepos())-array(target.rect.center))
             struct +=( ('Add link',lambda: self.start_linkgrabber(target,logic)),
             ('Delete node',lambda: self.rem_node(target.node)),
-            ('Fast quote',lambda: self.parent.handler.make_quote(target.node)),
+            ('Fast quote',lambda: self.make_quote(target.node)),
             )
             return struct
 
@@ -365,8 +366,10 @@ class MatchCanvasEditor(LogicCanvasEditor,MatchCanvasHandler):
         else:
             if not gph in self.flowgraph:
                 self.make_flow_graph(gph)
-            gph=self.flowgraph[gph]
-        self.canvas.set_active_graph(gph)
+            else:
+                self.upd_flow_graph(gph)
+            flow=self.flowgraph[gph]
+        self.canvas.set_active_graph(flow)
         self.canvas.assess_itemstate()
         self.canvas.update()
 
@@ -378,7 +381,22 @@ class MatchCanvasEditor(LogicCanvasEditor,MatchCanvasHandler):
         self.canvas.layers.append(flow)
         self.canvas.dft_graph_states[flow]="hidden"
 
-    def make_flow_link(self,target):
+    def upd_flow_graph(self,graph):
+        flow=self.flowgraph[graph]
+        if hasattr(graph,'owner'):
+            owner=graph.owner
+        else:
+            owner=None
+
+        for n in graph.nodes:
+            for scr in graph.get_info(n,'scripts'):
+                for mode,template in flow.Link().dft_modes(owner):
+                    if scr==template: #TODO!!
+
+                        link=flow.Link(genre=mode)
+                        flow.add(link)
+
+    def start_flow_link(self,target):
         gph=self.canvas.active_graph
         if not isinstance(gph,FlowGraph):
             self.canvas.set_active_graph(self.flowgraph[gph])
@@ -389,6 +407,7 @@ class MatchCanvasEditor(LogicCanvasEditor,MatchCanvasHandler):
         if graph in self.flowgraph:
             pass
         return True
+
 
 class MatchCanvasPlayer(MatchCanvasHandler):
     select_opt=deepcopy(MatchCanvasHandler.select_opt)
@@ -521,7 +540,7 @@ class MatchCanvasPlayer(MatchCanvasHandler):
             #print 'canvas received',evt,evt.args
             gr=self.canvas.graph
             for n in gr.nodes:
-                if n.ID==evt.args[0]:
+                if n.trueID==evt.args[0]:
                     self.center_on(gr.pos[n])
                     break
         if 'add' in evt.type and evt.data == self.canvas.active_graph:

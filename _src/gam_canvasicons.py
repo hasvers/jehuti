@@ -4,11 +4,11 @@ from gam_import import *
 
 
 def claim_color(claimed):
+        if isinstance(claimed,basestring):
+            return world.get_object(claimed).color
+
         if type(claimed)==int:
-            try:
-                return user.ui.match.cast.get_info(user.ui.match.cast.actor_by_id[claimed])['color']
-            except :
-                return graphic_chart['player_colors'][claimed]
+            return graphic_chart['player_colors'][claimed]
         if claimed== False or claimed is None:
             return 'unsaturated'
         if claimed == True:

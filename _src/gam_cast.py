@@ -14,7 +14,6 @@ class CastHandler(Handler):
         self.data=kwargs.get('data',LocCastData())
         self.view=kwargs.get('view',CastView(self,parent.view))
         self.view.handler=self
-        self.actor_by_id={}
 
     @property
     def actors(self):
@@ -23,7 +22,6 @@ class CastHandler(Handler):
     def clear(self):
         self.depend=DependencyGraph()
         self.make_dependencies()
-        self.actor_by_id={}
         self.view.renew()
         self.data.renew()
         self.upd_actors()
@@ -89,16 +87,13 @@ class CastHandler(Handler):
         for actor in tuple(self.view.icon.keys()) :
             if not actor in self.data.actors :
                 self.view.rem_actor(actor)
-        for actor in self.actors:
-            if not actor.ID in self.actor_by_id:
-                self.actor_by_id[actor.ID]=actor
+
         self.view.upd_actors()
         self.hud_update()
 
     def rem_actor(self,actor):
         self.signal('actor_deleted',actor)
         self.data.remove(actor)
-        del self.actor_by_id[actor.ID]
         self.upd_actors()
 
     def new_actor(self):
@@ -151,9 +146,9 @@ class CastEditor(CastHandler):
 class CastPlayer(CastHandler):
     def __init__(self,*args,**kwargs):
         CastHandler.__init__(self,*args,**kwargs)
-        if not isinstance(self.data,CastState):
-            print 'CastPlayer; leftover problem'
-            self.data=CastState(parent=self.data,rule='all')
+        assert isinstance(self.data,CastState)
+            #print 'CastPlayer; leftover problem'
+            #self.data=CastState(parent=self.data,rule='all')
 
     @property
     def rules(self):
@@ -217,34 +212,6 @@ class CastPlayer(CastHandler):
                     #struct +=( ('Repair',lambda e=actor: self.signal('repair',e)), )
                     #break
         return struct
-
-    def analyze(self,actor,ana):
-        info=self.data.get_info(ana)
-        aid=actor.trueID
-        prox=info['prox']
-        terr=info['terr']
-        face=info['face']
-        if prox[aid]<1./3.:
-            padj='angry'
-            pc='#cr#[Low empathy]##'
-        elif prox[aid] <2./3.:
-            padj='cold'
-            pc='#cy#[Med empathy]##'
-        else:
-            padj='warmer now'
-            pc='#cg#[High empathy]##'
-
-        if terr<1./3.:
-            tadj='vulnerable'
-            tc='#cr#[Low territory]##'
-        elif terr <2./3.:
-            tadj='uneasy'
-            tc='#cy#[Med territory]##'
-        else:
-            tadj='confident'
-            tc='#cg#[High territory]##'
-        txt='* {} looks {} {} and {} {} *'.format(info['name'],padj,pc,tadj,tc)
-        self.parent.add_balloon(txt,anchor=actor)
 
 
 class CastSceneHandler(CastHandler):

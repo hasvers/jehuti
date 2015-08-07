@@ -303,9 +303,9 @@ class CastView(View):
             self.add_actor(actor)
             self.upd_actors()
             return
-        ids=sorted([a.ID for a in self.icon])
+        ids=sorted([a.trueID for a in self.icon])
         self.icon[actor].make_faces()
-        self.actor_pos(self.icon[actor],ids.index(actor.ID))
+        self.actor_pos(self.icon[actor],ids.index(actor.trueID))
 
     def rem_actor(self,actor):
         self.children.remove(self.icon[actor])

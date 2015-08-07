@@ -22,7 +22,7 @@ class CharacterData(Data):
             #actor.truename='Actor'+str(id(actor))
         self.graph=graph
         self.belief=graph.Subgraph(graph,rule='all')
-        self.belief.owner=actor
+        self.belief.owner=actor.trueID
         #self.actorsubgraphs: potentially, keep knowledge of what X knows that Y knows?
 
     @property
@@ -34,7 +34,7 @@ class CharacterData(Data):
         self.actor=Actor()
         graph=self.graph=MatchGraph()
         self.belief=graph.Subgraph(graph,rule='all')
-        self.belief.owner=self.actor
+        self.belief.owner=self.actor.trueID
         self.scripts=[]
 
     def all_scripts(self):
@@ -42,8 +42,10 @@ class CharacterData(Data):
             #for fl in l.get('cflags',() ) if isinstance(fl,CFlag)))
 
     def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
-        kwargs.setdefault('add_param',[])
+        for c in ('add','init'):
+            kwargs.setdefault(c+'_param',[])
         kwargs['add_param']+=['graph','actor','scripts']
+        kwargs['init_param']+=['actor','graph']
         return Data.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
     def __str__(self):
@@ -54,6 +56,7 @@ class CharacterData(Data):
         toward the belief graph or the Actor item.'''
         if info=='prox':
             return {}
+        item=world.get_object(item)
         if item.type=='actor' and item.trueID==self.actor.trueID:
             if info==None:
                 return {f:getattr(self.actor,f) for f in self.actor.dft}
@@ -149,7 +152,7 @@ class CharacterEditor(MatchEditor):
             self.make_actorgraphs()
             self.canvas.assess_itemstate()
             return
-        sub = self.data.actorgraph[actor]
+        sub = self.data.actorgraph[actor.trueID]
         sub.renew()
         sub.name=self.cast.get_info(actor,'name')
         rule = lambda e,a=actor:self.ruleset.actor_should_know(a,e)

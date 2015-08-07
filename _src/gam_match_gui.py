@@ -746,7 +746,7 @@ class GraphMenu(DragWindow):
         self.add('text',val='Close',pos=(v,1),width=50,selectable=True,
             output_method=lambda e=self.name:self.interface.close(e))
         actors= self.data.cast.actors
-        actdict={a.name:a for a in actors }
+        actdict={a.name:a.trueID for a in actors }
         actdict['General']='General'
         own=self.owner
         if own=='General':
@@ -759,7 +759,7 @@ class GraphMenu(DragWindow):
             struct=('Base',self.handler.canvas.graph ),
             if hasattr(self.data,'convgraph'):
                  struct+=('Conversation', self.data.convgraph ) ,
-        elif own in actors:
+        elif own in [a.trueID for a in actors]:
             struct = ('Base', self.data.actorgraph[own] ),
             if hasattr(self.data,'actorsubgraphs'):
                 struct+=tuple( (act.name, self.data.actorsubgraphs[own][act] ) for act in actors )

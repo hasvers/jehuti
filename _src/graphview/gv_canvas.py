@@ -489,7 +489,6 @@ class Canvas():
         if not subgraph :
             subgraph=kwargs.get('subgraph',None)
             if subgraph is None:
-                print 'Adding no subgraph',debug.caller_name()
                 subgraph=self.graph.Subgraph(self.graph,**kwargs)
         self.layers.append(subgraph)
         self.catch_new()
@@ -927,10 +926,6 @@ class CanvasHandler(UI_Widget):
                         handled=self.left_click(hover,event)
                     elif event.button==3 :
                         handled = self.right_click(hover,event)
-                        '''try :
-                            print self.hovering.id, self.hovering.node.val, self.hovering.states
-                        except :
-                            print 'Not a node'''
                     elif event.button>3:
                         handled=self.fast_edit(hover,event)
             elif hover and  event.type == pg.MOUSEMOTION and  pg.mouse.get_pressed()[0]:

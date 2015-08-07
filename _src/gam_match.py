@@ -35,30 +35,34 @@ class MatchData(Data):
     def renew(self):
         Data.renew(self)
         self.scripts=[]
-        self.actorgraph={}
+        self.actorgraph=DataDict()
         self.make_actorgraphs()
 
     def make_actorgraphs(self,**kwargs):
+        #print 'Mk Actorgraph',self.trueID
         tmp=list(self.actorgraph.keys())
         for actor in self.cast.actors:
-            if not actor in tmp:
+            aid=actor.trueID
+            if not aid in tmp:
                 rule=kwargs.pop('rule','subt<'+str(actor.subt))
-                sub=self.actorgraph[actor]=MatchGraph.Subgraph(self.graph)
-                sub.owner=actor
+                sub=self.actorgraph[aid]=MatchGraph.Subgraph(self.graph)
+                sub.owner=aid
                 sub.name=self.cast.get_info(actor,'name')
                 sub.import_from_parent(rule=rule)
             else:
-                tmp.remove(actor)
-        for actor in tmp:
-            del self.actorgraph[actor]
+                tmp.remove(aid)
+        for aid in tmp:
+            del self.actorgraph[aid]
 
     def all_scripts(self):
         return set(self.scripts)#+ list(fl for j in self.actorgraph.values()
            # for k,l in j.infos.iteritems() for fl in l.get('cflags',() ) if isinstance(fl,CFlag)))
 
     def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
-        kwargs.setdefault('add_param',[])
+        for c in ('add','init'):
+            kwargs.setdefault(c+'_param',[])
         kwargs['add_param']+=['graph','cast','setting','scripts','actorgraph','music']
+        kwargs['init_param']+=['graph','cast','setting']
         return Data.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
     def txt_import(self,filename):
@@ -93,17 +97,19 @@ class MatchState(MatchData):
 
 
     def make_actorgraphs(self,**kwargs):
+        #print 'Mk State Actorgraph, parent:', self.parent.actorgraph, self.parent.trueID
         for actor in self.cast.actors:
-            par=self.parent.actorgraph[actor]
-            sub=self.actorgraph[actor]=MatchGraph.Subgraph(self.graph)
-            sub.owner=actor
+            aid=actor.trueID
+            par=self.parent.actorgraph[aid]
+            sub=self.actorgraph[aid]=MatchGraph.Subgraph(self.graph)
+            sub.owner=aid
             sub.name=self.cast.get_info(actor,'name')
             sub.import_from(par,rule='all',infos=par.infos)
-            print sub.infos
+            #print 'Mk State Actorgraph infos',sub.infos
 
     def renew(self):
         MatchData.renew(self)
-        self.actorsubgraphs=sparsemat(False)
+        self.actorsubgraphs=DataDict()#sparsemat(False)
         self.reactree=nx.DiGraph()
         self.convgraph=None
 
@@ -223,19 +229,20 @@ class MatchHandler(SceneHandler):
                 self.del_actorgraphs(act)
             return
         tokill=[]
-        tokill.append(self.data.actorgraph[actor])
-        del self.data.actorgraph[actor]
+        aid=actor.trueID
+        tokill.append(self.data.actorgraph[aid])
+        del self.data.actorgraph[aid]
         if hasattr(self.data,'actorsubgraphs'):
             for act,dic in self.data.actorsubgraphs.iteritems():
-                if actor in dic:
-                    tokill.append(dic[actor])
-                    del dic[actor]
-                if act == actor :
+                if aid in dic:
+                    tokill.append(dic[aid])
+                    del dic[aid]
+                if act == aid :
                     for i,j in tuple(dic.iteritems()):
                         tokill.append(j)
                         del dic[i]
             try:
-                del self.data.actorsubgraphs[actor]
+                del self.data.actorsubgraphs[aid]
             except :
                 pass
         for i in tokill:
@@ -313,34 +320,10 @@ class MatchEditor(MatchHandler,SceneEditor):
                 self.data.actorgraph[actor].name=self.cast.get_info(actor,'name')
 
         if 'flow' in sgn:
-            self.make_flow_script(*sarg)
-
-    def make_flow_script(self,*args):
-
-        link=args[0]
-        item=link.parents[0]
-        data=args[1]
-        if hasattr(data,'owner') and data.owner in self.actors:
-            owner=data.owner
-        else:
-            owner=None
-        genre=self.canvas.get_info(link,'genre')
-        s=Script(name=genre)
-        cond=MatchScriptCondition()
-        effect=MatchScriptEffect()
-        s.conds.append(cond)
-        s.effects.append(effect)
-        dftmodes=link.dft_modes(owner)
-        if genre in dftmodes:
-            for k,l in dftmodes[genre][0].iteritems():
-                cond.set_attr(k,l)
-            for k,l in dftmodes[genre][1].iteritems():
-                effect.set_attr(k,l)
-        evt=ChangeInfosEvt(item,data,scripts=[s],additive=True)
-        user.evt.do(evt,self,1,ephemeral=True)
-        print [c.conds for c in data.get_info(item,'scripts')]
-        print [c.effects for c in data.get_info(item,'scripts')]
-
+            if 'add' in sgn:
+                self.make_flow_script(*sarg)
+            if 'change' in sgn:
+                self.upd_flow_scripts(*sarg)
 
     def menu(self,event):
         #lam=lambda: self.parent.load_menu('cast',self.cast.add_actor_from_file,new=self.cast.new_actor)
@@ -355,14 +338,47 @@ class MatchEditor(MatchHandler,SceneEditor):
 
         return struct
 
+    def make_flow_script(self,*args):
+        link=args[0]
+        item=link.parents[0]
+        data=args[1]
+        if hasattr(data,'owner') and data.owner in [i.trueID for i in self.actors]:
+            owner=data.owner
+        else:
+            owner=None
+        genre=self.canvas.get_info(link,'genre')
+        s=Script(name=genre)
+        print 'MK flowscript',s.name
+        cond=MatchScriptCondition()
+        effect=MatchScriptEffect()
+        s.conds.append(cond)
+        s.effects.append(effect)
+        dftmodes=link.dft_modes(owner)
+        if genre in dftmodes:
+            for k,l in dftmodes[genre][0].iteritems():
+                cond.set_attr(k,l)
+            for k,l in dftmodes[genre][1].iteritems():
+                effect.set_attr(k,l)
+        evt=ChangeInfosEvt(item,data,scripts=[s],additive=True)
+        user.evt.do(evt,self,1,ephemeral=True)
+        print 'Mk flowscript conds:',[c.conds for c in data.get_info(item,'scripts')]
+        print 'Mk flowscript effects:',[c.effects for c in data.get_info(item,'scripts')]
+
+    def upd_flow_script(self,*args):
+        link=args[0]
+        item=link.parents[0]
+        data=args[1]
+        script=self.canvas.flowscript[link]
+        print 'TODO: Update flow script!'
+
     def make_quote(self,item):
-        info=self.canvas.get_info(item)
+        info=self.get_info(item)
         if info['desc']:
             name=info['desc']
         else:
             name=info['name']
-        name=self.textmaker.quotify(name)
+        name=self.parent.handler.textmaker.quotify(name)
         #quote=ConvNodeScript(truth='+',cond='Alone')
         quote=ConvNodeScript(truth='all',cond='Default',text=name)
         quote.name='Quote'
-        self.canvas.change_infos(item,scripts=[quote],update=True)
+        self.change_infos(item,scripts=[quote],update=True)

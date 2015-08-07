@@ -65,6 +65,7 @@ class Actor(DataItem):
         'control':'human',
         'status':'Unknown',
         'react':[],
+        'prox':DataDict(),
         'patterns':database['link_patterns'],
         }
 
@@ -112,23 +113,23 @@ class CastData(Data):
     def __init__(self,*args,**kwargs):
         self.infotypes['actor']=tuple(i for i in Actor().default_infos.keys())
         super(CastData, self).__init__(*args,**kwargs)
-        self.prox={}#DataMat(self,0.)
+        self.prox=DataDict()#DataMat(self,0.)
 
-    def get_info(self,item,info_type=None,**kwargs):
-        #Hijack info read to add proximity information if available
-        if info_type=='prox' and item.trueID in self.prox:
-            return self.prox[item.trueID]
-        info=Data.get_info(self,item,info_type,**kwargs)
-        if info_type==None:
-            prox=self.get_info(item,'prox',**kwargs)
-            info['prox']=prox
-        return info
+    #def get_info(self,item,info_type=None,**kwargs):
+        ##Hijack info read to add proximity information if available
+        #if info_type=='prox' and item in self.prox:
+            #return self.prox[item]
+        #info=Data.get_info(self,item,info_type,**kwargs)
+        #if info_type==None:
+            #prox=self.get_info(item,'prox',**kwargs)
+            #info['prox']=prox
+        #return info
 
-    def set_info(self,item,ityp,val,**kwargs):
-        if ityp=='prox' and item.trueID in self.prox:
-            self.prox[item.trueID]=val
-            return True
-        return Data.set_info(self,item,ityp,val,**kwargs)
+    #def set_info(self,item,ityp,val,**kwargs):
+        #if ityp=='prox' and item in self.prox:
+            #self.prox[item]=val
+            #return True
+        #return Data.set_info(self,item,ityp,val,**kwargs)
 
 
     def make_prox(self,actor=None,other=None):
@@ -138,9 +139,9 @@ class CastData(Data):
             return
 
         #baseprox=actor.prox #Recover proximity stored in the actor himself (pickle)
-        baseprox={}
+        #baseprox={}
         ainf=self.get_info(actor)
-        self.prox.setdefault(actor.trueID,{})
+        self.prox.setdefault(actor.trueID,DataDict())
         others=[other]
         if not other:
             others = self.actors
@@ -165,12 +166,12 @@ class CastData(Data):
                 #if actor in othprox:
                     #val=othprox[actor]
                 self.prox[other.trueID][actor.trueID]=val
-                #pr=DataDict(self)
-                #pr.update(self.prox[other])
-                #self.set_info(other,'prox',pr,update=True)
-        #pr=DataDict(self)
-        #pr.update(self.prox[actor])
-        #self.set_info(actor,'prox',pr,update=True)
+                pr=DataDict()
+                pr.update(self.prox[other])
+                self.set_info(other,'prox',pr,update=True)
+        pr=DataDict()
+        pr.update(self.prox[actor])
+        self.set_info(actor,'prox',pr,update=True)
 
     def add(self,actor,*args,**kwargs):
         handled = super(CastData, self).add(actor,*args,**kwargs)
@@ -215,3 +216,19 @@ class CastState(Data):
 
         if self.rule :
             self.import_from_parent()
+
+
+    #def get_info(self,item,info_type=None,**kwargs):
+        #if info_type=='prox' and item in self.prox:
+            #return self.prox[item]
+        #info=Data.get_info(self,item,info_type,**kwargs)
+        #if info_type==None:
+            #prox=self.get_info(item,'prox',**kwargs)
+            #info['prox']=prox
+        #return info
+
+    #def set_info(self,item,ityp,val,**kwargs):
+        #if ityp=='prox' and item in self.prox:
+            #self.prox[item]=val
+            #return True
+        #return Data.set_info(self,item,ityp,val,**kwargs)

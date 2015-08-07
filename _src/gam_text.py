@@ -343,10 +343,10 @@ class TextMaker(object):
 
     def actor_name(self,actor):
         try:
-            name='#c'+str(actor['color'])+'#'
+            name='%c'+str(actor['color'])+'%'
         except:
-            name= '#c(255,150,150,255)#'
-        name+= actor['name'] + '##'
+            name= '%c(255,150,150,255)%'
+        name+= actor['name'] + '%%'
         return name
 
     def clean_text(self,txt):

@@ -171,9 +171,7 @@ class GameState(Data):
         self.name='gamestate'
         self.current=kwargs.get('current',None) #current scene
         Data.__init__(self,**kwargs)
-        self.vargraph=nx.DiGraph() #evolving variable graph
-        #TODO: how to export vargraph?
-        self.node_state={}#DataDict()
+        self.node_state=DataDict()
 
     def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
         kwargs.setdefault('add_param',[])
@@ -227,11 +225,17 @@ class GameHandler(Handler):
             print 'loading',node.filename
             try:
                 fin=fopen(node.filename,'rb',filetype=genre)
+                fin.close()
             except Exception as e:
                 print "Couldn't load {}".format(node.filename),e
                 return None
-            data=self.blank_data(node.name,genre)
-            data.txt_import(node.filename)
+            items=world.explore_file(resource_path(node.filename,filetype=genre))
+            if not node.dataID:
+                node.dataID=[i for i in items if eval(world.future_data[i]['klass'])==self.klass_data(genre) ][0]
+
+            data=world.make_data(node.dataID)
+            #data=self.blank_data(node.name,genre)
+            #data.txt_import(node.filename)
             self.loaded[node.filename]=data
             self.data.graph.set_info(node,'dataID',data.trueID)
             self.data.graph.refresh_dict()
@@ -260,12 +264,28 @@ class GameHandler(Handler):
         data.name=name
         return data
 
+    def klass_data(self,genre):
+        if genre=='match':
+            return MatchData
+        elif genre=='cutscene':
+            return CutsceneData
+        elif genre=='place':
+            return PlaceData
+        elif genre=='actscene':
+            return ActsceneData
+        elif genre=='character':
+            return CharacterData
+        elif genre=='topic':
+            return MatchGraph
+
     def create_data(self,node):
         '''Create data for a scene/object that bears the name of the node'''
         name=node.name
         data=self.blank_data(name,node.genre)
         #fout=fopen(name,'wb',filetype=node.genre)
         #pickle.dump(data,fout)
+        node.dataID=data.trueID
+        node.filename=name
         data.txt_export(filename=name )
         #fout.close()
         self.data.graph.set_info(node,'filename',node.name)
@@ -304,9 +324,8 @@ class GameEditor(CanvasEditor,GameHandler):
     def __init__(self,parent=None,**kwargs):
         GameHandler.__init__(self)
         data=kwargs.get('data',GameData())
-        self.data=GameData
         if isinstance(data,basestring):
-            self.set_from_file(data,initial=True)
+            self.set_from_file(data,initial=True,klass='GameData',datatype='game')
         else:
             self.data=data
         CanvasEditor.__init__(self,GameCanvas(graph=self.data.graph),parent)
@@ -356,15 +375,14 @@ class GameEditor(CanvasEditor,GameHandler):
             node=target.item
             dataname =node.filename
             #print dataname, node.dataID, world.database
-            if node.dataID in world.database:
+            try:
+                existing=fopen(dataname,'rb',filetype=node.genre)
+                #print dataname, existing
+            except:
+                existing=False
+            if node.dataID in world.database or existing:
                 struct+=('Open data',lambda t=node: self.signal('open',t)),
                 existing=True
-            else:
-                try:
-                    existing=fopen(dataname,'rb',filetype=node.genre)
-                    #print dataname, existing
-                except:
-                    existing=False
             if existing:
                 dmeth=lambda t=node: self.delete_data(t)
                 struct+=('Delete data',lambda:self.parent.confirm_menu(dmeth,
@@ -438,14 +456,27 @@ class GamePlayer(GameHandler):
     #general access to ongoing game state and general functions
     def __init__(self,*args,**kwargs):
         GameHandler.__init__(self,*args,**kwargs)
-        self.gamestate= kwargs.get('gamestate',None)
-        if self.gamestate is None:
+        self.data=GameData()
+        data=kwargs.get('data',self.data)
+        if isinstance(data,basestring):
+            self.set_from_file(data,initial=True,klass='GameData',datatype='game')
+        else:
+            self.data=data
+
+        state= kwargs.get('gamestate',None)
+        if isinstance(state,basestring):
+            path='{}{}/'.format(database['game_path'],gamedata.name)
+            if not path in state:
+                path='{}{}{}'.format(path,state,database['save_ext'])
+            self.gamestate=self.get_from_file(data,initial=True,klass='GameState')
+        elif state is None:
             self.gamestate=GameState()
             for g in self.data.variables:
                 self.gamestate.add(g)
+        else:
+            self.gamestate=state
 
     def set_variable(self,varname,value,**kwargs):
-        #TODO:When the value of a variable changes, put it in vargraph
         variable=[v for v in self.gamestate.variables if v.name==varname] [0]
         if not self.gamestate:
             print 'No gamestate'

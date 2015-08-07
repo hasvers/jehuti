@@ -158,7 +158,7 @@ class GameEditorUI(EditorUI):
                             break
                 if not nam is None:
                     self.open_editor(nam)
-                    print 'Loading last map:',world.database[world.object[nam].dataID]
+                    print 'Loading last map:',world.database[world.get_object(nam).dataID]
             except:
                 pass
 
@@ -213,7 +213,7 @@ class GameEditorUI(EditorUI):
         '''Given a node, open the editor of the data linked to that node'''
         #If we receive a trueID instead:
         if isinstance(item,basestring):
-            item=world.object[item]
+            item=world.get_object(item)
         data= world.database[item.dataID]
         #Log the trueID of the currently open scene
         with fopen('logs/.editor_last','w') as last :
@@ -241,6 +241,7 @@ class GameEditorUI(EditorUI):
 
     def react(self,evt,**kwargs):
         if 'open' in evt.type:
+            #self.game.dataload(evt.args[0])
             self.open_editor(evt.args[0])
         if 'start_game' in evt.type :
             return user.set_ui(GameUI(self._screen,self.game.data),False )
@@ -259,28 +260,29 @@ class GameUI(BasicUI):
         #BasicUI.__init__(self,screen)
         self._screen=screen
         self.depend=DependencyGraph()
-        if isinstance(gamedata,basestring):
-            path=database['game_path']
-            if not path in gamedata:
-                path='{}{}{}'.format(path,gamedata,database['game_ext'])
-            else:
-                path=gamedata
-            #gfin=fopen(path,'rb')
-            gamedata=GameData()
-            gamedata.txt_import(path)
-            #gamedata=pickle.load(gfin)
-        gamestate= kwargs.get('gamestate',None)
-        if isinstance(gamestate,basestring):
-            path='{}{}/'.format(database['game_path'],gamedata.name)
-            if not path in gamestate:
-                path='{}{}{}'.format(path,gamestate,database['save_ext'])
-            else:
-                path=gamestate
-            gamestate=GameState()
-            gamestate.txt_import(path)
-            #gfin=fopen(path,'rb')
-            #gamestate=pickle.load(gfin)
-        self.game= GamePlayer(self,data=gamedata,gamestate=gamestate)
+        if 0:
+            if isinstance(gamedata,basestring):
+                path=database['game_path']
+                if not path in gamedata:
+                    path='{}{}{}'.format(path,gamedata,database['game_ext'])
+                else:
+                    path=gamedata
+                #gfin=fopen(path,'rb')
+                gamedata=GameData()
+                gamedata.txt_import(path)
+                #gamedata=pickle.load(gfin)
+            gamestate= kwargs.get('gamestate',None)
+            if isinstance(gamestate,basestring):
+                path='{}{}/'.format(database['game_path'],gamedata.name)
+                if not path in gamestate:
+                    path='{}{}{}'.format(path,gamestate,database['save_ext'])
+                else:
+                    path=gamestate
+                gamestate=GameState()
+                gamestate.txt_import(path)
+                #gfin=fopen(path,'rb')
+                #gamestate=pickle.load(gfin)
+        self.game= GamePlayer(self,data=gamedata,gamestate=kwargs.pop('gamestate',None) )
 
     def launch(self):
         if self.game.gamestate.current:

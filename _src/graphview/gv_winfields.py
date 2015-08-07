@@ -410,12 +410,12 @@ class TextField(WindowField):
             oi=i.replace('"','').replace("'",'')
             ocur=cur.replace('"','').replace("'",'')
             tests=array((oi.isalnum() and ocur.isalnum(),
-                cur and cur[0]=="#"  , #and not oi.isspace(),
-                links and links[-1][:2]=='#r' and i!='#', #hyperlinks stay grouped
+                cur and cur[0]=="%"  , #and not oi.isspace(),
+                links and links[-1][:2]=='%r' and i!='%', #hyperlinks stay grouped
                 oi.isspace() and ocur.isspace() ),dtype='bool')
             if tests.any():
                 cur+=i
-                if cur[0]=='#' ==i:
+                if cur[0]=='%' ==i:
                     l.append((idx,cur))
                     if cur[1]=='r': #hyperlink detection
                         links.append(cur)
@@ -460,8 +460,8 @@ class TextField(WindowField):
             for idx, w in l: #Right now i dont use idx at all, should I remove it?
                 if not w:
                     continue
-                if self.interpret and len(w)>1 and w[0]== w[-1]=='#': #options
-                    if w[1]=="#":
+                if self.interpret and len(w)>1 and w[0]== w[-1]=='%': #options
+                    if w[1]=="%":
                         if len(options)>1: #remove the last option
                             options.pop(-1)
                     else:

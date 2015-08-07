@@ -26,7 +26,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             #size=user.screen.get_rect().size
             #size =graphic_chart['screen_size']
 
-        self.controller={}
+        self.controller=DataDict()
 
         self.batchs={1:[]} # Event batchs list, by turn
         self.queue=[] #Events not yet executed and added to the list
@@ -126,7 +126,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             for k,l in j.iteritems():
                 l.kill()
         self.data.convgraph=None
-        self.data.actorsubgraphs=sparsemat(False)
+        self.data.actorsubgraphs=DataDict()#sparsemat(False)
         self.data.reactree=nx.DiGraph()
         for script in self.data.all_scripts():
             script.runs=0
@@ -138,7 +138,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             for actor in self.cast.actors:
                 self.make_relations(actor)
             return
-        proxystart={}
+        proxystart=DataDict()
         ainf=self.cast.get_info(actor)
         for other in self.actors:
             if other != actor:
@@ -156,10 +156,12 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                 self.make_beliefs(actor)
             return
         irule = lambda e, a=actor: self.ruleset.actor_selfgraph_init_rule(a,e)
-        subact=MatchGraph.Subgraph(self.data.actorgraph[actor],rule='None',precursors=(self.convgraph,))
-        subact.owner=actor
+        aid=actor.trueID
+        subact=MatchGraph.Subgraph(self.data.actorgraph[aid],rule='None',precursors=(self.convgraph,))
+        subact.owner=aid
         subact.import_from_parent(rule=irule)
-        self.data.actorsubgraphs[actor][actor]=subact
+        self.data.actorsubgraphs.setdefault(aid,DataDict())
+        self.data.actorsubgraphs[aid][aid]=subact
         subact.name='Self'+actor.name
         #self.canvas.add_subgraph(subact,pos=1)
         for other in self.cast.actors:
@@ -168,10 +170,11 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                 #TODO: consider how to import what an actor initially thinks of another's beliefs
                 orule = lambda e, a=actor,o=other: self.ruleset.actor_othergraph_init_rule(a,o,e)
                 sub.import_from_parent(rule=orule)
-                self.data.actorsubgraphs[actor][other]=sub
+                self.data.actorsubgraphs[aid][other.trueID]=sub
                 sub.name='Oth'+actor.name+':'+other.name
                 #self.canvas.add_subgraph(sub,pos=1)
-                sub.owner=actor #TODO: this is maybe dangerous: the owner of sub[act][oth] is act
+                sub.owner=aid #TODO: this is maybe dangerous: the owner of sub[act][oth] is act
+        #print self.data.actorsubgraphs[aid][aid],self.canvas.layers
 
 
 
@@ -201,7 +204,9 @@ class MatchPlayer(MatchHandler,PhaseHandler):
         act=self.data.active_player
         self.canvas.set_layer(self.data.actorsubgraphs[act][act],0)
 
+
         if not self.is_reloading:
+            #FIRST TIME LOADING THE MATCH
             self.set_player(self.human,True)
             #self.set_player(self.actors[0])
             self.signal('set_player',self.active_player,affects=(self.data,self.cast.data))
@@ -248,17 +253,18 @@ class MatchPlayer(MatchHandler,PhaseHandler):
         and put everything into a script (easier to reverse and to track).'''
         script=None
         for act in self.actors:
+            aid=act.trueID
             for item in (item for n,ls in
-                            self.data.actorgraph[act].links.iteritems()
+                            self.data.actorgraph[aid].links.iteritems()
                             for item in [n]+ls):
                 eff=None
-                flags=[f.val for f in self.data.actorgraph[act].get_info(item,'cflags')]
+                flags=[f.val for f in self.data.actorgraph[aid].get_info(item,'cflags')]
                 if 'Starter' in flags:
                     eff = MatchScriptEffect(**{'typ':'Action','target':item,
-                        'actor':act,'evt':'claim','info':'cost:0'})
+                        'actor':aid,'evt':'claim','info':'cost:0'})
                 elif 'Include' in flags:
                     eff = MatchScriptEffect(**{'typ':'Graph','target':item,
-                        'owner':act,'subject':act,'evt':'add','info':''})
+                        'owner':aid,'subject':aid,'evt':'add','info':''})
                 if eff:
                     if not script:
                         script=Script()
@@ -295,6 +301,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                 self.canvas.handler.human_player=False
                 #self.cast
             if not nosignal:
+                print 'Nosignal',self.active_player
                 self.signal('set_player',self.active_player,affects=(self.data,self.cast.data))
             if self.controller[actor]!='human' and self.controller[actor]:
                 self.controller[actor].make_turn()
@@ -444,7 +451,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
 
     def canvas_emote(self,c,txt,src):
         #c is an event, like a change or other
-        if (c.data.owner==self.active_player or c.data==self.canvas.active_graph) and self.controller[c.data.owner]=='human':
+        if (c.data.owner==self.active_player.trueID or c.data==self.canvas.active_graph) and self.controller[c.data.owner]=='human':
             subject =None
             target=c.item
             for oact,sub in self.data.actorsubgraphs[c.data.owner].iteritems():
@@ -454,7 +461,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                 color=self.cast.get_info(subject,'color')
                 anim= lambda t=target:self.canvas.icon[target].set_anim('blink')
                 user.ui.add_visual(anim)
-                self.canvas.icon[target].call_emote('#c{}#{}##'.format(color,txt))
+                self.canvas.icon[target].call_emote('%c{}%{}%%'.format(color,txt))
 
     def toggle_subgraph(self,actor=None):
         sub=self.data.actorsubgraphs
@@ -528,7 +535,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             if evt.state==2:
                 claim=evt.evt
                 inter=self.interact.make_script(claim,self)
-                print inter.interaction.ethos
+                print 'CLAIM ETHOS',inter.interaction.ethos
                 self.add_phase(inter)
                 #inter.pass_events()
                 #print inter.events
@@ -594,9 +601,9 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                     'Deference (Self Territory -> Other Face)'),
                 ('Promise',lambda a='promise',s=act,t=tgt:self.make_speech_act(a,s,t),
                     'Promise (Self Territory -> Other Territory)'),
-                ('#c(255,0,0,0)#Criticism##',lambda a='criticism',s=act,t=tgt:self.make_speech_act(a,s,t),
+                ('%c(255,0,0,0)%Criticism%%',lambda a='criticism',s=act,t=tgt:self.make_speech_act(a,s,t),
                     'Criticism (Other Face)'),
-                ('#c(255,0,0,0)#Doubt##',lambda a='doubt',s=act,t=tgt:self.make_speech_act(a,s,t),
+                ('%c(255,0,0,0)%Doubt%%',lambda a='doubt',s=act,t=tgt:self.make_speech_act(a,s,t),
                     'Doubt (Other Territory)'),
                 )
             user.ui.float_menu(struct)

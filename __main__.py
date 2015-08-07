@@ -13,8 +13,19 @@ if database['resizable_window']:
 
 def klassmake(self,klass,*args):
     return eval(klass)(*args)
+def do_python_script(self,script,mode='eval'):
+    if not isinstance(script,basestring):
+        text=script.text
+    else:
+        text=script
+    if mode=='exec':
+        exec(text)#, globals(), self.name)
+    else:
+        return eval(text)#, globals(), self.name)
 
+user.do_python_script=do_python_script
 Data.klassmake=klassmake
+world.klassmake=klassmake
 
 
 def windowed_size():

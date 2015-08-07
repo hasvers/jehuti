@@ -442,10 +442,7 @@ class MatchScriptCondition(SceneScriptCondition):
                         return True
         #elif self.typ=='Game':
             #if self.evt=='variable':
-                #if eval('{}{}'.format(self.target.val,self.cond)):
-                    ##when run, update vargraph in GameState (not in GameData!)
-                    #match.parent.state.vargraph.add_edge(self.target,self)
-                    #return True
+
         return SceneScriptCondition.test(self,match,evt)
 
     def __str__(self):

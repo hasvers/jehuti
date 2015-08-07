@@ -99,8 +99,9 @@ class PlaceData(BaseCanvasData):
                             return True
                         #layer=world.object[layer]
                         #self.add(kwargs['layer'])
-                    if not item in kwargs['layer'].items:
-                        kwargs['layer'].items.append(item)
+
+                    if not item in world.get_object(kwargs['layer']).items:
+                        world.get_object(kwargs['layer']).items.append(item)
                     else:
                         print 'PlaceADD: UNEXPECTED', kwargs['layer']
                 else:
@@ -436,12 +437,12 @@ class OldSettingData(Data):
     def __init__(self):
         super(SettingData, self).__init__()
         self.type='setting'
-        self.vargraph=nx.DiGraph()
+        #self.vargraph=nx.DiGraph()
 
 
     def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
         kwargs.setdefault('add_param',[])
-        kwargs['add_param']+=['bg','vargraph']
+        kwargs['add_param']+=['bg']
         return Data.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
 class OldSettingHandler(Handler):

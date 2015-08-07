@@ -197,9 +197,9 @@ class Graph(Data):
     overwrite_item=True
     def __init__(self,**kwargs):
         self.nodes=[]
-        self.links={}
+        self.links=DataDict()
         Data.__init__(self,**kwargs)
-        self.pos={}
+        self.pos=DataDict()
 
     Node= Node
     Link= Link
@@ -222,8 +222,8 @@ class Graph(Data):
 
     def renew(self,*args):
         Data.renew(self,*args)
-        self.links={}
-        self.pos={}
+        self.links=DataDict()
+        self.pos=DataDict()
 
     def make(self,**kwargs):
         N=kwargs.pop('N',40)
@@ -283,6 +283,8 @@ class Graph(Data):
 
 
     def contains(self,item):
+        if isinstance(item,basestring):
+            item=world.get_object(item)
         if item.type == 'node':
             if item in self.nodes :
                 return True

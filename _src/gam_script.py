@@ -293,9 +293,10 @@ class SceneScriptEffect(TimedEvent):
         except:
             game=scene.data.parent
 
+        wobj=world.object
+
         if game:
-            variables=game.variables
-            #OBSOLETE scenename=scene.data.filename()#name+database['{}_ext'.format(scene.data.datatype) ]
+            #variables=game.variables
             links=game.links(scene.data.trueID)
             calls=['title','END',]
             for l,other in links:
@@ -309,10 +310,10 @@ class SceneScriptEffect(TimedEvent):
                 temps.update( {
                     'call':( ('target','arrowsel',{'values':calls,'width':200}) ,
                          ('info','arrowsel',{'legend':'Transition','values':transitions }),) })
-            if variables:
-                temps.update( {
-                    'variable':( ('target','input',{'width':200}),
-                         ('info','input',{'width':200,'height':200}),) })
+            #if variables:
+                #temps.update( {
+                    #'variable':( ('target','input',{'width':200}),
+                         #('info','input',{'width':200,'height':200}),) })
             templatelist['Game']=(
                 ('evt','arrowsel',{'values': ('call','variable','save')  ,'remake':True}),
                 ) +temps.get(self.evt,())
@@ -321,8 +322,9 @@ class SceneScriptEffect(TimedEvent):
 
     def templates(self,template=None,**kwargs):
         scene=user.ui.scene
-        actors=sorted(scene.cast.actors)
-        templatelist=self.templatelist(scene,scene.data.sprites,actors)
+        actors= sorted(scene.cast.actors)
+        sprites= sorted(scene.data.sprites)
+        templatelist=self.templatelist(scene,sprites,actors)
         if template is None:
             return templatelist
         elif hasattr(template,'__iter__'):
@@ -429,6 +431,8 @@ class SceneScriptEffect(TimedEvent):
                 if not surf is None:
                     surfkey=hash(self)
                     ui.veils[surfkey]=surf
+                else:
+                    surfkey=None
                 if self.info!='None':
                     tdevt=FadeEvt((0,0,0,0),(0,0,0,365),surface=surfkey, duration=self.duration)
                     tdevt.block_thread=1
@@ -441,17 +445,18 @@ class SceneScriptEffect(TimedEvent):
             name=False
             if self.display=='On':
                 name=True
+            actor=self.actor
             scene.send_balloon(self.text,
-                anchor= self.actor,show_name=name)
+                anchor= actor,show_name=name)
         elif self.typ=='Choice':
             #TODO menu choices
             pass
         elif self.typ=='Python':
             if self.info=='exec':
-                user.world.do_python_script(self,'exec')
+                user.do_python_script(self,'exec')
                 #exec(self.text)
             elif self.info=='eval':
-                val=user.world.do_python_script(self,'eval')
+                user.do_python_script(self,'eval')
                 scene.add_balloon(unicode( val))
         elif self.typ in ('Cast','Scene') :
             if self.evt in ('anim','emote','state'):
@@ -493,7 +498,7 @@ class SceneScriptEffect(TimedEvent):
                 if self.target=='all':
                     targets=scene.cast.actors
                 else:
-                    targets=[self.target]
+                    targets=[world.get_object(self.target)]
                 info = self.info.split()[0]
                 margs=self.info.split()[1:]
                 for t in targets:
@@ -519,7 +524,7 @@ class SceneScriptEffect(TimedEvent):
                             type='game_var',source=src,priority=-1)
                     phase.run()
                 except Exception as e:
-                    print self, e
+                    print  'SCRIPT EXCEPTION',self, e
 
             elif self.evt=='save':
                 if not user.ui.editor_ui:
@@ -536,7 +541,7 @@ class SceneScriptEffect(TimedEvent):
                     loop=loops,fadein=int(self.delay))
         return True
 
-    def __repr__(self):
+    def __str__(self):
         #base = self.name+' '+self.typ
         base=self.typ
         if self.typ=='Text':
@@ -697,7 +702,7 @@ class SceneScriptCondition(DataBit):
         if self.typ=='Call':
             return evt==self.info
         if self.typ=='Python':
-            return user.world.do_python_script(self,'eval')
+            return user.do_python_script(self,'eval')
         if self.typ in ('Scene','Cast'):
             if self.typ == 'Scene':
                 data=scene.data
@@ -743,11 +748,7 @@ class SceneScriptCondition(DataBit):
                 if self.evt=='Speech act' and 'polite' in e.type and not 'queue' in e.type:
                     if eval('"{}"'.format(e.disc_type) +self.info):
                         return True
-        elif self.typ=='Game':
-            if self.evt=='variable':
-                if user.world.do_python_script('{}{}'.format(
-                        self.target.val,self.cond),'eval'):
-                    #when run, update vargraph in GameState (not in GameData!)
-                    scene.parent.state.vargraph.add_edge(self.target,self)
-                    return True
+        #elif self.typ=='Game':
+            #if self.evt=='variable':
+
         return False
