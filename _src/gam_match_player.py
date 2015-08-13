@@ -535,7 +535,6 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             if evt.state==2:
                 claim=evt.evt
                 inter=self.interact.make_script(claim,self)
-                print 'CLAIM ETHOS',inter.interaction.ethos
                 self.add_phase(inter)
                 #inter.pass_events()
                 #print inter.events

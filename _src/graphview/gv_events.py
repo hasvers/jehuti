@@ -188,6 +188,10 @@ class EventCommander(object):
             if kwargs.get('time',None)!=None:
                 state=evt.state_at_time(kwargs['time'],
                     pass_block=kwargs.get('pass_block',False))
+                #if state!=evt.state:
+                    #print '%%%%',evt,state, evt.states.nodes(), {str(i):j
+                       #if not hasattr(i.target,'keys') else (i.trueID,{str(z):w for z,w in i.target.iteritems()}, j)
+                       #for i,j in evt.states.node[state]['children_states'].iteritems()}
                 return self.go(evt,state,*args,**kwargs)
             else:
                 state=evt.states.successors(evt.state)[0]
@@ -657,25 +661,40 @@ class Event(Signal):
         return False
 
     def add_child(self,child,statedict,*args,**kwargs):
+        '''Add a child event with statedict specifying which state of the
+parent calls which state of the child.
+        Options: priority (int, or dict) If dict, key=state of the parent or "else" '''
         prior=kwargs.get('priority',False)
         for state in self.states.nodes():
             if self.check_duplicate(state,child,**kwargs):
                 continue
-            self.states.node[state]['children_states'][child]=statedict.get(state,0)
+            dico=self.states.node[state]
+            dico['children_states'][child]=statedict.get(state,0)
             if prior:
-                self.states.node[state]['priority'][child]=prior
+                if hasattr(prior,'keys'):
+                    p=prior.get(state,prior.get('else',None))
+                else:
+                    p=prior
+                if not p is None:
+                    dico['priority'][child]=p
 
     def add_sim_child(self,child,**kwargs):
-        #adds a child which follows exactly the same states as the parent
+        '''Adds a child which follows exactly the same states as the parent'''
         prior=kwargs.get('priority',False)
         for state in self.states.nodes():
+            dico=self.states.node[state]
             if not state in child.states.nodes():
                 continue
             if self.check_duplicate(state,child,**kwargs):
                 continue
-            self.states.node[state]['children_states'][child]=state
+            dico['children_states'][child]=state
             if prior:
-                self.states.node[state]['priority'][child]=prior
+                if hasattr(prior,'keys'):
+                    p=prior.get(state,prior.get('else',None))
+                else:
+                    p=prior
+                if not p is None:
+                    dico['priority'][child]=p
         if child.parent is None:
             child.parent=self
 
@@ -784,6 +803,14 @@ class ChangeInfosEvt(Event):
         item=self.item
         if not self.itemwrite and not self.data.contains(item):
             print 'ChangeInfos on item that is not in data!',infos,  item, self.data
+            if 1:
+                par =self
+                while par.parent:
+                    par=par.parent
+                if 'truthcalc' in str(par).lower():
+                    print '##PROBABLE CAUSE: Undoing events in wrong order in interaction'
+                    print '##Improve function undo_events by taking into account event priority'
+
             return False
         for i,j in infos.iteritems():
             if self.itemwrite:
@@ -948,6 +975,7 @@ class AddEvt(Event):
         if state == 1:
             handled = self.data.add(item,rule=self.kwargs.get('rule','none'),
                 **self.infos)
+            #print 'ADDEVT',self,handled#,kwargs.get('traceback','No traceback' )
             if handled and 'pos' in self.kwargs:
                 try:
                     self.data.pos[item]=self.kwargs['pos']
@@ -955,7 +983,7 @@ class AddEvt(Event):
                     pass
             return handled
         if state== 0:
-            #print 'ADDEVT',self,state,kwargs.get('traceback','No traceback' )
+            #print 'UNDO ADDEVT',self,state#,kwargs.get('traceback','No traceback' )
             handled= self.data.remove(item)
             if handled and 'pos' in self.kwargs:
                 try:

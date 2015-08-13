@@ -6,6 +6,8 @@ from gam_import import *
 def claim_color(claimed):
         if isinstance(claimed,basestring):
             return world.get_object(claimed).color
+        elif hasattr(claimed,'color'):
+            return claimed.color
 
         if type(claimed)==int:
             return graphic_chart['player_colors'][claimed]
@@ -30,10 +32,11 @@ class MatchArrow(Arrow):
         info=infosource.get_info(self.parent.link)
         unsaturated=False
         if 'claimed' in info:
-            if claim_color(info['claimed'])=='unsaturated':
+            color=claim_color(info['claimed'])
+            if color=='unsaturated':
                 unsaturated =True
             else :
-                mod = [i*j for i,j in zip(mod,claim_color(info['claimed']))]
+                mod = [i*j for i,j in zip(mod,color)]
 
 
 
@@ -132,14 +135,13 @@ class MatchNodeIcon(NodeIcon):
         ringw=graphic_chart['node_ring_width']
         info =infosource.get_info(self.node)
         if 'claimed' in info:
-            if type(info['claimed'])==int:
-                ringcolor=claim_color(info['claimed'])
-            else :
-                if claim_color(info['claimed'])=='unsaturated':
-                    unsaturated =True
-                else :
-                    mod = [i*j for i,j in zip(mod,claim_color(info['claimed']))]
-                    ringcolor=tuple(int(i) for i in array(claim_color(True))*graphic_chart['claim_color'])
+            ringcolor=claim_color(info['claimed'])
+            if ringcolor=='unsaturated':
+                ringcolor=None
+                unsaturated =True
+            elif isinstance(ringcolor[0],float):
+                mod = [i*j for i,j in zip(mod,ringcolor)]
+                ringcolor=tuple(int(i) for i in array(claim_color(True))*graphic_chart['claim_color'])
 
         radius = self.radius
         radius-=ringw
@@ -327,17 +329,25 @@ class MatchLinkIcon(LinkIcon):
         unsaturated=False
         borderw=graphic_chart['link_border_width']
         if 'claimed' in info:
-            if type(info['claimed'])==int:
-                bordercolor=claim_color(info['claimed'])
-                if color_in :
-                    tmp=[i/255. for i in bordercolor]
-                    mod = [i*j for i,j in zip(mod,tmp)]
-            else :
-                if claim_color(info['claimed'])=='unsaturated':
-                    unsaturated =True
-                else :
-                    mod = [i*j for i,j in zip(mod,claim_color(info['claimed']))]
-                    bordercolor=tuple(int(i) for i in array(claim_color(True))*graphic_chart['claim_color'])
+            bordercolor=claim_color(info['claimed'])
+            if bordercolor=='unsaturated':
+                bordercolor=None
+                unsaturated =True
+            elif isinstance(bordercolor[0],float):
+                mod = [i*j for i,j in zip(mod,bordercolor)]
+                bordercolor=tuple(int(i) for i in array(claim_color(True))*graphic_chart['claim_color'])
+            if color_in :
+                tmp=[i/255. for i in bordercolor]
+                mod = [i*j for i,j in zip(mod,tmp)]
+
+            #if type(info['claimed'])==int:
+                #bordercolor=claim_color(info['claimed'])
+            #else :
+                #if claim_color(info['claimed'])=='unsaturated':
+                    #unsaturated =True
+                #else :
+                    #mod = [i*j for i,j in zip(mod,claim_color(info['claimed']))]
+                    #bordercolor=tuple(int(i) for i in array(claim_color(True))*graphic_chart['claim_color'])
 
         blength,wid = size
         px = pg.PixelArray(pgsurface.Surface(size,Canvasflag))

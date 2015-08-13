@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from gv_component import *
+import gv_effects
 
 #BaseCanvas is the base class for anything that contains multiple icons and multiple plans
 
@@ -21,6 +22,8 @@ class BaseCanvasLayer(DataItem):
     states=('idle','hidden','ghost','blur')
 
     def contains(self,item):
+        if isinstance(item,basestring):
+            item=world.get_object(item)
         return item in self.items
 
     def __init__(self,*args,**kwargs):
@@ -215,8 +218,8 @@ class BaseCanvasView(View):
         self.group=pgsprite.LayeredUpdates()
         self.tools=pgsprite.Group()
         self.animated=pgsprite.Group()
-        self.pos={}
-        self.icon={}
+        self.pos=DataDict()
+        self.icon=DataDict()
         self.layers=DataList()
 
     def order_layers(self):
@@ -270,6 +273,18 @@ class BaseCanvasView(View):
         #if hasattr(self,'veil') and self.veil:
             #surface.blit(self.veil,(0,0),None,pg.BLEND_RGBA_MULT )
         self.group.draw(surface)
+        return
+        tmp=surface.convert_alpha()
+        for l in self.data.layers[::-1]:
+            tmp.fill((0,0,0,0))
+            #self.group.draw(tmp)
+            grp=pgsprite.Group([g for g in self.group if self.data.get_info(g.item,'layer')==l.trueID])
+            grp.draw(tmp)
+
+            d=self.data.get_info(l,'distance')
+            if d>0:
+                gv_effects.blur(tmp,sigma=int(4*d/1.) )
+            surface.blit(tmp,(0,0))
 
         return
         #for l in self.data.layers:

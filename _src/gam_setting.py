@@ -484,20 +484,6 @@ class OldSettingHandler(Handler):
 
         return Handler.react(self,evt)
 
-class OldSettingView(View):
-    offset=(0,0)
-
-    def __init__(self,handler,parent=None,**kwargs):
-        super(SettingView, self).__init__(handler,parent,**kwargs)
-        self.bg=None
-
-    def paint(self,surface=None):
-        if not surface:
-            surface=self.surface
-        if self.bg:
-            surface.blit(self.bg,-array(self.offset))
-
-
 class SettingView(PlaceView):
     def hover(self,*args):
         return False

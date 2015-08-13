@@ -272,6 +272,7 @@ class Data(object):
                 if kwargs.get('addrequired',False):
                     [self.add(x) for x in item.required]
                 else:
+                    print '!!! MISSING REQUIREMENT:',{str(p):self.contains(p) for p in item.required},self
                     return False
 
             if not ityp+'s' in self.fakelists and hasattr(self,ityp+'s'):
@@ -421,6 +422,8 @@ class Data(object):
     def contains(self,item):
         return item.trueID in self.infos
     def __contains__(self,item):
+        if not hasattr(item,'trueID'):
+            print item
         return item.trueID in self.infos
 
     def renew(self,renewinfotypes=True):

@@ -158,9 +158,12 @@ class Script(TimedEvent):
                 state+=1
                 states.append(state)
                 times.append(time)
+
+
         states.append(state+1)
         times.append(time+max(0,max(durs)))
         eff=self.effects[:]
+        order=dict((j,-i) for i,j in enumerate(eff) )
         for i in range(len(states)):
             if i>0:
                 pred=states[i-1]
@@ -179,6 +182,7 @@ class Script(TimedEvent):
                         stat['waiting']=1
                 else:
                     stat['children_states'][e]=0
+                stat['priority'].setdefault(e,order[e])
 
             stat['time']=times[i]
             if i<len(states)-1:
@@ -188,7 +192,15 @@ class Script(TimedEvent):
             stat['started']=None #Time at which node is stated
         self.states.node[0].update({'duration':0,'waiting':0,'time':0,'started':None} )
         self.scheduled=1
-        #print self, [ (s,self.states.node[s]['duration'],self.states.node[s]['children_states']) for s in self.states.node]
+
+        ## PRINT SCHEDULE:
+        if 0:
+            print '====>',self,'\n', '\n'.join(str(x) for x in [
+            (s, self.states.node[s]['duration'],
+                [(i.trueID,[(str(zz),ww) for zz,ww in i.target.iteritems()],j)
+                for i,j in self.states.node[s]['children_states'].iteritems()
+                if j>0 and i.target and hasattr(i.target,'keys')])
+                for s in self.states.nodes()]),'\n<====='
 
 
 class SceneScriptEffect(TimedEvent):
@@ -360,8 +372,11 @@ class SceneScriptEffect(TimedEvent):
 
     def prep_do(self,scene,**kwargs):
         if self.typ =='container':
+            #if self.target and self.parent.state>0:
+                #print '###',self.parent.state,self,self.trueID, {str(e):i for e,i in self.target.iteritems()},'###'#,debug.caller_name(),debug.caller_name(3),'###'
             for e in self.target:
-                self.add_sim_child(e)
+                #EVT AND PRIORITY
+                self.add_sim_child(e,priority=self.target[e] )
         if self.typ=='Text':
             self.block_thread=1
         elif self.typ=='Call':

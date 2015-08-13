@@ -150,7 +150,7 @@ class TruthCalcEvt(LogicEvent):
             if prevbias!=bias:
                 evt=ChangeInfosEvt(item,sub,bias=bias,source='biascalc')
                 #print 'bias change {} to {}'.format(prevbias,bias),item,should_have_truth,statedtruth, sub
-                self.add_child(evt,{0:0,2:1},priority=-1)
+                self.add_child(evt,{0:0,2:1},priority={0:5,'else':-1})
             return 0
 
         #print 'glappy:', item,graph.name,sub.name,truth,prevtruth
@@ -212,7 +212,8 @@ class TruthCalcEvt(LogicEvent):
             #Recompute the stated
             infos['stated_truth']=truth
         evt=ChangeInfosEvt(item,sub,source='truthcalc',**infos)
-        self.add_child(evt,{0:0,2:1},priority=-1)
+        self.add_child(evt,{0:0,2:1},priority={0:5,2:-1})
+
 
 
 class ReactLinkDiscoveryEvt(Event):

@@ -215,7 +215,7 @@ class InteractionRules(object):
     def __init__(self, match):
         self.match=match
         self.actors=match.actors
-        self.psy={a:PsychologyModel(a) for a in self.actors}
+        self.psy=DataDict({a:PsychologyModel(a) for a in self.actors})
 
     def verbalisation(self,agreement,emotion):
         '''Threshold for a verbal response that leaves
@@ -351,7 +351,7 @@ class InteractionRules(object):
 
     def perceived_discovery(self,ego,reac):
         '''When ego receives a reac, do they detect whether
-        this was a discovery?'''
+        this was a discovery for the reacting character?'''
         perc=self.match.cast.get_info(ego,'perc')
         if reac.discovery:
             if rnd.uniform(0,1) < perc:
@@ -399,15 +399,24 @@ class InteractionScript(Script):
         roots=[n for n,d in schema.in_degree().items() if d==0]
         states={}
         cur=set(roots)
+        nextcur=set([])
         state=1
         #With each state is associated a list of interaction stages
         while cur:
             states[state]=[]
-            for c in tuple(cur):
-                states[state].append(c)
-                cur=cur.union(set(schema.successors(c)))
-                cur.remove(c)
-            state+=1
+            prio={c:inter.stage_priority.get(c,0) for c in cur}
+            #print prio
+            inv={}
+            for c,p in prio.iteritems():
+                inv.setdefault(p,[]).append(c)
+            for p in sorted(prio.values(),reverse=1):
+                states[state]=inv[p][:]
+                state+=1
+            for c in cur:
+                #states[state].append(c)
+                nextcur=nextcur.union(set(schema.successors(c)))
+            cur=nextcur
+            nextcur=set([])
         calls=[]
         autotext={}
         #For each state, look at the stages associated with that states
@@ -416,8 +425,9 @@ class InteractionScript(Script):
         #be called by this one.
         for i in states:
             evtcontainer=SceneScriptEffect()
+            evtcontainer.wait='On'
             evtcontainer.typ='container'
-            evtcontainer.target=[]
+            evtcontainer.target={}
             src=[]
             effects=[evtcontainer]
             autotext[i]=[]
@@ -448,8 +458,8 @@ class InteractionScript(Script):
                             autotext[i].append((s,infos['name']))
             self.treat_autotext(autotext[i],effects)
             for s in src:
-                for e in events.get(s,()):
-                    evtcontainer.target.append(e)
+                for idx,e in enumerate(events.get(s,())):
+                    evtcontainer.target[e]=inter.stage_priority.get(s,0)-idx+len(events[s])
                 if not s in ethos:
                     continue
                 eth=self.total_ethos_effect(ethos[s])
@@ -463,6 +473,10 @@ class InteractionScript(Script):
                     effects.append(eff)
             for e in effects:
                 self.effects.append(e)
+        #print '=================',self
+        #print [(str(s),{str(i):j for i,j in s.target.iteritems()}
+            #) if hasattr(s.target,'keys') else str(s)  for s in self.effects ]
+        #print '================='
 
     def treat_autotext(self,autotext,effects):
         for src,txt in autotext:
@@ -616,11 +630,12 @@ class Interaction(object):
                 cur=cur.union(set(schema.predecessors(c)))
                 cur.remove(c)
                 if c in self.events:
-                    events+= self.events[c]
+                    events+= self.events[c][::-1]
                     #print c,self.events[c]
         cur=list(events)
         while cur:
             e=cur[0]
+            #print 'undoing', e,[(str(c),e.states.node[e.state]['priority'].get(c,"WUT")) for c in e.current_children(1)]
             if user.evt.go(e,0,shall_not_pass=True):
                 cur.remove(e)
                 #print e,[(c,e.states.node[e.state]['children_states'].get(c,"WUT")) for c in e.current_children(1)],e.state
@@ -638,16 +653,59 @@ class InteractionModel(object):
         self.actgraph=match.data.actorgraph
         self.subgraph=match.data.actorsubgraphs
 
+    def draw(self,inter):
+        '''Tool: makes a full graph of the main'''
+        g=nx.DiGraph()
+        for edge in inter.schema.edges():
+            g.add_edge(*edge)
+        color={}
+        for n in inter.schema.nodes():
+            color[n]='r'
+        for dic in (inter.factors, inter.events, inter.ethos):
+
+            for stage in dic:
+                for f in dic[stage]:
+                    if hasattr(f,'keys'):
+                        if not f:
+                            continue
+                        f=str(f)
+                    elif hasattr(f,'states'):
+                        for c in f.all_children(1):
+                            p= f.states.node[2].get('priority',{}).get(c,0)
+                            e='{} {}'.format(c,p)
+                            g.add_edge(f,e)
+                            color[e]='b'
+
+                    g.add_edge(stage,f)
+                    color[f]='g'
+
+        import matplotlib.pyplot as plt
+        pos=nx.spring_layout(g)
+        nx.draw_networkx_edges(g,pos=pos)
+        nx.draw_networkx_nodes(g,pos=pos,node_color=[color[n] for n in g.nodes()])
+        nx.draw_networkx_labels(g,pos,
+                 labels={s:str(s) for s in g.nodes() })
+        plt.show()
+
+
     def make_script(self,evt,scene):
+        '''Function called from the outside: take a proposed event (e.g. a Claim)
+and process its consequences.'''
         if 'claim' in evt.type:
             inter=self.process_claim(evt)
+
+            #self.draw(inter)
             script=InteractionScript(inter)
+            #print 'FINISHED MAKING\n'
             inter.undo_events()
+            #print 'FINISHED UNDOING\n'
             script.parse_interaction(scene)
+            #print 'FINISHED PARSING {}\n'.format(script)
             return script
 
     def process_claim(self,claimevt,inter=None):
-        '''Treatment of a claim proceeds in four stages:
+        '''Internal function.
+        Treatment of a claim proceeds in four stages:
                 - A claims (truth or inference)
                 - B perceives claim (add to subgraph)
                 - B reacts (agreement)
@@ -700,15 +758,29 @@ class InteractionModel(object):
                     perceived_reac=self.perceive_reac(ego,act,reac)
                     preacs.append(perceived_reac)
                     inter.add_edge(reac,perceived_reac)
-                    #TEMPORARY, AWAITING INTERPRETATION IMPLEMENTATION
-                    #inter.add_edge(reac,perceived_reac)#TMP TMP
-                    #self.prepare_stage(perceived_reac,inter) #TMP TMP
 
                 #Interpretation of perceived reactions
                 interpret=self.interpret_reacs(ego,act,preacs)
                 for preac in preacs:
                     inter.add_edge(preac,interpret)
                 self.prepare_stage(interpret,inter)
+
+        #Now pass priority down the branches of the interaction
+        #Whenever branches converge, priority takes max of the two
+        schema=inter.schema
+        for claim in priority:
+            cur=set(schema.successors(claim))
+            nextcur=set([])
+            prior=inter.stage_priority[claim]
+            while cur:
+                for c in cur:
+                    predprior=max(inter.stage_priority.get(pred,0) for
+                            pred in schema.predecessors(c))
+                    inter.stage_priority[c]=max(prior,predprior)
+                    nextcur=nextcur.union(set(schema.successors(c)))
+                cur=nextcur
+                nextcur=set([])
+
         self.make_ethos_effects(inter)
         return inter
 
@@ -755,6 +827,7 @@ class InteractionModel(object):
         item=claim.item
         claimant=claim.actor
 
+        self.assume_addevt(claimant,claim,inter)
         self.prepare_stage(claim,inter)
         #Tree of reactions
         for act2 in self.actors:
@@ -769,7 +842,21 @@ class InteractionModel(object):
             #Reaction to perceived claim
             reac=self.react_claim(act2,perceived_claim,inter)
             inter.add_edge(perceived_claim,reac)
+            self.assume_addevt(act2,perceived_claim,inter)
             self.prepare_stage(reac,inter)
+
+    def assume_addevt(self,ego,claim,inter):
+        '''To avoid any problems with future events, as soon as one
+claims or perceives a claim,one '''
+        return
+        addevts=[]
+        for act in self.actors:
+            if act==ego:
+                continue
+            evt=AddEvt(claim.item,self.subgraph[ego][act])
+            addevts.append(evt )
+            inter.event_source.setdefault(evt,[]).append(claim)
+        inter.events[claim]+=addevts
 
     def perceive_claim(self,ego,actor,claim):
         '''Creates the perceived_claim'''
@@ -814,6 +901,7 @@ class InteractionModel(object):
         return perceived_claim
 
     def react_claim(self,ego,perceived_claim,inter):
+        '''Creates reaction to a perceived_claim'''
         subg=self.subgraph[ego][ego]
         cast=self.match.cast
         actor=perceived_claim.actor
@@ -878,7 +966,7 @@ class InteractionModel(object):
         #information changes
         for xs,cs in changes.iteritems():
             item,data=xs
-            actor=data.owner
+            actor=world.get_object(data.owner)
             selfgraph=self.match.data.actorsubgraphs[actor][actor]
             finalchange={i:sum(c[i] for c in cs if i in c) for i in item.dft }
             for i,dif in finalchange.iteritems():
@@ -1065,7 +1153,11 @@ class InteractionModel(object):
 
 
         #Group truthcalc events concerning the same item
-        for item in per_item:
+        #(and order items by requirements)
+        req=[item for item in per_item]
+        req=[(item,[req.index(r) if r in req else 0 for r in item.required ]) for item in req]
+        req=sorted(req,key=lambda e:e[1])
+        for item,required in req:
             tcalc=per_item[item]
             for e1 in tuple(tcalc):
                 for e2 in tuple(tcalc):
@@ -1075,7 +1167,7 @@ class InteractionModel(object):
                         tcalc.remove(e2)
                         e1.add_sim_child(e2,priority="enclosed")
             evts+=tcalc
-        inter.events[stage]=evts
+        inter.events.setdefault(stage,[]).extend(evts)
 
     def create_factor_events(self,facs,inter):
         match=self.match
@@ -1100,7 +1192,7 @@ class InteractionModel(object):
                 psy=self.rules.psy[f.ego].ethos_effects([f]).iteritems()
                 for i,j in psy:
                     if i=='prox':
-                        j={f.actor.trueID:j}
+                        j={f.actor:j}
                     effect[(f.ego,i)]=j
 
                 effects.append( effect)
