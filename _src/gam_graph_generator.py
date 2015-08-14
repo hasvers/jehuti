@@ -223,7 +223,7 @@ class MatchGraph:
         tt=grammar.trait_type
         tags={}
         goals,important=grammar.make_goal()
-        textmaker=TextBase()
+        textmaker=TextGen()
         nodes={}
         self.renew()
         self.pos={}

@@ -176,7 +176,7 @@ class MatchHandler(SceneHandler):
         self.canvas.dft_graph_states['idle']='ghost'
         self.canvas.set_layer(self.canvas.graph)
 
-        self.textmaker=TextMaker(self.data)
+        self.textmaker=TextBase()
 
     @property
     def components(self):

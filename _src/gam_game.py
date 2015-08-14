@@ -43,9 +43,9 @@ class GameNodeIcon(NodeIcon):
 
 class GameLink(Link):
     klass_name='GameSceneGraph.Link'
-    dft={'name':'call',
-        'genre':'call',
-        'genres':('call',),
+    dft={'name':'jump',
+        'genre':'jump',
+        'genres':('jump',),
         'desc':'',
         'val':.5
         }
@@ -59,7 +59,7 @@ class GameLink(Link):
         for i in ('character','place','topic'):
             genretable[ (i,j) ]=('in',)
         for i in ('match','cutscene','actscene'):
-            genretable[ (i,j) ]=('call',)
+            genretable[ (i,j) ]=('jump',)
 
     def __str__(self):
         return '{}: {}'.format(self.name,[i.name for i in self.parents] )

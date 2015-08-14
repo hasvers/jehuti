@@ -35,9 +35,11 @@ class ActorReact(DataBit):
         DataBit.__init__(self,**kwargs)
 
     def __str__(self):
-        return self.cond+';'+self.text
+        return 'REACT" "{}{}{} {}'.format(self.agree,self.emotion,self.event,self.text)
 
     def test_cond(self,ag,mode='Agree'):
+        print "TODO:TESTCOND ACTOR REACT"
+        return 1
         c=self.cond
         if ag>0 and c ==mode:
             return 1

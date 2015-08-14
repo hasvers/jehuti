@@ -389,8 +389,14 @@ class InteractionScript(Script):
         self.by_actor=DataDict()
         self.interaction=inter
 
-    def parse_interaction(self,scene):
-        '''Takes an interaction schema and parses it into a script.'''
+    def parse_interaction(self,scene,viewpoint=None):
+        '''Takes an interaction schema and parses it into a script.
+All the text in the script is written from the viewpoint of a given character.'''
+#TODO: separate the text part (viewpoint-dependent) from the rest (absolute)
+        if viewpoint is None:
+            viewpoint=scene.active_player
+
+
         inter=self.interaction
         factors=inter.factors
         events=inter.events
@@ -418,7 +424,6 @@ class InteractionScript(Script):
             cur=nextcur
             nextcur=set([])
         calls=[]
-        autotext={}
         #For each state, look at the stages associated with that states
         #then look at the factors associated with those stages
         #and see if they fulfill conditions for scripts, that should thus
@@ -430,11 +435,11 @@ class InteractionScript(Script):
             evtcontainer.target={}
             src=[]
             effects=[evtcontainer]
-            autotext[i]=[]
             for s in states[i]:
                 src.append(s)
                 fac=factors[s]
                 src+=fac
+                #Get scripted effects:
                 if s.type in ('claim','reac'):
                     handled=None
                     infos=scene.canvas.get_info(s.item)
@@ -448,15 +453,9 @@ class InteractionScript(Script):
                         eff.typ='Call'
                         eff.target=called
                         effects.append(eff)
-                        if hasattr(called,'text') and called.text and s.type=='claim':
-                            autotext[i].append((s,called.text))
-                            handled=True
-                    if not handled and s.type=='claim' and s.item.type=='node':
-                        if infos.get('desc'):
-                            autotext[i].append((s,infos['desc']))
-                        else:
-                            autotext[i].append((s,infos['name']))
-            self.treat_autotext(autotext[i],effects)
+            #Make speech bubbles for all the stages contained in this state
+            effects+=self.make_speech(states[i],scene,viewpoint)
+            #Fill event container with logical/factor events and ethos
             for s in src:
                 for idx,e in enumerate(events.get(s,())):
                     evtcontainer.target[e]=inter.stage_priority.get(s,0)-idx+len(events[s])
@@ -478,16 +477,74 @@ class InteractionScript(Script):
             #) if hasattr(s.target,'keys') else str(s)  for s in self.effects ]
         #print '================='
 
-    def treat_autotext(self,autotext,effects):
-        for src,txt in autotext:
-            #TODO: proper autotext treatment
+    def make_speech(self, states,scene,viewpoint):
+        '''Creates speech bubbles (verbal and nonverbal) for the interaction
+seen from a given viewpoint.'''
+        verbal=[] #Verbal components of interaction during state i
+        nonverbal=[] #Nonverbal components
+        effects=[]
+
+        def get_scripted_speech(s,infos):
+            ''''''
+            scripted=[]
+            for called in infos['scripts']:
+                #Node/Link scripts
+                if not called.event_check(s.type,s.item,scene):
+                    continue
+                if called in calls:
+                    continue
+                if hasattr(called,'text') and called.text:
+                    scripted.append(called.text)
+            return scripted
+
+        text={}
+        #Get scripted text that overrides anything else
+        scripted={}
+        for s in states: #Stages involved in state i
+            text[s]=[]
+            if s.type in ('claim','reac'):
+                handled=None
+                infos=scene.canvas.get_info(s.item)
+                scr=get_scripted_speech(s,infos)
+                if scr:
+                    scripted.setdefault(s,[]).extend(scr)
+
+        def make_screff(txt,actor):
             teff=SceneScriptEffect()
             teff.typ='Text'
+            if hasattr(txt,'__iter__'):
+                txt='|'.join(txt)
             teff.text=txt
-            teff.actor=src.ego
+            teff.actor=actor
             teff.display='On'
-            effects.append(teff)
+            return teff
 
+
+        #Now specialize by viewpoint
+        for s in states:
+            actor=s.actor
+            ainf=scene.cast.get_info(actor)
+            txt=None
+            if s.ego!=viewpoint:
+                continue
+            if s in scripted:
+                txt=scripted[s]
+            else:
+                if s.type=='claim' or s.type=='perceived_claim':
+                    txt=TextInteract(scene).claim(s)
+
+                elif s.type=='reac':
+                    txt=TextInteract(scene).selfreac(s)
+
+                elif s.type=='interpret':
+                    txt= TextInteract(scene).interpret(s)
+                #else:
+                    #print 'LACKING TEXT:',s, s.type
+
+            if txt:
+                effects.append(make_screff(txt,actor) )
+
+        return effects
 
     def total_ethos_effect(self,eth):
         ego={}

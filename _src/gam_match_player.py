@@ -675,25 +675,3 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             user.evt.data.bind( (batch,rude) )
         user.evt.do(batch, self,1)
 
-    def auto_text(self,evt):
-        #TODO: Remake this
-        return False
-        texter=self.textmaker#TextMaker(self.data)
-        actor=evt.actor
-        ainf=self.cast.get_info(actor)
-        gph=self.data.actorsubgraphs[actor][actor]
-        clusters,semdata,txts=texter.batch_declaration(ainf,gph,evt)
-        for clus,txt in zip(clusters,txts):
-            self.add_balloon(txt,anchor= actor,source=evt,show_name=1)
-            for reac in reactree.successors(evt):
-                oact=reac.actor
-                oinf=self.cast.get_info(oact)
-                ogph=self.data.actorsubgraphs[oact][oact]
-                effects={}
-                effects.update(evt.effects)
-                for i,j in reac.effects:
-                    effects.setdefault(i,0)
-                    effects[i]+=j
-                txt=texter.reac_say(oinf, ogph,reac,cluster=clus,sem=semdata,eff=effects)
-                if txt:
-                    self.add_balloon(txt,anchor= oact,source=evt,show_name=1)

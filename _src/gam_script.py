@@ -310,24 +310,24 @@ class SceneScriptEffect(TimedEvent):
         if game:
             #variables=game.variables
             links=game.links(scene.data.trueID)
-            calls=['title','END',]
+            jumps=['title','END',]
             for l,other in links:
-                if l.genre !='call':
+                if l.genre !='jump':
                     continue
-                calls.append(other.dataID)
+                jumps.append(other.dataID)
             temps={'save': ( ('info','input',{'legend':'Name'}) , )}
-            if calls:
+            if jumps:
                 transitions=('None','Fade','XFade')
                 transitions+=tuple(olistdir(database['image_path']+'splash/'))
                 temps.update( {
-                    'call':( ('target','arrowsel',{'values':calls,'width':200}) ,
+                    'jump':( ('target','arrowsel',{'values':jumps,'width':200}) ,
                          ('info','arrowsel',{'legend':'Transition','values':transitions }),) })
             #if variables:
                 #temps.update( {
                     #'variable':( ('target','input',{'width':200}),
                          #('info','input',{'width':200,'height':200}),) })
             templatelist['Game']=(
-                ('evt','arrowsel',{'values': ('call','variable','save')  ,'remake':True}),
+                ('evt','arrowsel',{'values': ('jump','variable','save')  ,'remake':True}),
                 ) +temps.get(self.evt,())
         return templatelist
 
@@ -375,7 +375,6 @@ class SceneScriptEffect(TimedEvent):
             #if self.target and self.parent.state>0:
                 #print '###',self.parent.state,self,self.trueID, {str(e):i for e,i in self.target.iteritems()},'###'#,debug.caller_name(),debug.caller_name(3),'###'
             for e in self.target:
-                #EVT AND PRIORITY
                 self.add_sim_child(e,priority=self.target[e] )
         if self.typ=='Text':
             self.block_thread=1
@@ -429,7 +428,7 @@ class SceneScriptEffect(TimedEvent):
                     evt= AddEvt(self.target,data,infos=infos )
                 self.add_child(evt,{1:0,2:1},priority=1)
         elif self.typ=='Game':
-            if self.evt =='call':
+            if self.evt =='jump':
                 self.duration=ergonomy['transition_time']/2
                 tdevt=None
                 if self.info=='Fade':
@@ -521,9 +520,9 @@ class SceneScriptEffect(TimedEvent):
                         affects=(scene.cast.data, ))
 
         elif self.typ=='Game':
-            if self.evt =='call':
+            if self.evt =='jump':
                 if not user.ui.editor_ui:
-                    user.ui.game_ui.goto(self.target,splash=f)
+                    user.ui.game_ui.goto(self.target)#,splash=f)
                 else:
                     scene.return_to_editor()
                 scene.freeze()
@@ -568,7 +567,7 @@ class SceneScriptEffect(TimedEvent):
         elif self.typ in  ('Cast','Scene'):
             return base +': {} {} {}'.format(self.evt,self.target,self.info)
         elif self.typ =='Game':
-            if self.evt=='call':
+            if self.evt=='jump':
                 return base+': {} {}'.format(self.evt,self.target)
             else:
                 return base+': {} {} {}'.format(self.evt, self.target,self.info)

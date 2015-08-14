@@ -23,7 +23,7 @@ class PhaseHandler(object):
         self.timeline={}
         self.calls=nx.Graph()
         pg.event.set_blocked(30)
-        self.textmaker=TextMaker(self.data)
+
 
     def get_scripts(self,**kwargs):
         '''Returns all scripts that reply to a call or satisfy a given condition.'''
@@ -133,13 +133,13 @@ class PhaseHandler(object):
         elif hasattr(anchor, 'type'):
             if anchor.type=='actor':
                 if kwargs.pop('show_name',False):
-                    pre= self.textmaker.actor_name(self.cast.get_info(anchor))
+                    pre=  TextTools().actor_name(self.cast.get_info(anchor))
                     if '*' in txt:
                         pre+=' '
                         txt=txt.replace('*','')
                         if txt[-1]!='.':
                             txt+='.'
-                        txt='#i#{}##'.format(txt)
+                        txt='%i%{}%%'.format(txt)
                     else:
                         pre+=': '
                         txt=txt[0].capitalize()+txt[1:]
