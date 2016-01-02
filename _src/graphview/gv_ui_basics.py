@@ -30,6 +30,8 @@ class User():
         self.screen_scale=1
         self.screen_trans=array((0,0))
 
+        self.started_click=0
+
     def pause(self,do=True):
         self.paused=do
         self.evt.paused=do
@@ -185,6 +187,27 @@ class User():
                 dic=item.__dict__
             struct=tuple(('{}:{}'.format(i,j), lambda:1) for i,j in dic.iteritems() )
         self.ui.float_menu(struct,scrollable='v')
+
+    def accessibility_input_scheme(self,event):
+        '''Options for converting the input scheme, e.g. for tablet.'''
+
+
+        if event.type==pg.MOUSEBUTTONDOWN:
+            #Danger of using real time: if there is lag, click becomes long!
+            self.started_click=pg.time.get_ticks()
+
+
+        if event.type==pg.MOUSEBUTTONUP:
+            click_duration =pg.time.get_ticks()-self.started_click
+            if event.button==1:
+
+                if click_duration >ergonomy['long_click_duration'] and ergonomy['long_left_equals_right_click']:
+                    dic= event.dict
+                    dic['button']=3
+                    event=pg.event.Event(event.type,dic )
+                    #event.button=3
+        return event
+
 
 user = User()
 
@@ -361,10 +384,10 @@ def '''+i+'''(self,val):
                 return self.rect.topleft
 
     def mousepos(self,child=None):
-        if self.parent:
-            mousepos=self.parent.mousepos()
-        else:
-            mousepos=user.mouse_pos()
+        #if self.parent:   #IN PRINCIPLE, OBSOLETE GIVEN THAT RECURSION IS IN ABSPOS
+            #mousepos=self.parent.mousepos()
+        #else:
+        mousepos=user.mouse_pos()
         if self.zoom and self.zoom!=1:
             return tuple((array(mousepos )/self.zoom-self.abspos(child)).astype('int'))
         return tuple(mousepos-array(self.abspos(child)))
@@ -571,6 +594,13 @@ def '''+i+'''(self,val):
         super(UI_Item,self).kill()
         return True
 
+    def rem_anim(self,anim=None):
+        try:
+            user.ui.anim.add_anim
+        except:
+            #Tried to remove an animation before the gui was set up
+            return False
+        return user.ui.anim.rem_anim(self,anim)
 
     def set_anim(self,anim,**kwargs):
         try:

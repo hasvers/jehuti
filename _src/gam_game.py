@@ -278,18 +278,38 @@ class GameHandler(Handler):
         elif genre=='topic':
             return MatchGraph
 
+    def bind_data(self,node,data=None):
+        if not data is None:
+            node.dataID=data.trueID
+            name=data.name
+        else:
+            name=node.name
+        #data=self.blank_data(name,node.genre)
+        #fout=fopen(name,'wb',filetype=node.genre)
+        #pickle.dump(data,fout)
+        node.filename=name
+        #data.txt_export(filename=name )
+        #fout.close()
+        self.data.graph.set_info(node,'filename',name)
+        self.dataload(node)
+
+
+
     def create_data(self,node):
         '''Create data for a scene/object that bears the name of the node'''
         name=node.name
         data=self.blank_data(name,node.genre)
-        #fout=fopen(name,'wb',filetype=node.genre)
-        #pickle.dump(data,fout)
-        node.dataID=data.trueID
-        node.filename=name
         data.txt_export(filename=name )
-        #fout.close()
-        self.data.graph.set_info(node,'filename',node.name)
-        self.dataload(node)
+        self.bind_data(node,data)
+        #
+        ##fout=fopen(name,'wb',filetype=node.genre)
+        ##pickle.dump(data,fout)
+        #node.dataID=data.trueID
+        #node.filename=name
+        #data.txt_export(filename=name )
+        ##fout.close()
+        #self.data.graph.set_info(node,'filename',node.name)
+        #self.dataload(node)
 
     def delete_data(self,node):
         '''Delete data bound to a node'''
@@ -375,18 +395,26 @@ class GameEditor(CanvasEditor,GameHandler):
             node=target.item
             dataname =node.filename
             #print dataname, node.dataID, world.database
+            if dataname is None:
+                #Try to use the name of the node itself as file name
+                bound=False
+                dataname=node.name
+            else:
+                bound=True
             try:
                 existing=fopen(dataname,'rb',filetype=node.genre)
                 #print dataname, existing
             except:
                 existing=False
-            if node.dataID in world.database or existing:
+            if node.dataID in world.database or existing and bound:
                 struct+=('Open data',lambda t=node: self.signal('open',t)),
                 existing=True
-            if existing:
+            if existing and bound:
                 dmeth=lambda t=node: self.delete_data(t)
                 struct+=('Delete data',lambda:self.parent.confirm_menu(dmeth,
                         legend="Delete data? (IRREVERSIBLE)") ),
+            elif existing:
+                struct+=('Bind data',lambda t=node: self.bind_data(t)),
             else:
                 struct+=('Create data',lambda t=node: self.create_data(t)),
             if not ergonomy['edit_on_select']:

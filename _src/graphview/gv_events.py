@@ -7,6 +7,7 @@ DEBUG=0
 class Signal(DataBit):
 #
     def __init__(self,type,*args,**kwargs):
+        DataBit.__init__(self,**kwargs)
         self.source=kwargs.pop('source',None) #source is not that important if each handler has a list of events that it has responded to
         self.type=type
         self.inverse=kwargs.pop('inverse',None) # inverse type (undo for do, unselect for select)
@@ -638,7 +639,9 @@ class Event(Signal):
             self.states.add_edge(state,suc)
 
     def duplicate_of(self,evt):
-        if self==evt:
+        if self is evt :
+            return True
+        if evt.type==self.type and not False in [getattr(evt,i)==getattr(self,i) for i in self.dft]:
             return True
         return False
 
@@ -722,6 +725,13 @@ class ChangeInfosEvt(Event):
     repeatable=True #Allows to apply it multiple times with different contents
     # states : 0 = no change/back to inital state. 1 = final state.
 
+    dft={
+        'item':None,
+        'data':None,
+        #'kwargs':{},
+        }
+
+
     def __init__(self,item,data,**kwargs):
         self.additive=kwargs.pop('additive',False)#For additive change of numeric informations
 
@@ -743,11 +753,6 @@ class ChangeInfosEvt(Event):
     def infos(self):
         return self.sinfos(self.state)
 
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.item==evt.item and self.data==evt.data:
-            if self.kwargs==evt.kwargs:
-                return True
-        return False
 
     def sinfos(self,state):
         if state==1:
@@ -838,22 +843,28 @@ class DeleteInfoEvt(Event):
     (i.e. a data structure that has precursors filling in the missing info)'''
     desc='Delete info'
 
+    dft={
+        'item':None,
+        'data':None,
+        'infos':{},
+        'oldinfos':{},
+        }
+
     def __init__(self,item,data,infos,**kwargs):
         #data is the data container, kwargs are the infos (and some signal-related metainfos)
         super(DeleteInfoEvt, self).__init__(type='rem_info',**kwargs)
         self.data=data
         self.item=item
         self.infos=infos
-        self.oldinfos={}
 
     def __str__(self):
         return '{} {} {} {}'.format(self.desc,self.data,self.item,self.kwargs)
 
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.item==evt.item and self.data==evt.data:
-            if self.infos==evt.infos and self.oldinfos==evt.oldinfos:
-                return True
-        return False
+    #def duplicate_of(self,evt):
+        #if self.type==evt.type and self.item==evt.item and self.data==evt.data:
+            #if self.infos==evt.infos and self.oldinfos==evt.oldinfos:
+                #return True
+        #return False
 
     def affects(self):
         return (self.item,self.data)
@@ -891,6 +902,14 @@ class DeleteInfoEvt(Event):
 
 class AddEvt(Event):
     desc='Add'
+
+    dft={
+        'item':None,
+        'data':None,
+        'infos':{},
+        }
+
+
     def __init__(self,item,data,**kwargs):
         self.inverted=kwargs.pop('inverted',False)
         if self.inverted :
@@ -899,7 +918,6 @@ class AddEvt(Event):
         else :
             lab='add_'
         self.desc += ' '+item.type
-        self.infos=kwargs.pop('infos',{} )
         super(AddEvt, self).__init__(type=lab+item.type,**kwargs)
 
         self.kwargs.setdefault("assess",True)
@@ -916,10 +934,10 @@ class AddEvt(Event):
     def __str__(self):
         return '{} {} {} {}'.format(self.desc,self.item,self.data, self.state)
 
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.item==evt.item and self.data==evt.data:
-            return True
-        return False
+    #def duplicate_of(self,evt):
+        #if self.type==evt.type and self.item==evt.item and self.data==evt.data:
+            #return True
+        #return False
 
     def affects(self):
         return (self.item,self.data)
@@ -994,29 +1012,30 @@ class AddEvt(Event):
 
 class SelectEvt(Event):
     desc='Select'
+
+    dft={
+        'item':None,
+        }
+
     def __init__(self,*args,**kwargs):
         super(SelectEvt, self).__init__(type='select',*args,**kwargs)
         self.item = args[0]
         self.cues={0:'destroy'}
 
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.item==evt.item:
-            return True
-        return False
-
 class MoveEvt(Event):
     desc='Move'
+    dft={
+        'item':None,
+        'graph':None,
+        'pos':None,
+        }
+
     def __init__(self,item,graph,pos,**kwargs):
         super(MoveEvt, self).__init__(type='move',**kwargs)
         self.item = item
         self.pos=pos
         self.graph=graph
 
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.item==evt.item:
-            if self.pos==evt.pos and self.graph==evt.graph:
-                return True
-        return False
 
     def __str__(self):
         return '{} {} {}'.format(self.desc,self.item,self.pos)

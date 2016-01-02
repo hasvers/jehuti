@@ -207,27 +207,6 @@ class Handler(object):
         else:
             return self.set_data(data)
 
-    def old_set_from_file(self,filename):
-        genre=kwargs.get('datatype',self.data.datatype)
-        #path=database['{}_path'.format(genre)]
-        #ext=database['{}_ext'.format(genre)]
-        print 'Setting {} from'.format(genre),filename
-        #if not ext in filename:
-            #fin = fopen(path+filename+ext, "rb" )
-        #else :
-            #fin = fopen(filename, "rb")
-        #data = pickle.load( fin)
-        try:
-            data=self.data()
-        except:
-            data=self.data.__class__()
-        data.txt_import(filename)
-        #fin.close()
-        if kwargs.get('initial',False):
-            self.data=data
-        else:
-            return self.set_data(data)
-
     def save_to_file(self,filename,data=None):
         if data is None:
             data=self.data

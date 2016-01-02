@@ -500,6 +500,11 @@ class RadialMenu(RadialWindow):
         self.created_at=pg.time.get_ticks()
         user.focus_on(self)
 
+    def parse(self,struct,*args,**kwargs):
+        if struct is None:
+            return
+        struct2=[ (line[0].replace(u' ',u'\n'),)+tuple(line[1:]) if line[0] else line for line in struct ]
+        RadialWindow.parse(self,struct2,*args,**kwargs)
 
     def event(self,event,*args,**kwargs):
         if (event.type== pg.MOUSEBUTTONDOWN):
@@ -525,7 +530,7 @@ class RadialMenu(RadialWindow):
 
     def react(self,evt):
         if evt.type=='anim_stop' and evt.args[0].anim=='disappear':
-            if self.interface.window['floatmenu']==self:
+            if self.interface.window.get('floatmenu',None)==self:
                 self.interface.close('floatmenu')
 
 

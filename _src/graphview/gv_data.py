@@ -162,6 +162,7 @@ class Data(object):
         return [world.get_object(iid) for iid in self.infos]
 
     def IDify(self,val):
+        '''Replace explicit objects by their trueID in datastructures.'''
         if hasattr(val,'keys'):
             for i in val:
                 old= val[i]
@@ -252,6 +253,27 @@ class Data(object):
                 return types
         return []
 
+    def set_ID(self,item):
+        '''Attribute a local ID number (within the datastructure, used only
+        to keep track of number of items and generate default names).'''
+        ityp=item.type
+        lst=getattr(self,ityp+'s')
+        if hasattr(item, 'ID') and not item.ID is None:
+            for oth in lst:
+                if oth!=item and oth.ID==item.ID:
+                    item.set_ID(max(item.ID, max(o.ID for o in lst )  +1 ))
+                    break
+            if self.typID[ityp]<=item.ID:
+                self.typID[ityp]=item.ID+1
+        else:
+            item.set_ID(self.typID[ityp])
+            self.typID[ityp]+=1
+
+    #def create_item(self,klass):
+        #item=klass()
+        #self.set_ID(item)
+        #return item
+
     def add(self,item,**kwargs):
         #If the trueID does not already exist in World, add it
         if item is None:
@@ -282,16 +304,8 @@ class Data(object):
                         print 'ERROR DIAGNOSIS',item, self, ityp+'s', lst,self.objects()
                         raise Exception('Item in list but not in infos.')
                     lst.append(item)
-                if hasattr(item, 'ID') and not item.ID is None:
-                    for oth in lst:
-                        if oth!=item and oth.ID==item.ID:
-                            item.ID=max(item.ID, max(o.ID for o in lst )  +1 )
-                            break
-                    if self.typID[ityp]<=item.ID:
-                        self.typID[ityp]=item.ID+1
-                else:
-                    item.ID=self.typID[ityp]
-                    self.typID[ityp]+=1
+                self.set_ID(item)
+
             added=True
             self.infos[item.trueID]={}
 
@@ -309,6 +323,10 @@ class Data(object):
                     baseinfos[i]=getattr(item,i)
                 elif self.is_sole_source(i,item) and i in item.default_infos:
                     baseinfos[i]= deepcopy(item.default_infos[i])
+            if 'name' in item.dft and item.name==item.dft['name']:
+                #print self.ID
+                baseinfos['name']='{}{}'.format(baseinfos['name'],item.ID)
+
 
             if self.transparent: #do not cover parent's infos with default infos !
                 for j in iterchain(p.get_infotypes(item.type,force_opaque=1)
@@ -649,6 +667,9 @@ class DataItem(DataBit):
         if not hasattr(self,'type'):
             self.type='dataitem'
         DataBit.__init__(self,**kwargs)
+
+    def set_ID(self,ID):
+        self.ID=ID
 
     def txt_export(self,keydic,txtdic,typdic,**kwargs):
         kwargs.setdefault('add_param',[])

@@ -289,6 +289,8 @@ class GameUI(BasicUI):
             first= self.game.gamestate.current
         else:
             first=self.game.data.first
+        if first is None:
+            raise Exception('No first scene selected.')
         self.goto(first)
         self.launched=True
 

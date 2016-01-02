@@ -153,6 +153,7 @@ class BasicUI(UI_Widget):
                 self.window[typ].append(window)
         if not window in self.floatgroup:
             self.floatgroup.add(window)
+        self.kill_mouseover() #Seems cleaner if any mouseover is removed
         return  window
 
     def make_balloon(self,txt,**kwargs):
@@ -164,27 +165,40 @@ class BasicUI(UI_Widget):
             except:
                 pointpos=anchor.rect.topleft
 
-        w,h=graphic_chart['dialbox_size']
+        #Different types of balloons
+        mode=kwargs.get('mode','dialogue')
+        if mode=='dialogue':
+            w,h=graphic_chart['dialbox_size']
+            font=FONTLIB["dialogue"]
+            anim_len=ANIM_LEN['med']
+        elif mode=='emote':
+            anim_len=ANIM_LEN['short']
+            font=FONTLIB["emote"]
+            mrg=kwargs['margin']=6
+            w,h=array(font.size(txt)  )+2*mrg
+            kwargs['alpha']=140
+
+        #First create balloon without point
         rect=self.screen.get_rect()
         ball=SpeechBalloon(self,(w,h),maxsize=array(self.rect.size)*.5,fixsize=0,**kwargs)
-        ball.add('text',val=txt,wrap=True,maxlines=None,font=FONTLIB["dialogue"])
+        ball.add('text',val=txt,wrap=True,maxlines=None,font=font)
         brect=ball.rect
         w,h=brect.size
         bs=self.balloons.setdefault(anchor,[])
-        if  not anchor:
-            brect.center=rect.center
-            pos=brect.topleft
-        elif isinstance(anchor,basestring):
-            anchor=anchor.lower()
-            if anchor=='up':
-                brect.center=(rect.center+3*array(rect.midtop))/4
-            elif anchor=='down':
-                brect.center=(rect.center+3*array(rect.midbottom))/4
-            else:
-                brect.center=rect.center
-            pos=brect.topleft
 
+        #Defaut placement, without a point
+        if isinstance(anchor,basestring):
+            anchor=anchor.lower()
+        if anchor=='up':
+            brect.center=(rect.center+3*array(rect.midtop))/4
+        elif anchor=='down':
+            brect.center=(rect.center+3*array(rect.midbottom))/4
         else:
+            brect.center=rect.center
+        pos=brect.topleft
+
+        #If there is an anchor for the point
+        if anchor and not isinstance(anchor,basestring):
             dist=(rect.center+2*array(rect.midtop))/3 -pointpos
 
             if dist[1]<=0:
@@ -229,11 +243,18 @@ class BasicUI(UI_Widget):
         bs.append(ball)
         ball.anchor=anchor
 
-        ball.set_anim('appear',len=ANIM_LEN['med'],affects=[ball])
+        if mode=='dialogue':
+            ball.set_anim('appear',len=anim_len,affects=[ball])
+        else:
+            ball.set_anim('appear_in',len=anim_len,affects=[ball])
         border=self.screen.get_rect().inflate(w,h)
 
-        self.float_core(ball,'balloon',pos=pos,bbox=border,**kwargs)
+        if mode=='dialogue':
+            self.float_core(ball,'balloon',pos=pos,bbox=border,**kwargs)
+        else:
+            self.float_core(ball,'infobubble',pos=pos,bbox=border,**kwargs)
         #ballpos=
+        return ball
 
     def close_balloon(self,ball):
         if ball in self.balloons.get(ball.anchor,()):
@@ -556,14 +577,14 @@ class BasicUI(UI_Widget):
             if self.keymap(event):
                 return True
 
-        if not user.paused and event.type==30 or not self.window.get('floatdialog',False):
+        if (not user.paused and event.type==30) or not self.window.get('floatdialog',False):
             for l in self.layers :
                 if ( not l in exclude ) and l.event(event):
                     return True
 
 
 
-        if event.type == pg.MOUSEBUTTONDOWN:
+        if event.type == pg.MOUSEBUTTONUP:
             if 'floatmenu' in self.window and self.window['floatmenu'] :
                 self.window['floatmenu'].kill()
                 self.window['floatmenu']=None
@@ -615,23 +636,42 @@ class BasicUI(UI_Widget):
     def set_mouseover(self,txt,anim=None,**kwargs):
         if user.mouseover:
             user.mouseover.kill()
-        user.mouseover=emote=Emote(txt,**kwargs)
         pos=kwargs.get('pos',None)
-        source=kwargs.pop('source',None)
-        emote.source=source
         if pos is None:
-            kwargs['pos']=pos=user.mouse_pos()
-        if anim:
-            emote.set_anim(anim,**kwargs)
+            pos=user.mouse_pos()
+        if 1:
+            #MOUSEOVER AS A BALLOON
+            kw={}
+            if not 'anchor' in kwargs:
+                kw['pos']=pos
+            else:
+                kw['anchor']=kwargs['anchor']
+            user.mouseover=self.make_balloon(txt,
+                ephemeral=1,mode='emote',clickthrough=1,**kw)
         else:
-            emote.set_anim('appear',len=ANIM_LEN['instant'])
-        self.group.add(emote)
-        emote.rect.bottomleft=pos
+            #MOUSEOVER AS AN EMOTE TEXT
+            user.mouseover=emote=Emote(txt,**kwargs)
+            pos=kwargs.get('pos',None)
+            source=kwargs.pop('source',None)
+            emote.source=source
+            if pos is None:
+                kwargs['pos']=pos=user.mouse_pos()
+            if anim:
+                emote.set_anim(anim,**kwargs)
+            else:
+                emote.set_anim('appear',len=ANIM_LEN['instant'])
+            self.group.add(emote)
+            emote.rect.bottomleft=pos
+        return user.mouseover
 
     def kill_mouseover(self):
         if user.mouseover:
-            user.mouseover.set_anim('disappear',
-                len=ANIM_LEN['short'],affects=[user])
+            #user.mouseover.set_anim('disappear',
+                #len=ANIM_LEN['short'],affects=[user])
+            user.mouseover.rem_anim()
+            #user.mouseover.set_anim('disappear',len=ANIM_LEN['short'],affects=[self])
+            user.mouseover.kill()
+            user.mouseover=None
 
 
 class BasicSM(SoundMaster):

@@ -340,9 +340,9 @@ class MatchUI(BasicUI,SceneUI):
             smenu=False
 
         wintypes=kwargs.pop('wintypes',
-            (  ('statusbar',lambda e:StatusBar(e,menu=smenu), ('topleft','0,0') ),
+            (  #('statusbar',lambda e:StatusBar(e,menu=smenu), ('topleft','0,0') ),
                 ('dialbox',DialBox,('midbottom','self.rect.midbottom')),
-                ('turnbox',TurnBox, ('center','self.rect.center[0],70')),
+                ('turnbox',TurnBox, ('center',"self.rect.center[0],self.rect.midtop[1]+graphic_chart['turnbox_size'][1]")),
                 ('actionlist', ActionList,('topleft','self.window["turnbox"].rect.topright')),
             ))
 
@@ -379,7 +379,7 @@ class MatchUI(BasicUI,SceneUI):
             (self,self.match.cast),
             (self,self.match),
             (self,self.match.data),
-            (self.window['statusbar'], user),
+            #(self.window['statusbar'], user),
             (self.window['turnbox'], self.match),
             (self.window['turnbox'], self.match.data),
             (self.match,self.window['turnbox']),
@@ -478,7 +478,9 @@ class MatchUI(BasicUI,SceneUI):
                 #tgt=kwargs['target']
                 #pos=self.abspos(tgt)+array(tgt.rect.size)/2
                 #kwargs['pos']=pos
-            self.float_menu(struct,oneshot=True)#,**kwargs)
+            self.float_radial(struct,oneshot=True)#,**kwargs)
+        else:
+            self.float_radial(self.statusmenu(),ephemeral=True,oneshot=True)
 
     def keymap(self,event):
         if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():
@@ -610,6 +612,7 @@ class TurnBox(Window):
             self.turn.val= turn
             self.turn.redraw()
         self.time_left.set_val(match.time_left,max=match.time_allowance,neg=match.time_cost)
+        self.time_left.redraw()
         if match.time_cost > match.time_left:
             self.timetxt.set_state('negative')
             self.timetxt.redraw()

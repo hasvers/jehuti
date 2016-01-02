@@ -123,7 +123,7 @@ class ActscenePlayer(ActsceneHandler,CutscenePlayer):
         if ActsceneHandler.hover(self,target):
             mo= self.data.get_info(target,'mouseover')
             if mo:
-                user.set_mouseover(mo)
+                user.set_mouseover(mo,anchor=target)
             return 1
         return 0
 

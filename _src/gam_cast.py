@@ -98,7 +98,8 @@ class CastHandler(Handler):
 
     def new_actor(self):
         print 'Creating a new actor'
-        actor =Actor()
+        #actor =self.data.create_item(Actor)
+        actor=Actor()
         evt=AddEvt(actor,self.data)
         if user.evt.do(evt,self):
             self.upd_actors()

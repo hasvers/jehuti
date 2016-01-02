@@ -771,11 +771,13 @@ class CanvasHandler(UI_Widget):
             if self.label(hover):
                 if (not hover.item in self.canvas.labels or
                       not self.canvas.labels[hover.item] in self.canvas.group):
-                    if hover.item.type=='node':
-                        mopos=array(self.abspos(hover)) + (hover.rect.w*3/4,0)
-                    else:
-                        mopos=None
-                    user.set_mouseover(self.label(hover),pos=mopos)
+
+                    #if hover.item.type=='node':
+                        #mopos=array(self.abspos(hover)) + (hover.rect.w,0)
+                    #else:
+                        #mopos=hover.rect.center+array(self.abspos())
+
+                    user.set_mouseover(self.label(hover),anchor=hover.item)#,pos=mopos)
                 info=self.canvas.active_graph.get_info(hover.item)
                 if not info:
                     info= self.label(hover)
@@ -811,9 +813,12 @@ class CanvasHandler(UI_Widget):
         grabbed= user.grabbed
         if user.ungrab() and grabbed.item.type=='node':
             grabbed=grabbed.item
-            evt=MoveEvt(grabbed, self.canvas.graph,self.canvas.pos[grabbed])
-            if user.evt.do(evt,self.canvas.graph):
-                self.canvas.dirty=True
+            if tuple(self.canvas.graph.pos[grabbed])!=tuple(self.canvas.pos[grabbed]):
+                evt=MoveEvt(grabbed, self.canvas.graph,self.canvas.pos[grabbed])
+                if user.evt.do(evt,self.canvas.graph):
+                    self.canvas.dirty=True
+            return True
+        return False
 
     def test_hovering(self,event,**kwargs):
         canvas=self.canvas
@@ -917,7 +922,7 @@ class CanvasHandler(UI_Widget):
         if user.state == 'idle'  and event.type in (pg.MOUSEBUTTONDOWN,pg.MOUSEBUTTONUP,pg.MOUSEMOTION) :
             hover=self.test_hovering(event,pos=pos)
 
-            if event.type == pg.MOUSEBUTTONDOWN :
+            if event.type == pg.MOUSEBUTTONUP:#DOWN :
                     if not hover and self.select_opt['auto_unselect'] :
                         self.unselect()
                     #print [nicon.id for nicon in  pgsprite.spritecollide(user.arrow,canvas.group,False,pgsprite.collide_circle)]
@@ -932,8 +937,8 @@ class CanvasHandler(UI_Widget):
                 self.drag()
         if not handled :
             if event.type == pg.MOUSEBUTTONUP :
-                self.drop()
-                handled = True
+                handled=self.drop()
+                #handled = True
         if handled :
             self.canvas.dirty=True
 
@@ -1290,7 +1295,7 @@ class CanvasEditor(CanvasHandler):
                 tgt=kwargs['target']
                 pos=self.abspos(tgt)+array(tgt.rect.size)/2
                 kwargs['pos']=pos
-            user.ui.float_menu(menu,oneshot=True,**kwargs)
+            user.ui.float_radial(menu,oneshot=True,**kwargs)
 
     def right_click(self,target,event=None):
         if not target:

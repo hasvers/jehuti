@@ -136,6 +136,8 @@ def main():
         evts=pgevent.get()
         paint =False
         for event in evts:
+            event=user.accessibility_input_scheme(event) #Translate event content if input scheme
+
             if user.screen_scale!=1 and hasattr(event,'pos'):
                 updict={}
                 updict['pos']=scale_vec(event.pos-user.screen_trans)

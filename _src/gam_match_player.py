@@ -301,7 +301,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                 self.canvas.handler.human_player=False
                 #self.cast
             if not nosignal:
-                print 'Nosignal',self.active_player
+                print 'Signalling player set to',self.active_player
                 self.signal('set_player',self.active_player,affects=(self.data,self.cast.data))
             if self.controller[actor]!='human' and self.controller[actor]:
                 self.controller[actor].make_turn()
@@ -557,7 +557,7 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                         return False
                     if (self.time_left<0 and not database['allow_overtime']):
                         user.set_mouseover('No time',anim='emote_jump',
-                            ephemeral=1,color='r')
+                            ephemeral=1,color='r',anchor=item)
                         self.parent.soundmaster.play('cancel')
                         self.signal('overtime_denied')
                         return False
@@ -588,6 +588,16 @@ class MatchPlayer(MatchHandler,PhaseHandler):
             nevt = ExploreEvt(sgn, self.active_player,pos=self.canvas.graph.pos[item],cost=cst)
             cevt=QueueEvt(nevt,self.data)
             user.evt.do(cevt)
+
+        if 'jumpaction' in sgn:
+            item = sarg[0].item
+            tgtpos=self.canvas.graph.pos[item]
+            srcpos=self.data.active_region[0]
+            cst=skwarg.get('cost',self.ruleset.jumpcost(srcpos,tgtpos) )
+            nevt = JumpEvt(sgn,actor= self.active_player,pos=tgtpos,cost=cst)
+            cevt=QueueEvt(nevt,self.data)
+            user.evt.do(cevt)
+
 
         if 'speechact' in evt.type:
             tgt=evt.args[0]

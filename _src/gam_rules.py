@@ -99,6 +99,7 @@ class LogicRuleset():
 
 class MatchRuleset(LogicRuleset):
     pondermin=.3
+    pondermax=.3 #If <= pondermin, no choice of how much pondering
     speechactmin=.3
 
     @property
@@ -170,6 +171,21 @@ class MatchRuleset(LogicRuleset):
                 return {'truth':self.perceive_info(oti['truth'],act)}
         return False
 
+    # CANVAS RELATED
+
+    def explore_radius(self,cost,infos):
+        typ=ergonomy['canvas_typical_dist']/hypot(*ergonomy['default_canvas_size'])
+        rad= max(typ/2., min(sqrt(cost*infos['agil'])*typ*4, 4.*typ ))
+        #print 'explore radius', rad, 'min max',typ/2., typ*4.
+        return rad
+
+    def jumpcost(self,srcpos,tgtpos):
+        '''Cost of requesting a jump in the conversation'''
+        cost=.3
+        typ=ergonomy['canvas_typical_dist']#/hypot(*ergonomy['default_canvas_size'])
+        return  hypot(*( array(tgtpos)-srcpos) )*cost/typ
+
+
 # Time and relationships
 
 
@@ -178,12 +194,6 @@ class MatchRuleset(LogicRuleset):
         tot=len(actors)
         totface=sum(self.match.cast.get_info(a,'face') for a in actors)
         return float(tot)/totface
-
-    def explore_radius(self,cost,infos):
-        typ=ergonomy['canvas_typical_dist']/hypot(*ergonomy['default_canvas_size'])
-        rad= max(typ/2., min(sqrt(cost*infos['agil'])*typ*4, 4.*typ ))
-        #print 'explore radius', rad, 'min max',typ/2., typ*4.
-        return rad
 
     def politeness_effects(self,typ,*args,**kwargs):
         src_actor=args[0]

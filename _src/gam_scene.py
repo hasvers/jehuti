@@ -2,7 +2,7 @@
 
 from gam_phase import *
 from gam_cast import *
-from gam_setting import *
+from gam_place import *
 
 
 #Scene is the Urclass of Match, Cutscene and Actscene

@@ -165,7 +165,7 @@ class CutsceneEditor(PlaceEditor,SceneEditor,CutsceneHandler):
         )
         #lam=lambda: self.parent.load_menu('cast',self.cast.add_actor_from_file,new=self.cast.new_actor)
         struct+=(
-            ('Edit setting',lambda e=self.setting.data: self.signal('edit',e)),
+            #('Edit setting',lambda e=self.setting.data: self.signal('edit',e)),
             ('Add sprite', self.add_sprite ),
             ) + BaseCanvasEditor.bgmenu(self,*args,**kwargs)
         struct+=SceneEditor.menu(self,*args,**kwargs)
@@ -384,7 +384,9 @@ class CutsceneUI(BasicUI,SceneUI):
         self.soundmaster = self.SM(self)
         self.scene= self.Player(self,data=scenedata)
         SceneUI.__init__(self,**kwargs)
-        temp={'viewables':('floatmenu','menu','balloon','dialbox') ,'floatmenu':True,'menu':True,'balloon':'reverse','dialbox':True}
+        temp={'viewables':('floatmenu','menu','balloon','dialbox','infobubble') ,
+            'floatmenu':True,'menu':True,'balloon':'reverse','dialbox':True,
+            'infobubble':False}
         BasicUI.__init__(self,screen,template=temp,**kwargs)
         self.layers.append(self.scene)
         #if self.game:

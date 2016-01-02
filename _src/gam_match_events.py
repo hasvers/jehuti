@@ -23,6 +23,12 @@ class MatchEvent(LogicEvent):
 class QueueEvt(MatchEvent):
     #Simple wrapper for any event that is queued (always changes state after wrapped event)
     desc='Queue'
+    dft={
+        'evt':None,
+        'data':None,
+        }
+
+
     def __init__(self,evt,data,**kwargs):
         self.inverted=kwargs.pop('inverted',False)
         if self.inverted :
@@ -48,10 +54,6 @@ class QueueEvt(MatchEvent):
         return (self.evt,self.data)
 
 
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.evt==evt.evt and self.data==evt.data:
-            return True
-        return False
 
     def run(self,state,match,**kwargs):
         evt=self.evt
@@ -176,6 +178,13 @@ class NewReactEvt(MatchEvent):
 class ReactEvt(MatchEvent):
 
     desc ='React'
+
+    dft={
+        'actor':None,
+        'parent':None,
+        }
+
+
     def __init__(self,source,actor,event,**kwargs):
         super(ReactEvt, self).__init__(source,**kwargs)
         self.type='react_evt'
@@ -187,11 +196,6 @@ class ReactEvt(MatchEvent):
 
     def __str__(self):
         return '{} {} Discovery: {}  -> {}'.format(self.desc,self.actor,self.is_discovery,self.parent)
-
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.actor==evt.actor and self.parent==evt.parent:
-            return True
-        return False
 
     @property
     def item(self):
@@ -281,6 +285,13 @@ class ReactEvt(MatchEvent):
 class InterpretEvt(MatchEvent):
 
     desc ='Interpret'
+
+    dft={
+        'actor':None,
+        'parent':None,
+        }
+
+
     def __init__(self,source,actor,event,**kwargs):
         super(InterpretEvt, self).__init__(source,**kwargs)
         self.type='interpret_evt'
@@ -292,12 +303,6 @@ class InterpretEvt(MatchEvent):
 
     def __str__(self):
         return '{} {} Discovery: {}  -> {}'.format(self.desc,self.actor,self.is_discovery,self.parent)
-
-
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.actor==evt.actor and self.parent==evt.parent:
-            return True
-        return False
 
     @property
     def item(self):
@@ -363,6 +368,12 @@ class LogicEvt(MatchEvent):
     #DO NOT CALL IF THE SITUATION IS EXACTLY AS BELIEVED BY RECEIVER
     #otherwise would be a double-count
 
+    dft={
+        'actor':None,
+        'item':None,
+        }
+
+
     desc ='Logic'
     def __init__(self,source,actor,item,**kwargs):
         super(LogicEvt, self).__init__(source,**kwargs)
@@ -374,11 +385,6 @@ class LogicEvt(MatchEvent):
 
     def __str__(self):
         return '{} {} {}'.format(self.desc,self.actor,self.item)
-
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.item==evt.item and self.actor==evt.actor:
-            return True
-        return False
 
     def prep_do(self,match,*args,**kwargs):
         for i in (self.actor,match.data):
@@ -440,6 +446,13 @@ class LogicEvt(MatchEvent):
 
 class DeclareEvt(MatchEvent):
     desc ='Declare'
+
+    dft={
+        'actor':None,
+        'item':None,
+        }
+
+
     def __init__(self,source,actor,item,**kwargs):
         super(DeclareEvt, self).__init__(source,**kwargs)
         self.type='declare_evt'
@@ -450,11 +463,6 @@ class DeclareEvt(MatchEvent):
 
     def __str__(self):
         return '{} {} {}'.format(self.desc,self.actor,self.item)
-
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.item==evt.item and self.actor==evt.actor:
-            return True
-        return False
 
     def prepare(self,edge,match,*args,**kwargs):
         for i in (self.actor,match.data):
@@ -477,6 +485,12 @@ class DeclareEvt(MatchEvent):
 class ClaimEvt(MatchEvent):
     desc ='Claim'
     fixcost=None
+
+    dft={
+        'actor':None,
+        'item':None,
+        }
+
     def __init__(self,source,actor,item,**kwargs):
         if 'cost' in kwargs:
             self.fixcost=kwargs.pop('cost')
@@ -491,11 +505,6 @@ class ClaimEvt(MatchEvent):
 
     def __str__(self):
         return '{} {} {}'.format(self.desc,self.actor,self.item)
-
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.item==evt.item and self.actor==evt.actor:
-            return True
-        return False
 
     @property
     def cost(self):
@@ -583,6 +592,14 @@ class ConcedeEvt(MatchEvent):
     #Whenever the owner of a node is persuaded to transfer it to someone else
     #(accompanied with large face gain)
     desc ='Concede'
+
+
+    dft={
+        'actor':None,
+        'item':None,
+        'receiver':None,
+        }
+
     def __init__(self,source,actor,receiver,item,**kwargs):
         super(ConcedeEvt, self).__init__(source,**kwargs)
         self.type='concede_evt'
@@ -595,12 +612,6 @@ class ConcedeEvt(MatchEvent):
 
     def __str__(self):
         return '{} {} to {} {}'.format(self.desc,self.actor, self.receiver,self.item)
-
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.item==evt.item:
-            if self.actor==evt.actor and self.receiver==evt.receiver:
-                return True
-        return False
 
     def prep_do(self,match,*args,**kwargs):
         item=self.item
@@ -621,6 +632,36 @@ class ConcedeEvt(MatchEvent):
                     self.child_chginfo(act,match.cast.data,effects={(item, cond):('terr',eff)})
         return True
 
+
+
+class JumpEvt(MatchEvent):
+    desc ='Jump'
+    dft={'actor':None,
+        'pos':None}
+
+    def __init__(self,source,**kwargs):
+        MatchEvent.__init__(self,source,**kwargs)
+        self.type='jump_evt'
+        #self.cost =cost
+        #self.actor=actor
+        #self.pos=kwargs.get('pos',None)
+
+
+    def __str__(self):
+        return '{} {} {}'.format(self.desc,self.actor,self.radius)
+
+    def prep_init(self,match,**kwargs):
+        self._affects=(match.canvas.graph,match.data)
+        return True
+
+    def prep_uninit(self,match,**kwargs):
+        return True
+
+    def prep_do(self,match):
+        match.set_barycenter(self.pos,external=True)
+        return True
+
+
 class ExploreEvt(MatchEvent):
     desc ='Explore'
     radius=None
@@ -637,12 +678,6 @@ class ExploreEvt(MatchEvent):
 
     def __str__(self):
         return '{} {} {}'.format(self.desc,self.actor,self.radius)
-
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.actor==evt.actor:
-            if self.pos==evt.pos:
-                return True
-        return False
 
     def prep_init(self,match,**kwargs):
         self._affects=(match.canvas.graph,match.data)
@@ -705,6 +740,15 @@ class ExploreEvt(MatchEvent):
 
 class PathosEvt(MatchEvent):
     desc='Pathos'
+
+    dft={
+        'val':None,
+        'item':None,
+        'cond':None,
+        'path_type':None,
+        'targets':None,
+        }
+
     def __init__(self,source,actor,item,cond,val,**kwargs):
         MatchEvent.__init__(self,source,**kwargs)
         self.actor=actor #cause of the event
@@ -718,13 +762,6 @@ class PathosEvt(MatchEvent):
     def __str__(self):
         return '{} {} {} {} {} {} -- Targets {}'.format(self.desc, self.path_typ,self.actor,self.item, self.cond, self.val, self.targets)
 
-
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.item==evt.item and self.cond==evt.cond:
-            if self.val==evt.val and self.path_type==evt.path_type:
-                if self.targets==evt.targets:
-                    return True
-        return False
 
     def prep_do(self,match):
         val=self.val
@@ -761,6 +798,13 @@ class PathosEvt(MatchEvent):
 
 class PolitenessEvt(MatchEvent):
     desc='Politeness'
+
+    dft={
+        'val':None,
+        'disc_type':None,
+        'actor':None
+        }
+
     def __init__(self,source,actor,val,**kwargs):
         MatchEvent.__init__(self,source,**kwargs)
         self.actor=actor
@@ -769,13 +813,6 @@ class PolitenessEvt(MatchEvent):
         self.disc_type=kwargs.get('type',self.type)
         if 'type' in kwargs:
             self.desc+=self.disc_type
-
-
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.disc_type==evt.disc_type:
-            if self.actor==evt.actor and self.val==evt.val:
-                return True
-        return False
 
     def prep_init(self,match):
         #ainf=match.cast.get_info(self.actor)

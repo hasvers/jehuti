@@ -218,7 +218,7 @@ class IconField(WindowField):
 
 
     def event(self,event,**kwargs):
-        if event.type == pg.MOUSEBUTTONDOWN:
+        if event.type == pg.MOUSEBUTTONUP:
             if event.button ==1 :
                 self.parent.exe_command(self)
                 return True
@@ -718,7 +718,7 @@ class TextField(WindowField):
         if self.is_disabled:
             return False
         if self.selectable:
-            if event.type == pg.MOUSEBUTTONDOWN and event.button==1 :
+            if event.type == pg.MOUSEBUTTONUP and event.button==1 :
                 self.parent.select(self)
                 if self.is_selected:
                     return self.output(None,())

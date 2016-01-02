@@ -96,6 +96,7 @@ class BaseCanvasData(Data):
         return Data.txt_export(self,*args,**kwargs)
 
     def txt_import(self,*args,**kwargs):
+        print 'OBSOLETE: USE OF TXT_IMPORT IN gv_basecanvas'
         handl=Data.txt_import(self,*args,**kwargs)
         for l in tuple(self.layers):
             self.layers.remove(l)
@@ -466,7 +467,7 @@ class BaseCanvasView(View):
 
         if user.state == 'idle'  and event.type in (pg.MOUSEBUTTONDOWN,pg.MOUSEBUTTONUP,pg.MOUSEMOTION) :
             hover=self.test_hovering(event,pos=pos)
-            if event.type == pg.MOUSEBUTTONDOWN :
+            if event.type == pg.MOUSEBUTTONUP:#DOWN :
                 if not hover and self.select_opt['auto_unselect'] :
                     self.unselect()
                 if event.button ==1 :
@@ -478,7 +479,7 @@ class BaseCanvasView(View):
             elif hover and  event.type == pg.MOUSEMOTION and  pg.mouse.get_pressed()[0]:
                 self.handler.drag()
         if not handled :
-            if event.type == pg.MOUSEBUTTONUP :
+            if event.type == pg.MOUSEBUTTONUP and user.grabbed :
                 self.handler.drop()
                 handled = True
         if handled :
@@ -589,7 +590,7 @@ class BaseCanvasHandler(Handler):
 
 
     def label(self,item,state=None):
-        return item.type.capitalize()+' '+str(getattr(self.data,item.type+'s').index(item))+': '+item.name
+        return item.type.capitalize()+' '+str(getattr(self.data,item.type+'s').index(item)+1)+': '+item.name
 
     def change_infos(self,target,**kwargs):
         eph=kwargs.pop('invisible',False)
@@ -670,9 +671,10 @@ class BaseCanvasHandler(Handler):
             grabbed=grabbed.item
             inf= self.data.get_info(self.active_layer)
             pos=array((array(self.view.pos[grabbed])-inf['offset'])/inf['zoom'],dtype='int')
-            evt=MoveEvt(grabbed, self.active_layer,pos,affects=(self.data,))
-            if user.evt.do(evt,self):
-                self.view.dirty=True
+            if (pos-self.active_layer.pos[grabbed]).any():
+                evt=MoveEvt(grabbed, self.active_layer,pos,affects=(self.data,))
+                if user.evt.do(evt,self):
+                    self.view.dirty=True
 
 
     def react(self,evt):
@@ -934,7 +936,7 @@ class BaseCanvasEditor(BaseCanvasHandler):
         return struct
 
     def add_layer(self,layer=None,**kwargs):
-        if layer in self.data.layers:
+        if  not layer is None and layer in self.data.layers:
             return 0
         if layer is None:
             layer= self.data.Layer(self.data)

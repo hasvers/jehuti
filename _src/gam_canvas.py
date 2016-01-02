@@ -460,10 +460,13 @@ class MatchCanvasPlayer(MatchCanvasHandler):
 #        self.fog.update()
         #print self.fog.mask.get_at(self.mousepos()),self.fog.mask.get_at((0,0))
         #print self.fog.mask.get_at(self.mousepos())
-        if  event.type == pg.MOUSEBUTTONDOWN and self.fog.mask.get_at(self.mousepos()) :
+        if  event.type in (pg.MOUSEBUTTONDOWN,pg.MOUSEBUTTONUP) and self.fog.mask.get_at(self.mousepos()) :
             target= self.hovering
-            if target and target.item.type=='node':
-                print 'TODO: Node in fog',target.item
+            if target and target.item.type=='node' and event.type==pg.MOUSEBUTTONUP and event.button==1:
+                user.set_mouseover('Out of reach',anim='emote_jump',
+                    ephemeral=1,color='r',anchor=target)
+                user.ui.soundmaster.play('cancel')
+
             return False
         return MatchCanvasHandler.event(self,event,**kwargs)
 
@@ -477,21 +480,24 @@ class MatchCanvasPlayer(MatchCanvasHandler):
         if self.human_player and (self.parent.handler.time_left>0 or database['allow_overtime']):
             if typ == 'node':
                 match=self.parent.handler #TODO: this is unclean
-                out=lambda e: self.signal('ponder',target,cost=e)
+                out=lambda e,t=target: self.signal('ponder',t,cost=e)
                 pmin=match.ruleset.pondermin
                 maxval=max(pmin,match.time_left-match.time_cost)
-                if maxval>pmin:
-                    lampon=lambda:user.ui.input_menu('drag',out,title='Time:',
+                if maxval>pmin and match.ruleset.pondermax>pmin:
+                    lampon=lambda o=out:user.ui.input_menu('drag',o,title='Time:',
                         minval=pmin,maxval=maxval,showval=0,val=maxval)
                 else:
                     lampon=lambda: out(pmin)
-                lampon=lambda:out(pmin)
+                #lampon=lambda:out(pmin)
                 struct=()
                 struct +=( ('Ponder',lampon,
-                        'Ponder: Explore mental space.'),
-#                    ('Fallacy',lambda : self.signal('fallacy',target),
+                        'Ponder: Search for related arguments.'),
+                    ('Jump',lambda t=target:self.signal('jumpaction',t),
+                        'Jump: Recenter conversation.'),
+#                    ('Fallacy',lambda t=target: self.signal('fallacy',t),
  #                       'Fallacy: Fabricate argument.'),
                     )
+
                 act= match.active_player
                 if match.cast.get_info(act,'path'):
                     gph=match.data.actorsubgraphs[act][act]
@@ -586,7 +592,7 @@ class FogOfWar(pg.sprite.DirtySprite):
 
 
     def event(self,event,*args,**kwargs):
-        if event.type == pg.MOUSEBUTTONDOWN and self.mask.g:
+        if event.type in (pg.MOUSEBUTTONDOWN,pg.MOUSEBUTTONUP) and self.mask.g:
             return True
         return False
 

@@ -101,7 +101,7 @@ class InputField(TextField):
     def event(self,event,*args,**kwargs):
         #if event.type == pg.MOUSEMOTION :  #Why the hell did I put this?
             #return True
-        if event.type == pg.MOUSEBUTTONDOWN:
+        if event.type == pg.MOUSEBUTTONUP:
             if False and self.is_focused:
                 user.unfocus()
             elif event.button==1 :
@@ -227,7 +227,7 @@ class ExtSelField(TextField):
         return False
 
     def event(self,event,*args,**kwargs):
-        if event.type == pg.MOUSEBUTTONDOWN and event.button==1 :
+        if event.type == pg.MOUSEBUTTONUP and event.button==1 :
             self.parent.select(self)
             if not self.is_selected:
                 #Inverted from normal textfield: output activated if field NOT selected
@@ -484,7 +484,7 @@ class DragField(WindowField):
                 self.cursorstate='idle'
                 self.redraw()
                 return True
-        elif event.type == pg.MOUSEBUTTONDOWN :
+        elif event.type == pg.MOUSEBUTTONUP :
             if event.button ==1:
                 #pg.time.delay(60)
                 #evts= pgevent.get((pg.MOUSEMOTION,pg.MOUSEBUTTONUP,pg.MOUSEBUTTONDOWN))
@@ -666,7 +666,7 @@ class WindowIcon(UI_Icon):
         self.size=self.width,self.height=self.rect.size
 
     def event(self,event,*args,**kwargs):
-        if event.type==pg.MOUSEBUTTONDOWN and event.button==1:
+        if event.type==pg.MOUSEBUTTONUP and event.button==1:
             self.method()
             return True
         return super(WindowIcon, self).event(event,*args,**kwargs)
@@ -689,7 +689,7 @@ class ListSelField(MultiTextField):
     hoverable=1
     selectable=1
     def event(self,event,*args,**kwargs):
-        if event.type == pg.MOUSEBUTTONDOWN and event.button==1 :
+        if event.type == pg.MOUSEBUTTONUP and event.button==1 :
             struct= ((unicode(v),lambda x=v:self.set_val(x,output=1))  for v in self.values )
             user.ui.float_menu(struct)
         else:
@@ -799,7 +799,7 @@ class ArrowList(MultiTextField,UI_Widget):
                     return self.next_val()
                 if event.key==pg.K_LEFT :
                     return self.prev_val()
-        if event.type==pg.MOUSEBUTTONDOWN:
+        if event.type==pg.MOUSEBUTTONUP:
             if event.button==4:
                 return self.next_val()
             if event.button==5:
@@ -931,7 +931,7 @@ class ColorField(WindowField):
 
 
     def event(self,event,**kwargs):
-        if event.type == pg.MOUSEBUTTONDOWN:
+        if event.type == pg.MOUSEBUTTONUP:
             dif=1
             if event.button ==5 :
                 dif=-1

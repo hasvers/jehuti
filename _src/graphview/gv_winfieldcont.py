@@ -287,7 +287,7 @@ class FieldContainer(UI_Widget):
         event= args[0]
         if self.scrollable:
             delta=ergonomy['key_graph_move_rate']
-            if event.type in ( pg.KEYDOWN, pg.MOUSEBUTTONDOWN) :
+            if event.type in ( pg.KEYDOWN,pg.MOUSEBUTTONUP) :
                 self.dirty=1
             if event.type == pg.KEYDOWN :
                 if event.key==pg.K_DOWN :
@@ -298,7 +298,7 @@ class FieldContainer(UI_Widget):
                     return self.set_offset(delta,0,True)
                 if event.key==pg.K_LEFT :
                     return self.set_offset(-delta,0,True)
-            if event.type == pg.MOUSEBUTTONDOWN:
+            if event.type == pg.MOUSEBUTTONUP:
                 if event.button==5 :
                     return self.set_offset(delta,1,True)
                 if event.button==4 :
@@ -371,7 +371,7 @@ class FieldContainer(UI_Widget):
             else :
                 gnr='text'
             field=self.add(gnr,val=line[0],output_method=line[1],
-                selectable=True,no_paint=True)
+                selectable=True,no_paint=True,maxlines=None)
             if gnr =='text' and len(line)>2:
                 field.status_tip=line[2]
         self.update()

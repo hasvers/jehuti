@@ -68,6 +68,12 @@ class AnimationHandler(object):
         self.done=[]
         self.time=0
 
+    def rem_anim(self,item,anim=None):
+        for a in tuple(self.stack):
+            if a.item==item:
+                if anim is None or a.anim==anim:
+                    self.stack.remove(a)
+
     def add_anim(self,item,anim,*args,**kwargs):
         anim=Animation(anim,item,*args,**kwargs)
         #item.current_anim.append(anim)
@@ -414,7 +420,7 @@ class Animation(TimedEvent):
                 st=self.Step('grow_in',kwargs.get('anchor','topleft'),inverted=True,override=True )
                 steps+=[(time,length,st)]
             elif anim=='appear_in':
-                print('TODO: Animation appear_in not working yet')
+                #print('TODO: Animation appear_in not working yet')
                 length=kwargs.get('len',1200)
                 st=self.Step('appear_in',kwargs.get('direction',0),override=True )
                 steps+=[(time,length,st)]

@@ -13,6 +13,12 @@ class ThreadEvent(TimedEvent):
         # step-by-step i.e.  finite number of mid-points (e.g. anim frames)
 
     repeatable=True
+
+    dft={
+        'tinit':None,
+        'mode':None,
+        }
+
     def __init__(self,*args,**kwargs):
         self.block_thread=kwargs.get('block_thread',0) #for sequential events
         self.tinit=kwargs.get('tinit',None)
@@ -88,13 +94,19 @@ class ThreadEvent(TimedEvent):
     def end(self,*args,**kwargs):
         pass
 
-    def duplicate_of(self,evt):
-        if str(self)==str(evt):
-            return True
-        return False
+    #def duplicate_of(self,evt):
+        #if str(self)==str(evt):
+            #return True
+        #return False
 
 class ThreadMoveEvt(ThreadEvent):
     desc='Move'
+    dft={
+        'item':None,
+        'pos':None,
+        'graph':None
+        }
+
     def __init__(self,item,graph,pos,**kwargs):
         super(ThreadMoveEvt, self).__init__(type='move',**kwargs)
         self.item = item
@@ -104,12 +116,6 @@ class ThreadMoveEvt(ThreadEvent):
 
     def __str__(self):
         return '{} {} {}'.format(self.desc,self.item,self.pos)
-
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.item==evt.item:
-            if self.graph==evt.graph and self.pos==evt.pos:
-                return True
-        return False
 
     def affects(self):
         return (self.item, self.graph)+tuple(self._affects)
@@ -138,6 +144,11 @@ class ThreadMoveEvt(ThreadEvent):
 
 class FadeEvt(ThreadEvent):
     desc='Fade'
+
+    dft={
+        'mod':None,
+        }
+
     def __init__(self,mod1,mod2,**kwargs):
         super(FadeEvt, self).__init__(type='fade',**kwargs)
         self.mod=(mod1,mod2)
@@ -147,10 +158,6 @@ class FadeEvt(ThreadEvent):
     def __str__(self):
         return 'Fade {} -> {}'.format(self.mod[0],self.mod[1])
 
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.mod==evt.mod:
-            return True
-        return False
 
     def prep_init(self,handle,*args,**kwargs):
         ui=handle.parent
@@ -202,6 +209,12 @@ class FadeEvt(ThreadEvent):
 
 class PanEvt(ThreadEvent):
     desc='Pan'
+
+    dft={
+        'rel':None,
+        'scene':None,
+        }
+
     def __init__(self,scene,rel,**kwargs):
         super(PanEvt, self).__init__(type='pan',**kwargs)
         self.rel=rel
@@ -210,11 +223,6 @@ class PanEvt(ThreadEvent):
 
     def __str__(self):
         return '{} {} {}'.format(self.desc,self.scene,self.rel)
-
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.rel==evt.rel and self.scene==evt.scene:
-            return True
-        return False
 
     def affects(self):
         return (self.scene,)+tuple(self._affects)
@@ -275,6 +283,12 @@ class PanEvt(ThreadEvent):
 
 class ZoomEvt(ThreadEvent):
     desc='Zoom'
+
+    dft={
+        'target':None,
+        'data':None,
+        }
+
     def __init__(self,scene,target,**kwargs):
         super(ZoomEvt, self).__init__(type='zoom',**kwargs)
         self.target=target
@@ -283,11 +297,6 @@ class ZoomEvt(ThreadEvent):
 
     def __str__(self):
         return '{} {} {}'.format(self.desc,self.scene,self.target)
-
-    def duplicate_of(self,evt):
-        if self.type==evt.type and self.target==evt.target and self.data==evt.data:
-            return True
-        return False
 
     def affects(self):
         return (self.scene,)+tuple(self._affects)

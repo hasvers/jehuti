@@ -73,6 +73,8 @@ class Script(TimedEvent):
 
     def test_cond(self,scene,evt=None):
         handled=0
+        if not self.conds:
+            return 1
         if  True in [c.attach_to_event for c in self.conds] and (evt is None or not 'batch' in evt.type):
             return 0
 

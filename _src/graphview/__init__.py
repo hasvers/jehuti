@@ -35,6 +35,7 @@ def mainlaunch():
         pg.time.set_timer(30,int(round(1000/ergonomy['animation_fps'])))# Animation pulse: event type 30
         while 1:
             for event in pgevent.get():
+                event=user.accessibility_input_scheme(event)
                 #screen.fill((200,200,200,255))
                 user.ui.event(event)
                 if event.type == pg.QUIT:
