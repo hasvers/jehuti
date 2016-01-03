@@ -556,8 +556,8 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                     if  self.canvas.get_info(item,'claimed'):
                         return False
                     if (self.time_left<0 and not database['allow_overtime']):
-                        user.set_mouseover('No time',anim='emote_jump',
-                            ephemeral=1,color='r',anchor=item)
+                        user.set_mouseover('No time',anim='emote_jump',mode='emote',
+                            ephemeral=1,color='r',anchor=self.canvas.icon[item])
                         self.parent.soundmaster.play('cancel')
                         self.signal('overtime_denied')
                         return False

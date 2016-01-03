@@ -406,7 +406,7 @@ class Canvas():
             if evt.kwargs.get('assess',False) :
                 self.assess_itemstate(item)
             if evt.kwargs.get('update',False) :
-                self.update()
+                self.update(force=True)
         #return
         #in principle what is below is unnecessary since children are passed
         #by the user.event !
@@ -452,7 +452,7 @@ class Canvas():
         return glist
 
     def update(self,*args,**kwargs):
-        if user.evt.moving:
+        if user.evt.moving and not kwargs.get('force',False):
             return False
         self.surface.fill(COLORKEY)
         #self.static_surface.fill((0,0,0,0) )
@@ -664,15 +664,15 @@ class CanvasHandler(UI_Widget):
         return self.canvas.pos
 
 
-    def paint(self,surface=None,pos=(0,0)):
+    def paint(self,surface=None,pos=(0,0),flags=0):
         if not surface:
             return
         surf=self.canvas.surface
         if self.zoom and self.zoom!=1:
             surf=pg.transform.scale(surf,(array(surf.get_rect().size)*self.zoom).astype("int"))
-            surface.blit(surf,pos-(array(self.offset)*self.zoom).astype("int"))
+            surface.blit(surf,pos-(array(self.offset)*self.zoom).astype("int"),None,flags)
         else:
-            surface.blit(surf,pos-array(self.offset))
+            surface.blit(surf,pos-array(self.offset),None,flags)
 
     def oldpaint(self,surface=None):
         if not surface:
@@ -777,7 +777,7 @@ class CanvasHandler(UI_Widget):
                     #else:
                         #mopos=hover.rect.center+array(self.abspos())
 
-                    user.set_mouseover(self.label(hover),anchor=hover.item)#,pos=mopos)
+                    user.set_mouseover(self.label(hover),anchor=hover)#,pos=mopos)
                 info=self.canvas.active_graph.get_info(hover.item)
                 if not info:
                     info= self.label(hover)
@@ -1295,7 +1295,7 @@ class CanvasEditor(CanvasHandler):
                 tgt=kwargs['target']
                 pos=self.abspos(tgt)+array(tgt.rect.size)/2
                 kwargs['pos']=pos
-            user.ui.float_radial(menu,oneshot=True,**kwargs)
+            user.ui.float_menu(menu,oneshot=True,**kwargs)
 
     def right_click(self,target,event=None):
         if not target:

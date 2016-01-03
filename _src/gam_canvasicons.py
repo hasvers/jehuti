@@ -30,6 +30,7 @@ class MatchArrow(Arrow):
         const=array(logic[2:])
 
         info=infosource.get_info(self.parent.link)
+        activity=info.get('activity',0)
         unsaturated=False
         if 'claimed' in info:
             color=claim_color(info['claimed'])
@@ -37,7 +38,6 @@ class MatchArrow(Arrow):
                 unsaturated =True
             else :
                 mod = [i*j for i,j in zip(mod,color)]
-
 
 
         for x in range(length):
@@ -48,7 +48,8 @@ class MatchArrow(Arrow):
                         r,g,b= tmp
                         gray = (30*r+59*g+11*b)/100
                         tmp=[gray for i in xrange(3)]
-                    px[x][y]= tuple(tmp+[255])
+                    #tmp=[ int(i) for i in tmp]
+                    px[x][y]=tmp
                 else :
                     px[x][y]=COLORKEY
         surf= px.make_surface()
@@ -324,10 +325,12 @@ class MatchLinkIcon(LinkIcon):
         except:
             self.premade={}
         info=infosource.get_info(self.link)
+        activity=info.get('activity',False)
         color_in=False
         bordercolor = None
         unsaturated=False
         borderw=graphic_chart['link_border_width']
+        size=array(size)+(0,2*borderw)
         if 'claimed' in info:
             bordercolor=claim_color(info['claimed'])
             if bordercolor=='unsaturated':
@@ -350,11 +353,16 @@ class MatchLinkIcon(LinkIcon):
                     #bordercolor=tuple(int(i) for i in array(claim_color(True))*graphic_chart['claim_color'])
 
         blength,wid = size
+        if not activity:
+            wid-=8
+            ymrg=4
+        else:
+            ymrg=0
         px = pg.PixelArray(pgsurface.Surface(size,Canvasflag))
         color_ext=graphic_chart['icon_node_fill_colors']
         t0=self.logic[0]
         t1= self.logic[1]
-        desc=(color_ext[t0], color_ext[t1],bordercolor,color_in,tuple(mod),unsaturated)
+        desc=(color_ext[t0], color_ext[t1],bordercolor,color_in,tuple(mod),unsaturated,activity)
 
         if desc in self.premade:
             return self.premade[desc].copy()
@@ -377,18 +385,22 @@ class MatchLinkIcon(LinkIcon):
                 if min(y,wid-y)<=borderw:
                     if bordercolor and color_in :
                         tmp= [self.make_color(float(x)/blength,float(y)/wid,color_ext[t0][i],color_ext[t1][i]) for i in range(3)]+[255]
-                        px[x][y]=tuple(tmp)
+                        px[x][y+ymrg]=tuple(tmp)
                     elif bordercolor:
-                        px[x][y]=bordercolor
+                        px[x][y+ymrg]=bordercolor
                     else:
-                        px[x][y]=COLORKEY
+                        px[x][y+ymrg]=COLORKEY
                 else:
-                    tmp= [self.make_color(float(x)/blength,float(y)/wid,color_ext[t0][i],color_ext[t1][i]) for i in range(3)]+[255]
+                    tmp= [self.make_color(float(x)/blength,float(y)/wid,color_ext[t0][i],color_ext[t1][i]) for i in range(3)]
+                    #if not activity:
+                        #tmp+=[int(255* (.2+abs( 2.*x/blength-1.)**.9)  )]
+                    #else:
+                    tmp+=[255]
                     if unsaturated:
                         r,g,b= tmp[:3]
                         gray = (30*r+59*g+11*b)/100
                         tmp[:3]=[gray for i in xrange(3)]
-                    px[x][y]=(min(255,tmp[0]*mod[0]),min(255,tmp[1]*mod[1]),min(255,tmp[2]*mod[2]),min(255,tmp[3]*mod[3]))
+                    px[x][y+ymrg]=(min(255,tmp[0]*mod[0]),min(255,tmp[1]*mod[1]),min(255,tmp[2]*mod[2]),min(255,tmp[3]*mod[3]))
         surf=self.premade[desc]=px.make_surface()
         return surf
 

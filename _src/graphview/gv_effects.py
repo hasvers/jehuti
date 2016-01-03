@@ -6,10 +6,13 @@ from scipy import signal, ndimage
 '''Visual effects.'''
 
 
-def glow(surface, sigma=8,intens=.85,mode='np'):
+def glow(surface, sigma=8,intens=.85,mode='np',rgba=0):
     newsurf=surface.copy()
     blur(newsurf,sigma,intens)
-    surface.blit( newsurf,(0,0),None,pg.BLEND_ADD)
+    if rgba:
+        surface.blit( newsurf,(0,0),None,pg.BLEND_RGBA_ADD)
+    else:
+        surface.blit( newsurf,(0,0),None,pg.BLEND_ADD)
 
 
 def blur(surface, sigma=8,intens=1,mode='np'):

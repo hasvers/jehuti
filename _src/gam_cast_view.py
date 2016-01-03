@@ -201,6 +201,7 @@ class ActorPanel(SidePanel):
     title = 'Actor editor'
     attrs=(
         ('name','input','Name',100,{'charlimit':20}),
+        ('data_index','arrowsel','Position',100,{'values':[0]}),
         ('color','color','Color',100,{'colors':graphic_chart['player_colors']}),
         #('portrait','menu','Portrait',100,{'type':'input'})
         ('portrait','listsel','Portrait',120,{
@@ -209,10 +210,17 @@ class ActorPanel(SidePanel):
         )
 
 
+    def make_attrs(self,**kwargs):
+        for a in self.attrs:
+            if a[0]=='data_index':
+                a[4]['values']=range(len(self.infosource.actors) )
+        return SidePanel.make_attrs(self,**kwargs)
+
     def __init__(self,interface,infosource,ref=None,**kwargs):
         self.ref=ref
         self.infosource=infosource
         self.interface=interface
+
         for dft in (Actor.dft_attr,Actor.dft_res):
             for i, j in dft.iteritems():
                 self.attrs=self.attrs+((i,'drag',Actor.dft_names[i],80,{'minval':0.,'maxval':1.}),)
@@ -222,6 +230,7 @@ class ActorPanel(SidePanel):
         self.update()
 
     def make(self):
+        self.make_attrs()
         SidePanel.make(self,cats={'color':self.input})
         #por=self.input['portrait']
         #self.change_method(['portrait','text'],
@@ -303,9 +312,10 @@ class CastView(View):
             self.add_actor(actor)
             self.upd_actors()
             return
-        ids=sorted([a.trueID for a in self.icon])
+        #ids=sorted([a.trueID for a in self.icon])
         self.icon[actor].make_faces()
-        self.actor_pos(self.icon[actor],ids.index(actor.trueID))
+        position=self.handler.actors.index(actor )
+        self.actor_pos(self.icon[actor],position )#ids.index(actor.trueID))
 
     def rem_actor(self,actor):
         self.children.remove(self.icon[actor])

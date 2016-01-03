@@ -60,7 +60,9 @@ class CharacterData(Data):
         if item.type=='actor' and item.trueID==self.actor.trueID:
             if info==None:
                 return {f:getattr(self.actor,f) for f in self.actor.dft}
-            return getattr(self.actor,info)
+            if hasattr(self.actor,info):
+                return getattr(self.actor,info)
+            return None
         elif item.type in ('link','node'):
             return self.belief.getinfotypes(itemtype)
         return Data.get_info(self,item,info,**kwargs)

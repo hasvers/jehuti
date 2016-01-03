@@ -38,6 +38,9 @@ class LogicRuleset():
         #Truth of a node during the conversation, including link contributions
         #graph is mindscape of the observer, sub is what he thinks is true for
         #the mindscape he is computing truth in (could be his own, could be someone else's)
+        if not node.type=='node':
+            print 'ERROR in calc_truth: Tried to compute truth of non-node object.'
+            return None
         base= kwargs.get('bias',sub.get_info(node,'bias'))+.5
         case='typ'
         extrapolate=kwargs.get('extrapolate',0)

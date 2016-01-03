@@ -133,46 +133,17 @@ class MatchLink(Graph.Link):
     dft={}
     dft.update(Graph.Link.dft)
     dft['subt']=.3
-    dft['val']=.2
+    dft['val']=.5
     dft['claimed']=False
     dft['scripts']=[]
     dft['cflags']=[]
     patterns=database['link_patterns']
     dft['pattern']=patterns[0]
 
-    logics=database['link_logics']
+    logics=database['link_logics'] #(a,b,c,d)
     dft['logic']=logics[0]
 
 
-class MatchSubgraph(Graph.Subgraph):
-    owner=None
-    klass_name='MatchGraph.Subgraph'
-    infotypes={
-        'node':
-            ('truth',
-            'bias',
-            'desc',
-            'scripts',
-            'cflags',
-            'terr'
-            ),
-        'link':
-            ('desc',
-            'scripts',
-            'cflags',
-            ),
-        }
-    rule = 'none'
-
-    def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
-        kwargs.setdefault('add_param',[]).append('owner')
-        kwargs.setdefault('init_param',[]).append('parent')
-        return Data.txt_export(self,keydic,txtdic,typdic,**kwargs)
-
-    def __str__(self):
-        if self.name != Graph.Subgraph.name :
-            return 'Sub:'+self.name# +'('+unicode(self.parent)+')'
-        return 'Sub{}('.format(self.owner)+unicode(self.parent)+')'
 
 class MatchSubgraph(Graph.Subgraph):
     owner=None
@@ -191,6 +162,7 @@ class MatchSubgraph(Graph.Subgraph):
             ('desc',
             'scripts',
             'cflags',
+            'activity',
             ),
         }
     rule = 'none'

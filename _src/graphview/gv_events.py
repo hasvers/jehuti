@@ -963,7 +963,11 @@ class AddEvt(Event):
                 if self.item in i.required:
                     #remove (and re-add upon redo) all dependent items
                     infos =self.data.get_info(i,transparent=False)
-                    evt=AddEvt(i,self.data,infos=infos, inverted=self.inverted,**self.kwargs)
+                    kwargs={}
+                    kwargs.update(self.kwargs)
+                    kwargs['infos']=infos
+
+                    evt=AddEvt(i,self.data, inverted=self.inverted,**self.kwargs)
                     self.add_sim_child( evt)
                     self.temp.append(evt)
                     #requirers are last to come, first to go

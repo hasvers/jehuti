@@ -118,6 +118,13 @@ class TruthCalcEvt(LogicEvent):
         if item.type=='link':
             s,t=item.parents
             logic=graph.get_info(item,'logic')
+            #COMMENTED BELOW: WOULD BE USEFUL IF LINKS COULD CHANGE LOGIC
+            #AS SUCH, USELESS (but implemented for editor in gam_Canvas)
+            #if logic[2] or logic[3]:
+                #reverse=self.truth_calc(s,graph,sub,track,tracklist)
+            #else:
+                #reverse=True
+            #return self.truth_calc(t,graph,sub,track,tracklist) and reverse
             if srceff(graph.get_info(s,'truth'),logic ):
                 return self.truth_calc(match,t,graph,sub,track,tracklist)
             elif tgteff(graph.get_info(t,'truth'),logic ):

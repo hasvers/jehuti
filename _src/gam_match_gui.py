@@ -480,7 +480,7 @@ class MatchUI(BasicUI,SceneUI):
                 #kwargs['pos']=pos
             self.float_radial(struct,oneshot=True)#,**kwargs)
         else:
-            self.float_radial(self.statusmenu(),ephemeral=True,oneshot=True)
+            self.float_menu(self.statusmenu(),ephemeral=True,oneshot=True)
 
     def keymap(self,event):
         if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():

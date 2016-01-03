@@ -30,6 +30,7 @@ class User():
         self.screen_scale=1
         self.screen_trans=array((0,0))
 
+        self.dragging = False #position from which user starts dragging on the screen
         self.started_click=0
 
     def pause(self,do=True):
@@ -196,16 +197,29 @@ class User():
             #Danger of using real time: if there is lag, click becomes long!
             self.started_click=pg.time.get_ticks()
 
+        if event.type==pg.MOUSEMOTION:
+            if not self.dragging and pg.mouse.get_pressed()[0]:
+                if event.rel[0] or event.rel[1]:
+                    self.dragging=event.pos
+                    #if self.state=='idle':
+                        #self.state='drag'
 
         if event.type==pg.MOUSEBUTTONUP:
             click_duration =pg.time.get_ticks()-self.started_click
             if event.button==1:
 
                 if click_duration >ergonomy['long_click_duration'] and ergonomy['long_left_equals_right_click']:
-                    dic= event.dict
-                    dic['button']=3
-                    event=pg.event.Event(event.type,dic )
+                    if  not self.dragging or max(( array(self.dragging)-event.pos )**2) < ergonomy['mouse_tremor']**2:
+                        dic= event.dict
+                        dic['button']=3
+                        event=pg.event.Event(event.type,dic )
                     #event.button=3
+
+            #AFTER EVERYTHING, STOP DRAGGING
+            if self.dragging:
+                self.dragging=False
+                if self.state=='drag':
+                    self.state='idle'
         return event
 
 

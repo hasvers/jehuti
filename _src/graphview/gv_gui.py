@@ -198,7 +198,7 @@ class BasicUI(UI_Widget):
         pos=brect.topleft
 
         #If there is an anchor for the point
-        if anchor and not isinstance(anchor,basestring):
+        if not pointpos is None or anchor and not isinstance(anchor,basestring):
             dist=(rect.center+2*array(rect.midtop))/3 -pointpos
 
             if dist[1]<=0:
@@ -245,8 +245,8 @@ class BasicUI(UI_Widget):
 
         if mode=='dialogue':
             ball.set_anim('appear',len=anim_len,affects=[ball])
-        else:
-            ball.set_anim('appear_in',len=anim_len,affects=[ball])
+        #else:
+            #ball.set_anim('appear_in',len=anim_len,affects=[ball])
         border=self.screen.get_rect().inflate(w,h)
 
         if mode=='dialogue':
@@ -639,7 +639,7 @@ class BasicUI(UI_Widget):
         pos=kwargs.get('pos',None)
         if pos is None:
             pos=user.mouse_pos()
-        if 1:
+        if kwargs.get('mode','balloon')=='balloon':
             #MOUSEOVER AS A BALLOON
             kw={}
             if not 'anchor' in kwargs:

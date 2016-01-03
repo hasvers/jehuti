@@ -13,7 +13,7 @@ class LogicCanvas(Canvas):
         #except:
          #   pass
         if 'change' in evt.type or 'rem_info' in evt.type:
-            if array( [i in evt.infos for i in ('val','genre','logic','truth','claimed','effects','subt','terr') ]).any():
+            if array( [i in evt.infos for i in ('activity','val','genre','logic','truth','claimed','effects','subt','terr') ]).any():
                 target=evt.item
                 self.icon_update(target)
             return True
@@ -36,10 +36,20 @@ class LogicCanvasHandler(CanvasHandler):
         if item.type=='link':
             s,t=item.parents
             logic=graph.get_info(item,'logic')
-            if srceff(graph.get_info(s,'truth'),logic ):
-                return self.truth_calc(t,graph,sub,track,tracklist)
-            elif tgteff(graph.get_info(t,'truth'),logic ):
-                return self.truth_calc(s,graph,sub,track,tracklist)
+            if logic[2] or logic[3]:
+                reverse=self.truth_calc(s,graph,sub,track,tracklist)
+            else:
+                reverse=True
+            return self.truth_calc(t,graph,sub,track,tracklist) and reverse
+
+            #if srceff(graph.get_info(s,'truth'),logic ):
+                #self.canvas.change_infos(item,graph=sub,activity=True)
+                #return self.truth_calc(t,graph,sub,track,tracklist)
+            #elif tgteff(graph.get_info(t,'truth'),logic ):
+                #self.canvas.change_infos(item,graph=sub,activity=True)
+                #return self.truth_calc(s,graph,sub,track,tracklist)
+            #self.canvas.change_infos(item,graph=sub,activity=False)
+            #return
 
         truth=match.ruleset.calc_truth(item,graph,sub,extrapolate=0)
         prevtruth=sub.get_info(item,'truth')
@@ -83,10 +93,17 @@ class LogicCanvasHandler(CanvasHandler):
             for l in sub.links.get(item,[]):
                 logic=sub.get_info(l,'logic')
                 if l.parents[0]==item:
-                    if srceff(truth,logic)!=srceff(prevtruth,logic):
+                    activated=srceff(truth,logic)
+                    if activated!=srceff(prevtruth,logic):
                         self.truth_calc(l.parents[1],graph,sub,track,tracklist)
-                elif tgteff(truth,logic)!=tgteff(prevtruth,logic):
-                    self.truth_calc(l.parents[0],graph,sub,track,tracklist)
+                else:
+                    activated=tgteff(truth,logic)
+                    if activated!=tgteff(prevtruth,logic):
+                        self.truth_calc(l.parents[0],graph,sub,track,tracklist)
+                if activated is None:
+                    activated=0
+                self.canvas.change_infos(l,graph=sub,activity=abs(activated) )
+
         return 1
 
     def react(self,evt):
@@ -282,7 +299,10 @@ class LogicCanvasEditor(CanvasEditor,LogicCanvasHandler):
             return  desc
         elif item.type=='link':
             if 'pattern' in infos:
-                return  str([i.ID for i in item.parents])+infos['pattern'] #+ ': '+ infos['desc']
+                desc=str([i.ID for i in item.parents])+infos['pattern']
+                if infos.get('activity',0):
+                    desc+=' (active)'
+                return  desc #+ ': '+ infos['desc']
         return str(item)
 
 class MatchCanvas(LogicCanvas):
@@ -290,6 +310,8 @@ class MatchCanvas(LogicCanvas):
 
 class MatchCanvasHandler(LogicCanvasHandler):
     pass
+    #def paint(self,surface=None):
+        #LogicCanvasHandler.paint(self,surface,flags=pg.BLEND_RGB_ADD)
 
 class MatchCanvasEditor(LogicCanvasEditor,MatchCanvasHandler):
 
@@ -463,7 +485,7 @@ class MatchCanvasPlayer(MatchCanvasHandler):
         if  event.type in (pg.MOUSEBUTTONDOWN,pg.MOUSEBUTTONUP) and self.fog.mask.get_at(self.mousepos()) :
             target= self.hovering
             if target and target.item.type=='node' and event.type==pg.MOUSEBUTTONUP and event.button==1:
-                user.set_mouseover('Out of reach',anim='emote_jump',
+                user.set_mouseover('Out of reach',anim='emote_jump',mode='emote',
                     ephemeral=1,color='r',anchor=target)
                 user.ui.soundmaster.play('cancel')
 

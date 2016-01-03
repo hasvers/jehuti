@@ -32,13 +32,15 @@ class CastHandler(Handler):
     def change_infos(self,target,**kwargs):
         eph=kwargs.pop('invisible',False)
         evt=ChangeInfosEvt(target,self.data,**kwargs)
-        return user.evt.do(evt,self,None,eph)
+        return user.evt.do(evt,self,None,ephemeral=eph)
 
     def react(self,evt):
         if 'change' in evt.type or 'rem_info' in evt.type:
             target=evt.item
             if 'portrait' in evt.infos:
                 self.icon_update(target)
+            if 'data_index' in evt.infos:
+                self.upd_actors()
             self.hud_update(target)
         if 'add' in evt.type:
             self.upd_actors()
@@ -80,6 +82,8 @@ class CastHandler(Handler):
     def add_actor(self,actor,**kwargs):
         if actor in self.data.actors:
             return False
+        kwargs.setdefault('infos',{})
+        kwargs['infos'].setdefault('data_index',len(self.data.actors) )
         evt=AddEvt(actor,self.data,**kwargs)
         user.evt.do(evt,self)
 

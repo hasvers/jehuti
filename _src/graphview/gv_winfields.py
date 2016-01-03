@@ -154,7 +154,7 @@ class WindowField(UI_Item):
     def set_state(self,state,*args,**kwargs) :
         if UI_Item.set_state(self,state,*args,**kwargs):
             if state=='hover' and self.mouseover and not self.is_disabled:
-                if not user.mouseover or user.mouseover.source!=self:
+                if not user.mouseover:# or user.mouseover.source!=self:
                     user.set_mouseover(self.mouseover,bg=graphic_chart['mouseover_bg'],
                         anim='appear',len=ANIM_LEN['short'],delay=ANIM_LEN['long'],
                         source=self)
@@ -166,7 +166,7 @@ class WindowField(UI_Item):
     def rm_state(self,state,*args,**kwargs) :
         if UI_Item.rm_state(self,state,*args,**kwargs):
             if state=='hover':
-                if self.mouseover and user.mouseover and user.mouseover.source==self:
+                if self.mouseover and user.mouseover:# and user.mouseover.source==self:
                     user.kill_mouseover()
                 if self.status_tip:
                     user.set_status('')

@@ -109,11 +109,13 @@ class CastData(Data):
     datatype='cast'
     name='dft_cast'
     infotypes={
-        'actor':(),
+        'actor':('data_index',
+             ),
         }
+    ordered_lists=('actor',)
 
     def __init__(self,*args,**kwargs):
-        self.infotypes['actor']=tuple(i for i in Actor().default_infos.keys())
+        self.infotypes['actor']+=tuple(i for i in Actor().default_infos.keys())
         super(CastData, self).__init__(*args,**kwargs)
         self.prox=DataDict()#DataMat(self,0.)
 
@@ -211,6 +213,7 @@ class CastState(Data):
     infotypes={
         'actor':('face','terr','teri','prox','path','transcript','effects'), #teri is invested terr
         }
+    ordered_lists=('actor',)
     transparent=True
 
     def __init__(self,*args,**kwargs):

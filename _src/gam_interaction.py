@@ -258,7 +258,12 @@ class InteractionRules(object):
         if egotruth is None:
             egotruth=perceived_claim.egoinfos['truth']
         claimtruth=perceived_claim.truth
+        #AGREEMENT SHOULD BE MORE MARKED WHEN AWAY FROM THE MIDDLE
+
         agreement= (egotruth+claimtruth-1)**2-(egotruth-claimtruth)**2
+        #x= (a+b-1)^2 - (a-b)^2  = 1 - 2 (a+b) + 4 ab
+        # => a = (x-1+2b)/(4b-2)  to deduce egotruth from agreement
+
         #agreement*=1-.9*perceived_claim.discovery
         agreement*=self.psy[ego].demonstrativeness(actor,match.cast)
         return agreement
@@ -272,9 +277,12 @@ class InteractionRules(object):
         actor=perceived_reac.actor
         demonstr=self.psy[actor].demonstrativeness(ego,self.match.cast)
         agr/=self.psy[ego].perceive_trait(demonstr,actor,self.match.cast)
+
         t= (1-agr-2*egotruth)/2
-        if t>0 and abs(egotruth-.5)>0.000001:
+        if  abs(egotruth-.5)>0.000001:
             t/=(1-2*egotruth)
+        else:
+            t=0.5
         return t
 
 
@@ -1166,6 +1174,7 @@ claims or perceives a claim,one '''
                     #Deduce truth from degree of agreement
                     truth=self.rules.truth_from_agreement(
                         ego,tmpstage,subact)
+                    print 'yes',truth,ego,tmpstage,subact,agree
                     actinfos['truth']=truth
                     actinfos['stated_truth']=truth
                     egotruth=subg.get_info(item,'truth')

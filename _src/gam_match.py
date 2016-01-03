@@ -42,7 +42,7 @@ class MatchData(Data):
         #print 'Mk Actorgraph',self.trueID
         tmp=list(self.actorgraph.keys())
         for actor in self.cast.actors:
-            aid=actor.trueID
+            aid=actor
             if not aid in tmp:
                 rule=kwargs.pop('rule','subt<'+str(actor.subt))
                 sub=self.actorgraph[aid]=MatchGraph.Subgraph(self.graph)

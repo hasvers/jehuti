@@ -5,6 +5,7 @@ class Data(object):
     #can contain only objects susceptible of pickling, ie  independent objects recoverable as such
     name='data'
     datatype='data'
+    ordered_lists=() #For cases where order is important in automatically generated object lists
     fakelists=()
     infotypes={} #defines BOTH the types of objects contained here and the types of infos stored about them
     rule = 'all' #rule limiting objects that may be added here
@@ -111,7 +112,7 @@ class Data(object):
             for p in self.precursors(item):
                 if info_type in p.get_infotypes(item.type):
                     return False
-            return True
+        return True
 
     def get_info(self,item,info_type=None,**kwargs):
         if isinstance(item,basestring):
@@ -119,6 +120,10 @@ class Data(object):
             item=world.get_object(iid)
         else:
             iid=item.trueID
+        if info_type=='data_index':
+            if hasattr(self,item.type+'s' ):
+                return getattr(self,item.type+'s').index(item)
+
         if self.transparent and kwargs.get('transparent',True):
             #If transparent, look up info in precursors i.e. more general databases
 
@@ -129,6 +134,8 @@ class Data(object):
                     if info:
                         tmp.update(info)
                 tmp.update(self.infos.get(iid,{}))
+                if item.type in self.ordered_lists and hasattr(self,item.type+'s' ):
+                    tmp['data_index']=getattr(self,item.type+'s').index(item)
                 return tmp
             if iid in self.infos and info_type in self.infos[iid] :
                 #print item,info_type, self.infos[iid][info_type]
@@ -192,6 +199,13 @@ class Data(object):
             iid=item
         else:
             iid=item.trueID
+
+        if ityp=='data_index' and hasattr(self,item.type+'s' ):
+            lst=getattr(self,item.type+'s')
+            lst.remove(item)
+            lst.insert(val,item)
+            return 1
+
 
         #print self, item, ityp, val, self.infotypes[item.type]
         if ityp in self.infotypes[item.type]:
