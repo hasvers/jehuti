@@ -149,7 +149,7 @@ class QueueEvt(MatchEvent):
         self.batch=evt
 
 
-class NewReactEvt(MatchEvent):
+class NewReactEvt(MatchEvent): #OBSOLETE DUE TO gam_interaction
     desc ='React'
 
     #1)initial value of admitted node (new node in subgraph) may depend of convincing arguments
@@ -172,10 +172,7 @@ class NewReactEvt(MatchEvent):
     def __str__(self):
         return '{} {} Discovery: {}  -> {}'.format(self.desc,self.actor,self.is_discovery)
 
-
-
-
-class ReactEvt(MatchEvent):
+class ReactEvt(MatchEvent): #OBSOLETE DUE TO gam_interaction
 
     desc ='React'
 
@@ -835,6 +832,11 @@ class BatchEvt(MatchEvent):
     desc='Batch'
     #State 1 : The starting event is submitted to gather reactions
     #State 2 : A transcript of the whole batch is made
+
+    dft={
+        'root_events':[],
+        'actor':None,
+        }
 
     def __init__(self,events=(),*args,**kwargs):
         self.actor=kwargs.pop('actor',None)

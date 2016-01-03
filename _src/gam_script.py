@@ -378,6 +378,7 @@ class SceneScriptEffect(TimedEvent):
                 #print '###',self.parent.state,self,self.trueID, {str(e):i for e,i in self.target.iteritems()},'###'#,debug.caller_name(),debug.caller_name(3),'###'
             for e in self.target:
                 self.add_sim_child(e,priority=self.target[e] )
+            #print 'CONTAINER',id(self),[(str(e),self.target[e],e.state ) for e in self.target],[str(x) for x in self.all_children() ]
         if self.typ=='Text':
             self.block_thread=1
         elif self.typ=='Call':

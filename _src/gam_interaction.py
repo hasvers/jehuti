@@ -362,7 +362,7 @@ class InteractionRules(object):
         this was a discovery for the reacting character?'''
         perc=self.match.cast.get_info(ego,'perc')
         if reac.discovery:
-            if rnd.uniform(0,1) < perc:
+            if rnd.uniform(0,1)/2 < perc:
                 return 1
         return 0
 
@@ -466,6 +466,7 @@ All the text in the script is written from the viewpoint of a given character.''
             #Fill event container with logical/factor events and ethos
             for s in src:
                 for idx,e in enumerate(events.get(s,())):
+                    #print 'adding event to container',e,evtcontainer,id(evtcontainer)
                     evtcontainer.target[e]=inter.stage_priority.get(s,0)-idx+len(events[s])
                 if not s in ethos:
                     continue
@@ -479,6 +480,8 @@ All the text in the script is written from the viewpoint of a given character.''
                     eff.info["additive"]=True
                     effects.append(eff)
             for e in effects:
+                if e.typ=='container' and not e.target:
+                    continue
                 self.effects.append(e)
         #print '=================',self
         #print [(str(s),{str(i):j for i,j in s.target.iteritems()}
@@ -943,14 +946,17 @@ claims or perceives a claim,one '''
         #Is the claimed item already known to reactant?
         if subg.contains(item):
             #Already thought of during this conversation
+            #print 'ALREADY KNOWS',ego,item
             discovery=0.
         elif actg.contains(item):
             #Known before but not thought of
+            #print 'KNOWS BUT DID NOT THINK',ego,item
             if item.type=='node':
                 newinfos.update(self.rules.belief_revision_under_influence(
                     ego,perceived_claim,actg))
             discovery=1./2
         else:
+            #print "DISCOVERING",ego,item
             #Discovery
             if item.type=='node':
                 #bias here is created through irrational influence
@@ -1162,6 +1168,7 @@ claims or perceives a claim,one '''
                 item=r.item
                 if not (item,r) in to_add:
                     to_add[(item,r)]=i[0]
+
             for item,reac in to_add:
                 agree=to_add[(item,reac)]
                 actinfos={}
@@ -1174,7 +1181,6 @@ claims or perceives a claim,one '''
                     #Deduce truth from degree of agreement
                     truth=self.rules.truth_from_agreement(
                         ego,tmpstage,subact)
-                    print 'yes',truth,ego,tmpstage,subact,agree
                     actinfos['truth']=truth
                     actinfos['stated_truth']=truth
                     egotruth=subg.get_info(item,'truth')
@@ -1186,6 +1192,7 @@ claims or perceives a claim,one '''
                 evts.append(evt)
                 inter.event_source.setdefault(evt,[]).append(reac)
                 if reac.discovery and item.type=='link':
+                    #NB: remember that this is perceived_discovery, and can be mistaken
                     link_discoveries.append(evt)
 
 
@@ -1218,7 +1225,7 @@ claims or perceives a claim,one '''
             inter.event_source.setdefault(evt,[stage])
 
 
-        #Group truthcalc events concerning the same item
+        #Group truthcalc events concerning the same item in various graphs
         #(and order items by requirements)
         req=[item for item in per_item]
         req=[(item,[req.index(r) if r in req else 0 for r in item.required ]) for item in req]
@@ -1230,6 +1237,9 @@ claims or perceives a claim,one '''
                     if e2==e1:
                         continue
                     if e1.tgtgraph in e2.tgtgraph.precursors():
+                        #If the data modified by truthcalc event e1
+                        #is a precursor of the data modified by e2
+                        #make e2 a child of e1
                         tcalc.remove(e2)
                         e1.add_sim_child(e2,priority="enclosed")
             evts+=tcalc

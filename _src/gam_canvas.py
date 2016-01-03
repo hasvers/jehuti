@@ -550,9 +550,10 @@ class MatchCanvasPlayer(MatchCanvasHandler):
                 if e.state==1:
                     user.evt.undo(e)
                     return True
-        evt=SelectEvt(target,affects=[self.canvas,self],**kwargs)
-        user.evt.do(evt)
-        self.events.append(evt)
+        if target.item.type in ('node','link'):
+            evt=SelectEvt(target,affects=[self.canvas,self],**kwargs)
+            user.evt.do(evt)
+            self.events.append(evt)
         return True
         #return MatchCanvasHandler.select(self,target,*args,**kwargs)
 

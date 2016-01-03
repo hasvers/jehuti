@@ -3,9 +3,18 @@
 from gam_import import *
 
 class LogicEvent(Event):
-    '''Events for logical consequences, generally bound (with low priority)
+    '''Superclass for events for
+
+    1) logical consequences, generally bound (with low priority)
     to an AddEvt or ChangeInfosEvt concerning logic-related elements
-    (bias, truth, link logic, new or disputed link).'''
+    (bias, truth, link logic, new or disputed link).
+
+    2) other processes that may share traits of such events (e.g. Match events)
+    '''
+
+    dft={
+        'item':None,
+        }
 
     def __init__(self,item,**kwargs):
         super(LogicEvent, self).__init__(**kwargs)
@@ -79,6 +88,11 @@ class TruthCalcEvt(LogicEvent):
     '''Event called whenever bias changes or new link added, to recompute truth
     throughout the graph.'''
 
+    dft={
+        'tgtgraph':None,
+        'refgraph':None,
+        'item':None,
+        }
 
     def __init__(self,item,refgraph,tgtgraph=None,**kwargs):
         super(TruthCalcEvt, self).__init__(item,**kwargs)
@@ -98,7 +112,14 @@ class TruthCalcEvt(LogicEvent):
             return "TruthCalc {} {}".format(item,refgraph)
 
     def prep_do(self,match,*args,**kwargs):
-        return self.truth_calc(match,self.item,self.refgraph,self.tgtgraph)
+        prep= self.truth_calc(match,self.item,self.refgraph,self.tgtgraph)
+        #if not prep:
+            #print '\n===== FAILED PREP',self,self.all_children()
+        return True
+
+    #def run(self,state,*args,**kwargs):
+        #print 'Run',state, self,[str(i) for i in self.states.node[1]['children_states'] ]
+        #return 1
 
     def truth_calc(self,match, item,graph=None,sub=None,track=None,tracklist=None):
         '''Core function for recomputing truth values, starting from the root_item
@@ -228,6 +249,13 @@ class ReactLinkDiscoveryEvt(Event):
     #reevaluate ego's opinion of their bias: compute what ego thinks
     #is their bias WITHOUT this link.
 
+    dft={
+        'tgtgraph':None,
+        'refgraph':None,
+        'item':None,
+        }
+
+
     def __init__(self,item,refgraph,tgtgraph=None,**kwargs):
         super(ReactLinkDiscoveryEvt, self).__init__(**kwargs)
         self.item=item
@@ -236,6 +264,13 @@ class ReactLinkDiscoveryEvt(Event):
             tgtgraph=refgraph
         self.tgtgraph=tgtgraph
         self.type='reactlinkdiscovery'
+
+    def __str__(self):
+        item,refgraph,tgtgraph=self.item,self.refgraph,self.tgtgraph
+        if refgraph!=tgtgraph:
+            return "ReactLinkDiscovery {} {} {}".format(item,refgraph,tgtgraph)
+        else:
+            return "ReactLinkDiscovery {} {}".format(item,refgraph)
 
 
     def prepare(self,edge,match,*args,**kwargs):
@@ -250,7 +285,7 @@ class ReactLinkDiscoveryEvt(Event):
                 bias=truth-should_have_truth
                 prevbias=tgt.get_info(node,'bias')
                 if prevbias!=bias:
-                    #print 'truth of {} is {} should be {} hence bias {} (before, {})'.format(node,truth, should_have_truth,bias,prevbias)
+                    print 'truth of {} is {} should be {} hence bias {} (before, {})'.format(node,truth, should_have_truth,bias,prevbias)
                     #print 'MAKECHANGE',tgt,node,bias
                     cevt=ChangeInfosEvt(node,tgt,bias=bias,
                                 source='perceived_link_discovery')

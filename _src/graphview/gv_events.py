@@ -642,6 +642,7 @@ class Event(Signal):
         if self is evt :
             return True
         if evt.type==self.type and not False in [getattr(evt,i)==getattr(self,i) for i in self.dft]:
+            print  '~~~~DUPLICATE',self,evt, [getattr(evt,i)==getattr(self,i) for i in self.dft]
             return True
         return False
 
@@ -1003,6 +1004,11 @@ class AddEvt(Event):
                     self.data.pos[item]=self.kwargs['pos']
                 except:
                     pass
+            #if not handled:
+                #print 'FAILURE ADDEVT',item,self.data
+            #else:
+                #print 'ADDEVT',item,self.data
+
             return handled
         if state== 0:
             #print 'UNDO ADDEVT',self,state#,kwargs.get('traceback','No traceback' )
@@ -1012,6 +1018,10 @@ class AddEvt(Event):
                     del self.data.pos[item]
                 except:
                     pass
+            #if not handled:
+                #print 'FAILURE ADDEVT UNDO',item,self.data
+            #else:
+                #print 'ADDEVT UNDO',item,self.data
             return handled
 
 class SelectEvt(Event):
