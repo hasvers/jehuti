@@ -175,7 +175,7 @@ class ResIcon(UI_Icon):
         if not self.vals or (base,mod,teri)!=self.vals:
             self.vals=(base,mod,teri)
 
-            basesurf=CANVAS_ICON_LIB.get_icon(self.type,MatchNodeIcon,
+            basesurf=CANVAS_ICONLIB.get_icon(self.type,MatchNodeIcon,
                 val=base, bonus=mod,unsat=unsaturated,imm=teri)
             if basesurf:
                 basesurf=pg.transform.smoothscale(basesurf,2*array((radius,radius)))

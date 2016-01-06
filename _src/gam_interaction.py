@@ -266,6 +266,7 @@ class InteractionRules(object):
 
         #agreement*=1-.9*perceived_claim.discovery
         agreement*=self.psy[ego].demonstrativeness(actor,match.cast)
+        #print agreement, egotruth,claimtruth
         return agreement
 
 
@@ -466,8 +467,8 @@ All the text in the script is written from the viewpoint of a given character.''
             #Fill event container with logical/factor events and ethos
             for s in src:
                 for idx,e in enumerate(events.get(s,())):
-                    #print 'adding event to container',e,evtcontainer,id(evtcontainer)
                     evtcontainer.target[e]=inter.stage_priority.get(s,0)-idx+len(events[s])
+                    #print 'adding event to container',e,evtcontainer,id(evtcontainer),evtcontainer.target[e]
                 if not s in ethos:
                     continue
                 eth=self.total_ethos_effect(ethos[s])
@@ -1032,7 +1033,7 @@ claims or perceives a claim,one '''
                         facs.append(Fac('unknown_pattern',item=e.item,
                                 actor=stage.actor,ego=stage.ego))
                 if 'change' in e.type:
-                    dif={i:j-e.oldinfo[i] for i,j in e.infos.iteritems()}
+                    dif={i:j-e.oldinfo[i] for i,j in e.infos.iteritems() if i in e.oldinfo}
                     changes.setdefault((e.item,e.data),[]).append(dif)
         #information changes
         for xs,cs in changes.iteritems():
@@ -1187,7 +1188,10 @@ claims or perceives a claim,one '''
                     #Deduce bias
                     pbias= truth-match.ruleset.calc_truth(item,subg,
                         subact,extrapolate=0,bias=0)
+                    uncert=match.ruleset.uncertainty(egotruth,match.cast.get_info(ego,'perc') )
+                    pbias *=(1-uncert)
                     actinfos['bias']=pbias
+                    actinfos['uncertainty']=uncert
                 evt=AddEvt(item,subact,infos=actinfos)
                 evts.append(evt)
                 inter.event_source.setdefault(evt,[]).append(reac)
@@ -1205,20 +1209,24 @@ claims or perceives a claim,one '''
                 if evt.data == actg and not self.rules.update_true_beliefs:
                     #dont update truth in actorgraph if rules forbid it
                     continue
+                if evt.data==actg:
+                    refg=actg
+                else:
+                    refg=subg
                 #If a link has been discovered by actor, truthcalc must ignore_stated
                 #because the stated_truth from before may be different from
                 #what actor now believes, knowing the link.
                 ignore_stated= evt in link_discoveries
                 item=evt.item
-                tevt=TruthCalcEvt(item,subg,evt.data,ignore_stated=ignore_stated)
+                tevt=TruthCalcEvt(item,refg,evt.data,ignore_stated=ignore_stated)
                 tevt.add_sim_child(evt,priority=2)
                 per_item.setdefault(item,[]) #List to group truthcalc relating to same item
                 per_item[item].append( tevt)
                 evts.remove(evt)
                 inter.event_source[tevt]=inter.event_source.get(evt,[None])
                 if evt in link_discoveries:
-                    cevt=ReactLinkDiscoveryEvt(evt.item,subg,evt.data)
-                    tevt.add_sim_child(cevt,priority=1)
+                    cevt=ReactLinkDiscoveryEvt(evt.item,refg,evt.data)
+                    tevt.add_child(cevt,{0:0,1:0,2:1},priority=1)
                     inter.event_source[cevt]=inter.event_source[tevt]
 
                 #print ' >P:',evt,evt.infos
@@ -1227,10 +1235,23 @@ claims or perceives a claim,one '''
 
         #Group truthcalc events concerning the same item in various graphs
         #(and order items by requirements)
-        req=[item for item in per_item]
-        req=[(item,[req.index(r) if r in req else 0 for r in item.required ]) for item in req]
-        req=sorted(req,key=lambda e:e[1])
-        for item,required in req:
+        items=[item for item in per_item if not item.required] #Start with items with no requirement
+        req=[item for item in per_item if item.required]
+        while req:
+            cur=req.pop(0)
+            handled=True
+            for r in cur.required:
+                if r in per_item and not r in items:
+                    handled=False
+            if handled:
+                items.append(cur)
+            else:
+                req.append(cur)
+        #print items
+
+        #req=[(item,[req.index(r) if r in req else 0 for r in item.required ]) for item in req]
+        #req=sorted(req,key=lambda e:e[1])
+        for item in items:
             tcalc=per_item[item]
             for e1 in tuple(tcalc):
                 for e2 in tuple(tcalc):

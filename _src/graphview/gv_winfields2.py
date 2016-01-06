@@ -484,7 +484,7 @@ class DragField(WindowField):
                 self.cursorstate='idle'
                 self.redraw()
                 return True
-        elif event.type == pg.MOUSEBUTTONUP :
+        elif event.type == pg.MOUSEBUTTONDOWN :
             if event.button ==1:
                 #pg.time.delay(60)
                 #evts= pgevent.get((pg.MOUSEMOTION,pg.MOUSEBUTTONUP,pg.MOUSEBUTTONDOWN))
@@ -492,10 +492,20 @@ class DragField(WindowField):
                     user.focus_on(self)
                     user.grab(self)
                     return True
-                else:
+
+        elif event.type == pg.MOUSEBUTTONUP :
+            if event.button ==1:
+                #pg.time.delay(60)
+                #evts= pgevent.get((pg.MOUSEMOTION,pg.MOUSEBUTTONUP,pg.MOUSEBUTTONDOWN))
+                if not self.cursor.rect.collidepoint(self.parent.mousepos(self)) :
+                    #user.focus_on(self)
+                    #user.grab(self)
+                    #return True
+                #else:
                     self.set_val(None,tuple(array(self.parent.mousepos(self))-array(self.cursor.rect.center)))
                     self.output()
                     return True
+
             if event.button==4: #wheel up
                 increment,direction=1,1
             if event.button ==5: #wheel down

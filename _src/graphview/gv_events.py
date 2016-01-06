@@ -301,13 +301,13 @@ class EventCommander(object):
                 kwarg=shallow_nested(kwarg)
                 kwarg['ephemeral']=1
                 kwarg['handle']=handle
-                kwarg['traceback']=kwargs.get('traceback',[])[:]+[(evt,evt.state,p)]
+                kwarg['traceback']=kwargs.get('traceback',[])[:]+[(str(evt),'{}->{}'.format(edge[0],edge[1]),p)]
                 try:
                     arg=evt.states.node[state]['children_arg'][c]
                     kwarg=evt.states.node[state]['children_kwarg'][c]
                 except:
                     pass
-
+                #print 'Trying',c,'{}->{}'.format(c.state,s),c.states.node[s]['children_states']
                 chandled = self.go(c,s,*arg,**kwarg)
                 handled=chandled or handled
                 #if  'cflag' in evt.type:
@@ -333,8 +333,8 @@ class EventCommander(object):
                             if e2.state != s2:
                                 self.go(e2,s2,**kwargs)
                 handled = evtdone or handled
-                #else:
-                    #print 'FAIL', evt, state
+        #if evt.state!=edge[1]:
+            #print '!!!FAIL',evt,edge
         if evt.cues.get(state,None)=='destroy':
             self.destroy(evt)
         self.moving.remove(evt)
@@ -642,7 +642,7 @@ class Event(Signal):
         if self is evt :
             return True
         if evt.type==self.type and not False in [getattr(evt,i)==getattr(self,i) for i in self.dft]:
-            print  '~~~~DUPLICATE',self,evt, [getattr(evt,i)==getattr(self,i) for i in self.dft]
+            #print  '~~~~DUPLICATE',self,evt, [getattr(evt,i)==getattr(self,i) for i in self.dft]
             return True
         return False
 
@@ -701,6 +701,16 @@ parent calls which state of the child.
                     dico['priority'][child]=p
         if child.parent is None:
             child.parent=self
+
+    def get_child_states(self,child):
+        '''Returns a dictionary parent state->child state'''
+        state_dic={}
+        for state in self.states.nodes():
+            dico=self.states.node[state]
+            if not state in child.states.nodes():
+                continue
+            state_dic[state]=dico['children_states'][child]
+        return state_dic
 
     def rem_child(self,child):
         for state in self.states.nodes():
@@ -793,7 +803,9 @@ class ChangeInfosEvt(Event):
 
 
     def run(self,state,*args,**kwargs):
-        #print '\nCHANGEINFOS',state,self,kwargs.get('traceback','No traceback')
+        #print '\nCHANGEINFOS','{}->{}'.format(self.state,state),self,kwargs.get('traceback','No traceback')
+        #if 'bias' in self.oldinfo:
+            #print self,id(self),state,self.state,self.sinfos(state)
         return self.apply_infos(self.sinfos(state))#either new or old depending on state
 
     def update(self,**kwargs):

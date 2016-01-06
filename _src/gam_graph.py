@@ -153,6 +153,7 @@ class MatchSubgraph(Graph.Subgraph):
             ('truth',
             'stated_truth',#Useful only for subgraph[self][other]: allows to reeval bias
             'bias',
+            'uncertainty',
             'desc',
             'scripts',
             'cflags',

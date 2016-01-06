@@ -80,7 +80,7 @@ class MatchArrow(Arrow):
 
 class MatchNodeIcon(NodeIcon):
 
-    def make_icon(self,size,radius,colors,val,unsaturated=False,mod=(1.,1.,1.,1.)):
+    def make_icon(self,size,radius,colors,val,unsaturated=False,mod=(1.,1.,1.,1.),blur=0):
         center=array(size)/2
         COLORKEY=(0,0,0,0)
         px = pg.PixelArray(pgsurface.Surface(size,pg.SRCALPHA))
@@ -92,6 +92,9 @@ class MatchNodeIcon(NodeIcon):
                 c=c+(255,)
             newcols.append(c)
         colors=tuple(newcols)
+        if blur>1:
+            blur=1
+
         for x in range(size[0]):
             for y in range(size[1]):
                 tup=(x-center[0],y-center[1])
@@ -110,7 +113,7 @@ class MatchNodeIcon(NodeIcon):
                             #if hyp2>0:
                                 #shad/=hyp2
                             pixel[i]=min([mod[i]*rint( (colors[1][i]-colors[0][i])*(
-                                1+tanh(20*fy))/2. + colors[0][i])*shad,255])
+                                1+tanh( 20*(1.-blur)*fy))/2. + colors[0][i])*shad,255])
                         pixel[2]=min(255,pixel[2]+85*(1.-shad))
                         if unsaturated:
                             r,g,b=pixel[:3]
@@ -144,11 +147,16 @@ class MatchNodeIcon(NodeIcon):
                 mod = [i*j for i,j in zip(mod,ringcolor)]
                 ringcolor=tuple(int(i) for i in array(claim_color(True))*graphic_chart['claim_color'])
 
+        uncertainty=infosource.get_info(self.node,'uncertainty')
+        if not uncertainty:
+            uncertainty=0
+
         radius = self.radius
         radius-=ringw
         center=array(size)/2
         val = info.get('truth',1.)-.5
-        basesurf=CANVAS_ICON_LIB.get_icon('node',MatchNodeIcon,val=val,unsat=unsaturated)
+        basesurf=CANVAS_ICONLIB.get_icon('node',MatchNodeIcon,val=val,unsat=unsaturated,uncert=uncertainty)
+        basesurf=None
         if basesurf:
             basesurf=pg.transform.smoothscale(basesurf,2*array((radius,radius)))
             surf=pgsurface.Surface(size ,pg.SRCALPHA)
@@ -156,7 +164,7 @@ class MatchNodeIcon(NodeIcon):
             surf.blit(basesurf,center-(radius,radius))
         else:
             color_ext=graphic_chart['icon_node_fill_colors']
-            surf=self.make_icon(size,radius,color_ext,val,unsaturated,mod)
+            surf=self.make_icon(size,radius,color_ext,val,unsaturated,mod,blur=uncertainty)
 
         if ringcolor :
             pg.draw.circle(surf,ringcolor,center,radius+ringw,ringw)

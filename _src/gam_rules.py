@@ -19,20 +19,36 @@ class LogicRuleset():
             return True
         return False
 
-    def link_effect_from_source(self,st,logic):
+    def link_effect_from_source(self,truth,logic,uncertainty=0):
         #depending on source truth, effect on target
-        st=self.truth_value(st)
+        if uncertainty is None:
+            uncertainty=0
+        if self.truth_value(truth+uncertainty)!=self.truth_value(truth-uncertainty):
+            print "AHAAA", truth, uncertainty,self.truth_value(truth+uncertainty),self.truth_value(truth-uncertainty)
+            return None
+
+        st=self.truth_value(truth)
         if st==2*logic[0]-1:
             return 2*logic[1]-1
         if logic[2] and st==1-2*logic[0]:
             return 0
         return None
-    def link_effect_from_target(self,tt,logic):
+    def link_effect_from_target(self,truth,logic,uncertainty=0):
         #depending on source truth, effect on target
-        tt=self.truth_value(tt)
+        if uncertainty is None:
+            uncertainty=0
+
+        if self.truth_value(truth+uncertainty)!=self.truth_value(truth-uncertainty):
+            return None
+
+        tt=self.truth_value(truth)
         if logic[3] and tt==1-2*logic[1]:
             return 0
         return None
+
+    def uncertainty(self,belief,perception=0.):
+        #How much certainty is to be put in a resposne that has belief, given own perception
+        return 1-abs(2*belief-1) #*perception
 
     def calc_truth(self,node,graph,sub,**kwargs):
         #Truth of a node during the conversation, including link contributions
@@ -41,7 +57,15 @@ class LogicRuleset():
         if not node.type=='node':
             print 'ERROR in calc_truth: Tried to compute truth of non-node object.'
             return None
-        base= kwargs.get('bias',sub.get_info(node,'bias'))+.5
+        changed=kwargs.get('changed',{}) #If some info is already being changed by events not yet executed
+
+        def subinfo(item,ityp):
+            if changed and item in changed and ityp in changed[item]:
+                return changed[item][ityp]
+            else:
+                return sub.get_info(item,ityp)
+
+        base= kwargs.get('bias',subinfo(node,'bias'))+.5
         case='typ'
         extrapolate=kwargs.get('extrapolate',0)
         if extrapolate:
@@ -60,9 +84,9 @@ class LogicRuleset():
                     links.remove(l)
         for l in links:
             logic=graph.get_info(l,'logic')
-            magn=sub.get_info(l,'val')
+            magn=subinfo(l,'val')
             if node==l.parents[1]:
-                st= sub.get_info(l.parents[0],'truth')
+                st= subinfo(l.parents[0],'truth')
                 if logic[0]==round(1+self.truth_value(st))/2:
                     if logic[1]==1:
                         base+=magn
@@ -80,7 +104,7 @@ class LogicRuleset():
                             base=min(.5,base+magn/2.)
                         case='doubt+'
             if node ==l.parents[0] and logic[3]:
-                st= sub.get_info(l.parents[1],'truth')
+                st= subinfo(l.parents[1],'truth')
                 if logic[1]!=int(round(.5+.5*self.truth_value(st))):
                     if logic[0]==1:
                         if base>.5:

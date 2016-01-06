@@ -121,7 +121,7 @@ class TruthCalcEvt(LogicEvent):
         #print 'Run',state, self,[str(i) for i in self.states.node[1]['children_states'] ]
         #return 1
 
-    def truth_calc(self,match, item,graph=None,sub=None,track=None,tracklist=None):
+    def truth_calc(self,match, item,graph=None,sub=None,track=None,tracklist=None,force=False):
         '''Core function for recomputing truth values, starting from the root_item
         of the TruthCalcEvt, then going by recurrence through every one of its consequences.
             Graph is the graph that the current actor believes to be true
@@ -146,15 +146,25 @@ class TruthCalcEvt(LogicEvent):
             #else:
                 #reverse=True
             #return self.truth_calc(t,graph,sub,track,tracklist) and reverse
-            if srceff(graph.get_info(s,'truth'),logic ):
+
+            if srceff(sub.get_info(s,'truth'),logic, sub.get_info(s,'uncertainty') ):
+                self.set_change(item,sub,activity=1,source='truthcalc')
+            elif tgteff(sub.get_info(t,'truth'),logic, sub.get_info(t,'uncertainty') ):
+                self.set_change(item,sub,activity=1,source='truthcalc')
+            else:
+                self.set_change(item,sub,activity=0,source='truthcalc')
+
+
+
+            if srceff(graph.get_info(s,'truth'),logic, graph.get_info(s,'uncertainty') ):
                 return self.truth_calc(match,t,graph,sub,track,tracklist)
-            elif tgteff(graph.get_info(t,'truth'),logic ):
+            elif tgteff(graph.get_info(t,'truth'),logic, graph.get_info(t,'uncertainty') ):
                 return self.truth_calc(match,s,graph,sub,track,tracklist)
             else:
                 return 0
 
         #Truth inferred from the graph's logic
-        truth=match.ruleset.calc_truth(item,graph,sub,extrapolate=0)
+        truth=match.ruleset.calc_truth(item,graph,sub,extrapolate=0,changed=self.get_changes() )
 
         #current value of the truth ####POTENTIAL BREAK: was this sub or graph?
         prevtruth=sub.get_info(item,'truth')
@@ -170,7 +180,7 @@ class TruthCalcEvt(LogicEvent):
             statedtruth=None
         else:
             statedtruth= sub.get_info(item,'stated_truth')
-        if not statedtruth is None:
+        if not statedtruth is None and not force:
             should_have_truth=match.ruleset.calc_truth(item,graph,sub,extrapolate=1,bias=0)
             bias=statedtruth-should_have_truth
             prevbias=sub.get_info(item,'bias')
@@ -182,7 +192,7 @@ class TruthCalcEvt(LogicEvent):
             return 0
 
         #print 'glappy:', item,graph.name,sub.name,truth,prevtruth
-        if truth==prevtruth and track:
+        if truth==prevtruth and track and not force:
             return 0
         #print 'truth change',truth,prevtruth,item, sub,sub.get_info(item,'truth'),graph
         if item in track:
@@ -220,29 +230,49 @@ class TruthCalcEvt(LogicEvent):
             #print 'set truth',item.name,truth, 'from' ,prevtruth, 'in', sub
         track[item]=(prevtruth,truth)
         tracklist.append(item)
+        uncertainty=sub.get_info(item,'uncertainty')
         if match.ruleset.truth_value(truth)!= match.ruleset.truth_value(prevtruth):
             for l in sub.links.get(item,[]):
                 logic=sub.get_info(l,'logic')
+                activated=False
                 if l.parents[0]==item:
-                    if srceff(truth,logic)!=srceff(prevtruth,logic):
+                    activated=srceff(truth,logic,uncertainty )
+                    if activated!=srceff(prevtruth,logic,uncertainty ):
                         self.truth_calc(match,l.parents[1],graph,sub,track,tracklist)
-                elif tgteff(truth,logic)!=tgteff(prevtruth,logic):
-                    self.truth_calc(match,l.parents[0],graph,sub,track,tracklist)
+                else:
+                    activated=tgteff(truth,logic,uncertainty)
+                    if activated!=tgteff(prevtruth,logic,uncertainty):
+                        self.truth_calc(match,l.parents[0],graph,sub,track,tracklist)
+                if activated:
+                    self.set_change(l,sub,activity=1,source='truthcalc')
+                else:
+                    self.set_change(l,sub,activity=0,source='truthcalc')
 
-    def set_change(self,item,sub,truth,source):
+
+    def set_change(self,item,sub,source,truth=0,activity=0):
+        infos={}
         if item in self.changevts:
             #In case we backtrack on a change
             old=self.changevts[item]
             del self.changevts[item]
             self.rem_child(old)
-        infos={'truth':truth}
-        if self.ignore_stated:
-            #Recompute the stated
-            infos['stated_truth']=truth
+            infos.update(old.kwargs)
+        if item.type=='node':
+            infos['truth']=truth
+            if self.ignore_stated:
+                #Recompute the stated
+                infos['stated_truth']=truth
+        elif item.type=='link':
+            infos['activity']=activity
         evt=ChangeInfosEvt(item,sub,source='truthcalc',**infos)
+        self.changevts[item]=evt
         self.add_child(evt,{0:0,2:1},priority={0:5,2:-1})
 
-
+    def get_changes(self):
+        changes={}
+        for item in self.changevts:
+            changes[item]=self.changevts[item].kwargs
+        return changes
 
 class ReactLinkDiscoveryEvt(Event):
     #If ego realizes that someone DID NOT know a link before,
@@ -285,7 +315,7 @@ class ReactLinkDiscoveryEvt(Event):
                 bias=truth-should_have_truth
                 prevbias=tgt.get_info(node,'bias')
                 if prevbias!=bias:
-                    print 'truth of {} is {} should be {} hence bias {} (before, {})'.format(node,truth, should_have_truth,bias,prevbias)
+                    #print 'REF {} TGT {} '.format(ref,tgt)+'truth of {} is {} should be {} hence bias {} (before, {})'.format(node,truth, should_have_truth,bias,prevbias)
                     #print 'MAKECHANGE',tgt,node,bias
                     cevt=ChangeInfosEvt(node,tgt,bias=bias,
                                 source='perceived_link_discovery')
@@ -329,7 +359,7 @@ class BiasCalcEvt(Event):
         for l in graph.links.get(item,[]):
             logic=graph.get_info(l,'logic')
             if l.parents[0]==item:
-                if srceff(truth,logic) or srceff(should_have_truth,logic):
+                if srceff(truth,logic,graph.get_info(item,'uncertainty')) or srceff(should_have_truth,logic,graph.get_info(item,'uncertainty')):
                     self.bias_calc(l.parents[1],graph,sao,tracklist)
             elif tgteff(truth,logic) or tgteff(should_have_truth,logic):
                 self.bias_calc(l.parents[0],graph,sao,tracklist)

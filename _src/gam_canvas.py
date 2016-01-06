@@ -93,12 +93,12 @@ class LogicCanvasHandler(CanvasHandler):
             for l in sub.links.get(item,[]):
                 logic=sub.get_info(l,'logic')
                 if l.parents[0]==item:
-                    activated=srceff(truth,logic)
-                    if activated!=srceff(prevtruth,logic):
+                    activated=srceff(truth,logic, sub.get_info(item,'uncertainty') )
+                    if activated!=srceff(prevtruth,logic, sub.get_info(item,'uncertainty')):
                         self.truth_calc(l.parents[1],graph,sub,track,tracklist)
                 else:
-                    activated=tgteff(truth,logic)
-                    if activated!=tgteff(prevtruth,logic):
+                    activated=tgteff(truth,logic, sub.get_info(item,'uncertainty'))
+                    if activated!=tgteff(prevtruth,logic, sub.get_info(item,'uncertainty')):
                         self.truth_calc(l.parents[0],graph,sub,track,tracklist)
                 if activated is None:
                     activated=0
@@ -301,7 +301,9 @@ class LogicCanvasEditor(CanvasEditor,LogicCanvasHandler):
             if 'pattern' in infos:
                 desc=str([i.ID for i in item.parents])+infos['pattern']
                 if infos.get('activity',0):
-                    desc+=' (active)'
+                    desc+='\nActive'
+                else:
+                    desc+='\nInactive'
                 return  desc #+ ': '+ infos['desc']
         return str(item)
 
@@ -473,7 +475,11 @@ class MatchCanvasPlayer(MatchCanvasHandler):
             else:
                 return  '{} {} {}'.format(infos['name'],infos['truth'],infos.get('bias',None))#,rfloat(infos['bias']),rfloat(infos['truth'])) #+ ' T:'+str(infos.get('terr',0))#+ ': '+ infos['desc']
         elif item.type=='link':
-            return  infos['pattern'] #+ ': '+ infos['desc']
+            if infos.get('activity',0):
+                activity='Active'
+            else:
+                activity="Inactive"
+            return '{}\n{}'.format(infos['pattern'],activity) #+ ': '+ infos['desc']
 
     def drag(self):
         return False

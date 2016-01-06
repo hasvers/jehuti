@@ -158,8 +158,9 @@ class CanvasIconLibrary(ResourceLibrary):
             val=kwargs.get('val',1.)
             unsat=kwargs.get('unsat',0)
             intval=int(round(nbimgs*val))
+            intuncert=int(round(nbimgs*kwargs.get('uncert',0)))
             #try:
-            term='node'+str(intval)
+            term='node'+str(intval)+'_'+str(intuncert)
             if unsat:
                 term+='u'
             if not term in icon_db:
@@ -180,5 +181,5 @@ class CanvasIconLibrary(ResourceLibrary):
                 #return icon_db['node']
             #except:
                 #pass
-CANVAS_ICON_LIB=CanvasIconLibrary()
+CANVAS_ICONLIB=CanvasIconLibrary()
 

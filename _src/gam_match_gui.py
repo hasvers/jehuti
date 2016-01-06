@@ -589,7 +589,7 @@ class TurnBox(Window):
 
     def react(self,evt):
         sgn=evt.type
-        if 'turn' in sgn or 'queue' in sgn or 'player' in sgn:
+        if 'next_turn' in sgn or 'new_turn' in sgn or 'queue' in sgn or 'player' in sgn:
             self.refresh()
         if 'overtime_denied' in sgn:
             self.timetxt.set_anim('blink',color='r',len=ANIM_LEN['long'])
