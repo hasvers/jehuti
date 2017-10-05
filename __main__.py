@@ -24,7 +24,7 @@ def do_python_script(self,script,mode='eval'):
         return eval(text)#, globals(), self.name)
 
 user.do_python_script=do_python_script
-Data.klassmake=klassmake
+#Data.klassmake=klassmake ##PROBABLY OBSOLETE?
 world.klassmake=klassmake
 
 

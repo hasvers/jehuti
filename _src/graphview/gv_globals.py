@@ -1,7 +1,7 @@
 import pygame as pg
 from pygame import surface as pgsurface, event as pgevent, sprite as pgsprite, rect as pgrect,mixer as pgmixer
 from copy import deepcopy
-from numpy import array, random as nprandom, ndarray,nditer, uint8 as npuint8, int as npint,maximum as npmaximum,newaxis as npnewaxis
+from numpy import array, rint as arint,clip as aclip, random as nprandom, ndarray,nditer, uint8 as npuint8, int as npint,maximum as npmaximum,newaxis as npnewaxis
 from math import *
 import colors as matcolors
 import random as rnd
@@ -17,6 +17,7 @@ from PIL import Image as pilImage, ImageEnhance as pilImageEnhance
 from PIL import ImageOps as pilImageOps, ImageFilter as pilImageFilter
 import shutil
 
+from collections import OrderedDict
 from itertools import chain as iterchain
 
 pg.font.init()

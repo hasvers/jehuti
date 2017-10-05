@@ -157,6 +157,9 @@ class Window(FieldContainer):
             if 'confirm' in com and not 'confirm' in self.queue:
                 queue+=['confirm']
             exe=True
+        if 'exit' in allcom:
+            exe=True
+        #print exe,queue,source,com[source]
 
         if exe:
             while queue :
@@ -361,6 +364,17 @@ class Window(FieldContainer):
         if self.pause:
             user.pause(False)
 
+    def appear_event(self):
+        if ergonomy['anim_menu']:
+            self.set_anim('grow_in',len=ANIM_LEN['instant'])
+            for c in self.children:
+                c.set_anim('appear',len=ANIM_LEN['short'])
+
+    def closing_event(self):
+        if ergonomy['anim_menu']:
+            self.set_anim('disappear',len=ANIM_LEN['short'],affects=[self])
+
+
 class DragWindow(Window):
     draggable=True
 
@@ -411,6 +425,7 @@ class FloatMenu(DragWindow):
         DragWindow.__init__(self,*args,**kwargs)
         if struct != None:
             self.parse(struct)
+
 
 class InputMenu(FloatMenu):
 
@@ -526,7 +541,13 @@ class RadialMenu(RadialWindow):
         return RadialWindow.event(self,event,*args,**kwargs)
 
     def closing_event(self):
-        self.set_anim('disappear',len=ANIM_LEN['short'],affects=[self])
+        if ergonomy['anim_menu']:
+            self.set_anim('disappear',len=ANIM_LEN['short'],affects=[self])
+
+    def appear_event(self):
+        if ergonomy['anim_menu']:
+            self.set_anim('grow_in',len=ANIM_LEN['instant'],anchor='center')
+
 
     def react(self,evt):
         if evt.type=='anim_stop' and evt.args[0].anim=='disappear':

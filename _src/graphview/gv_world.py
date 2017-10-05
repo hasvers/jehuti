@@ -10,7 +10,7 @@ from weakref import WeakValueDictionary
 
 class World(object):
     '''ECS-style World: Contains the list of trueIDs representing objects,
-    dictionaries allowing to retrive said objects,
+    dictionaries allowing to retrieve said objects,
     canon source corresponding to a given trueID
     and dependency graphs between objects
     '''
@@ -97,7 +97,7 @@ game objects that it may have to create later.'''
         fd=fopen(filename,'rb')
         attrs={}
         infos={}
-        chunk={}
+        chunk=OrderedDict()
         items={}
         klasses={}
         initparams={}
@@ -124,12 +124,12 @@ game objects that it may have to create later.'''
                     infos[lastid]=chunk
                 else:
                     attrs[lastid]=chunk
-                chunk={}
+                chunk=OrderedDict()
                 mode='attr'
             elif '##info' in l:
                 attrs[lastid]=chunk
                 #trueID[lastid]=chunk['trueID']
-                chunk={}
+                chunk=OrderedDict()
                 mode='info'
             elif 'class:' in l:
                 klasses[lastid]=l.split(':',1)[1].strip()
@@ -243,7 +243,7 @@ game objects that it may have to create later.'''
             return self.database[itemID]
 
         chunk=self.future_data[itemID]
-        info,attr={},{}
+        info,attr=OrderedDict(),OrderedDict()
         if chunk['info']:
             info.update(chunk['info'])
         attr.update(chunk['attr'])
@@ -276,7 +276,7 @@ game objects that it may have to create later.'''
             item=self.object[itemID]
         else:
             item=self.database[itemID]
-        info,attr={},{}
+        info,attr=OrderedDict(),OrderedDict()
         if chunk['info']:
             info.update(chunk['info'])
         attr.update(chunk['attr'])
@@ -301,6 +301,7 @@ game objects that it may have to create later.'''
                 setattr(item,key,val)
 
         #Infos
+
         for k,v in info.iteritems():
             key,val=[self.import_analyze(x,items) for x in (k,v)]
             if not hasattr(key,'trueID'):
@@ -443,6 +444,9 @@ class DataDict(dict,DataContainer):
             exc= 'Missing key {} {} in {}'.format(key,world.get_object(key),self)
             raise KeyError(exc)
         return self.default
+
+    def index(self,key):
+        return None
 
     def __getitem__(self,key):
         key=self.conv_key(key)

@@ -217,10 +217,10 @@ class FieldContainer(UI_Widget):
         self.group.update()
         for c in self.children :
             if c in self.pos :
-                pos=array(self.pos[c])
+                pos=array(self.pos[c],dtype='float')
                 if not c in self.decor :
-                    pos-=array(self.offset)
-                    c.rect.topleft = pos
+                    pos-=array(self.offset,dtype='float')
+                    c.rect.topleft = arint(pos)
 
             if hasattr(c,'draw'):
                 #c.dirty=1

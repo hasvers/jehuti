@@ -720,11 +720,15 @@ class LayerMenu(DragWindow):
         field.bind_command(output_method)
 
     def react(self,evt):
-        if 'layer' in evt.type or 'add' in evt.type  and  hasattr(evt.item,
-                'type') and 'layer' in evt.item.type :
+        if '_layer' in evt.type or ('add' in evt.type  and  hasattr(evt.item,
+                'type') and 'layer' in evt.item.type) :
+            #Set layer, set active layer, add new layer...
             self.make()
         if ('change' in evt.type or 'rem_info' in evt.type) and  hasattr(evt.item,
                 'type') and 'layer' in evt.item.type :
+            if 'data_index' in evt.kwargs:
+                #Change layer order
+                self.make()
             if 'name' in evt.kwargs:
                 self.namefield[evt.item].set_val(self.data.get_info(evt.item,'name'))
             if 'state' in evt.kwargs:

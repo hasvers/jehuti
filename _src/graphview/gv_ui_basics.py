@@ -427,7 +427,7 @@ def '''+i+'''(self,val):
         for i in self.modimg:
             if self.states[i]:
                 j=self.color_mod(i)
-                if j=='grayed':
+                if isinstance(j,basestring) and j=='grayed':
                     grayed=True
                 else:
                     mod *= array(j)

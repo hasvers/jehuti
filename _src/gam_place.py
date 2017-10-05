@@ -50,7 +50,8 @@ class PlaceLayer(BaseCanvasLayer):
     pass
 
 class PlaceData(BaseCanvasData):
-    dft={'name':'place','music':'','panrange':(0,0,0,0),'bg':''}
+    dft=deepcopy(BaseCanvasData.dft)
+    dft.update({'name':'place','music':'','panrange':(0,0,0,0),'bg':''})
     infotypes=deepcopy(BaseCanvasData.infotypes)
     infotypes['sprite']=('name','layer')
     datatype='place'
@@ -81,7 +82,7 @@ class PlaceData(BaseCanvasData):
 
     def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
         kwargs.setdefault('add_param',[])
-        kwargs['add_param']+=['music','bg','panrange']
+        kwargs['add_param']+=['music','bg']
         return BaseCanvasData.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
     def __str__(self):

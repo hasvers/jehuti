@@ -106,9 +106,7 @@ class BasicUI(UI_Widget):
     def float_menu(self,struct,**kwargs):
         kwargs['klass']=FloatMenu
         window=self.float_menu_core(struct,**kwargs)
-        window.set_anim('grow_in',len=ANIM_LEN['instant'])
-        for c in window.children:
-            c.set_anim('appear',len=ANIM_LEN['short'])
+        window.appear_event()
         return window
 
     def float_radial(self,struct,**kwargs):
@@ -118,7 +116,7 @@ class BasicUI(UI_Widget):
         prevpos=self.pos[window]
         decal=array(window.rect.topleft)-window.rect.center
         self.pos[window]=window.rect.topleft=tuple(prevpos+decal)
-        window.set_anim('grow_in',len=ANIM_LEN['instant'],anchor='center')
+        window.appear_event()
         return window
 
     def float_core(self,window,typ='floatmenu',**kwargs):
@@ -362,28 +360,34 @@ class BasicUI(UI_Widget):
         else:
             path=database[typ+'_path']
         candidates = olistdir(path)
-        print path,candidates
         flist=[]
-        window=FloatMenu(self.screen,self,(128,100),oneshot=True,**kwargs)
-        v=0
+        window=FloatMenu(self.screen,self,(128,100),oneshot=False,**kwargs)
         ext=kwargs.get('ext',database.get(typ+'_ext',''))
         for c in candidates:
             cs=str(c)
             if ext in cs:
                 flist.append((cs,cs.replace(ext,'') ))
         if flist :
-            window.add('text',val='Overwrite:',selectable=False,pos=(0,0) )
-            v+=1
-            window.add('list',val=flist,output_method=output_method,pos=(v,0))
-            v+=1
+            v=2
+        else:
+            v=0
         window.add('text',val='New file:',selectable=False,pos=(v,0) )
         v+=1
         tmp=window.add('input',val=default,width=150,pos=(v,0),allchars='alnum')
         tmp.bind_command(output_method,default)
         window.add('text',val=kwargs.get('ext',database.get(typ+'_ext','')),selectable=False,pos=(v,1))
         v+=1
-        window.add('text',val='Ok',output_method='confirm',selectable=True,pos=(v,0))
-        window.add('text',val='Cancel',output_method='cancel',selectable=True,pos=(v,1))
+        window.add('text',val='Ok',output_method=[lambda t=tmp:output_method(tmp.val), 'confirm','exit'],selectable=True,pos=(v,0))
+        window.add('text',val='Cancel',output_method='exit',selectable=True,pos=(v,1))
+
+        if flist :
+            v=0
+            window.add('text',val='Overwrite:',selectable=False,pos=(0,0) )
+            v+=1
+            ls=window.add('list',val=flist,output_method=tmp.set_val,pos=(v,0))
+            ls.bind_command(['confirm','unselect'])
+
+        window.ask_confirm()
         self.float_core(window,'floatmenu',**kwargs)
 
     def load_menu(self,typ_or_list,output_method,**kwargs):

@@ -81,7 +81,7 @@ class ActorIcon(UI_Icon):
         img=image_load(source).convert_alpha()
         rect = array(img.get_rect().size)
         height = graphic_chart['portrait_height']
-        rect *= float(height)/rect[1]
+        rect *= rint(height*1./rect[1])
         img=images['idle']=pg.transform.smoothscale(img,tuple(int(i) for i in rect))
         hovimg=img.copy()
         gv_effects.glow(hovimg,4,.55)

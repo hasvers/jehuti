@@ -71,7 +71,7 @@ class Data(object):
             if i=='contexts':
                 self.contexts=j
             if i=='name':
-                self.name=name
+                self.name=j
 
         if kwargs.get('maketypedlists',True): #default: create a list for every type of item
             for i in self.infotypes.keys():
@@ -204,7 +204,7 @@ class Data(object):
             lst=getattr(self,item.type+'s')
             lst.remove(item)
             lst.insert(val,item)
-            return 1
+            return True
 
 
         #print self, item, ityp, val, self.infotypes[item.type]
@@ -455,7 +455,7 @@ class Data(object):
         return item.trueID in self.infos
     def __contains__(self,item):
         if not hasattr(item,'trueID'):
-            print item
+            print item, 'DOES NOT HAVE trueID'
         return item.trueID in self.infos
 
     def renew(self,renewinfotypes=True):
@@ -548,13 +548,13 @@ Recursively explores data and replaces any reference to a game object by their k
             keydic[self.trueID],klassn,init_param)
         test=lambda e,k=keydic,t=txtdic,tp=typdic:self.txt_export_analyze(e,k,t,tp)
         #Store attributes of this object
-        dic={}
+        dic=OrderedDict()
         for i in add_param:
             j=getattr(self,i)
             dic[i]=j
         #Store infos on other objects
-        dicinf={}
-        for i in self.infos:
+        dicinf=OrderedDict()
+        for i in sorted(self.infos.keys(), key=lambda k:self.get_info(k,'data_index') ):
             dicinf[i]={}
             if i in world.load_state:
                 test(world.get_object(i))
@@ -574,7 +574,7 @@ Recursively explores data and replaces any reference to a game object by their k
         label=[u'##attr',u'##infos'] #NB: the label #attr is essentially useless
         for d in (dic,dicinf):
             txt+=u'{}\n'.format(label.pop(0))
-            for i in sorted(d):
+            for i in d:
                 j=d[i]
                 tmp=u'{}:{}\n'.format(test(i),test(j))
                 txt+=tmp

@@ -62,7 +62,7 @@ class BaseCanvasData(Data):
     #or dedicated sprites
 
     dft={'size':ergonomy['default_canvas_size'],'pan':(0,0),'zoom':1 }
-    infotypes={'layer':('offset','state','zoom','distance','items','name','bound','order'),
+    infotypes={'layer':('offset','state','zoom','distance','items','name','bound'),
          }
 
     multi_belong=False #if True, a given object can belong to multiple layers
@@ -88,20 +88,11 @@ class BaseCanvasData(Data):
             return lays
         return False
 
-    def txt_export(self,*args,**kwargs):
-        if not 'order' in self.infotypes['layer']:
-            self.infotypes['layer']+=('order',)
-        for il,l in enumerate(self.layers):
-            self.set_info(l,'order',il)
-        return Data.txt_export(self,*args,**kwargs)
+    def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):
+        kwargs.setdefault('add_param',[])
+        kwargs['add_param']+=['pan','size','zoom']
+        return Data.txt_export(self,keydic,txtdic,typdic,**kwargs)
 
-    def txt_import(self,*args,**kwargs):
-        print 'OBSOLETE: USE OF TXT_IMPORT IN gv_basecanvas'
-        handl=Data.txt_import(self,*args,**kwargs)
-        for l in tuple(self.layers):
-            self.layers.remove(l)
-            self.layers.insert(self.get_info(l,'order'),l)
-        return handl
 
 class BaseCanvasIcon(UI_Icon):
     state_list=('idle','hover','select','ghost')
@@ -221,10 +212,10 @@ class BaseCanvasView(View):
         self.animated=pgsprite.Group()
         self.pos=DataDict()
         self.icon=DataDict()
-        self.layers=DataList()
+        #self.layers=DataList()
 
     def order_layers(self):
-        for nl,l in enumerate(self.data.layers):
+        for nl,l in enumerate(self.data.layers ):
             for i in l.items:
                 if i in self.icon:
                     self.group.change_layer(self.icon[i],nl)
@@ -240,6 +231,7 @@ class BaseCanvasView(View):
         if self.animated :
             self.animated.update()
         if self.dirty:
+            #self.order_layers()
             if self.handler.clickable:
                 surface=self.surface#.copy()
                 surface.fill(COLORKEY)
@@ -275,6 +267,8 @@ class BaseCanvasView(View):
             #surface.blit(self.veil,(0,0),None,pg.BLEND_RGBA_MULT )
         self.group.draw(surface)
         return
+
+        # OBSOLETE!!
         tmp=surface.convert_alpha()
         for l in self.data.layers[::-1]:
             tmp.fill((0,0,0,0))
@@ -695,20 +689,24 @@ class BaseCanvasHandler(Handler):
                 self.view.rect = pg.rect.Rect((0,0),self.data.size)
         if ('change' in evt.type or 'rem_info' in evt.type)  and evt.item in self.data  :
             item=evt.item
+            if 'data_index' in evt.infos:
+                self.view.order_layers()
+                self.view.signal('set_layer',item)
+
             if array( [i in evt.infos for i in ('val','genre','set') ]).any():
                 self.view.icon_update(item)
             if 'offset' in evt.infos or 'zoom' in evt.infos:
-                self.view.upd_layer(evt.item)
+                self.view.upd_layer(item)
             if 'state' in evt.infos:
                 state= evt.kwargs.get('state',None)
                 if state == 'hidden' and evt.state==1:
-                        [ self.view.hide(self.view.icon[s]) for s in evt.item.items ]
+                        [ self.view.hide(self.view.icon[s]) for s in item.items ]
                 else:
-                        [ self.view.show(self.view.icon[s]) for s in evt.item.items ]
+                        [ self.view.show(self.view.icon[s]) for s in item.items ]
                 if state == 'ghost' and evt.state==1:
-                        [self.view.icon[s].set_state('ghost') for s in evt.item.items ]
+                        [self.view.icon[s].set_state('ghost') for s in item.items ]
                 else:
-                        [self.view.icon[s].rm_state('ghost')  for s in evt.item.items ]
+                        [self.view.icon[s].rm_state('ghost')  for s in item.items ]
 
         if ('add' in evt.type or 'rem' in evt.type):#  and evt.item in self.data
             item=None
@@ -962,12 +960,24 @@ class BaseCanvasEditor(BaseCanvasHandler):
         if layer is None:
             layer = self.active_layer
         llen=len(self.layers)
-        self.set_layer(layer,min(self.layers.index(layer)+1,llen) ,activate=False)
+        cur=self.layers.index(layer)
+        new=aclip(cur+1,0,llen)
+        if new!=cur:
+            evt=ChangeInfosEvt(layer,self.data,data_index= new)
+            user.evt.do(evt,self)
+
+        #self.set_layer(layer,min(self.layers.index(layer)+1,llen) ,activate=False)
 
     def layer_down(self,layer=None):
         if layer is None:
             layer = self.active_layer
-        self.set_layer(layer,max(self.layers.index(layer)-1,0) ,activate=False)
+        llen=len(self.layers)
+        cur=self.layers.index(layer)
+        new=aclip(cur-1,0,llen)
+        if new!=cur:
+            evt=ChangeInfosEvt(layer,self.data,data_index= new)
+            user.evt.do(evt,self)
+        #self.set_layer(layer,max(self.layers.index(layer)-1,0) ,activate=False)
 
     def keymap(self,event,**kwargs):
         handled=False

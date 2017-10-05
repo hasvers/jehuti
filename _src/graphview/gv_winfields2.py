@@ -424,6 +424,9 @@ class DragField(WindowField):
         if val is None and rel is None:
             return False
         WindowField.set_val(self,val)
+        if not hasattr(self,'cursor'):
+            print 'Warning: Scrollbar.set_val used before cursor created, caller:', debug.caller_name()
+            return
         dr = self.direction
         if dr == 0:
             curspos=self.cursor.rect.left
@@ -936,7 +939,7 @@ class ColorField(WindowField):
             self.val=color
 
             col2=array(color)
-            col2[:3]*=.8
+            col2[:3]=arint(.8*col2[:3])
             self.image.blit(gradients.horizontal(self.rect.size, color,col2),(0,0))
 
 
