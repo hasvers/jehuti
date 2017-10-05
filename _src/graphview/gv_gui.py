@@ -410,11 +410,11 @@ class BasicUI(UI_Widget):
         window.ask_confirm()
         window.add('text',val='Files:',selectable=False)
         if flist :
-            window.add('list',val=flist,output_method=output_method)
+            window.add('list',val=flist,output_method=output_method,key='fname')
         else :
             window.add('list',val=[('No file found','')],selectable=False)
         cont = FieldContainer(window,margin=8,maxsize=self.screen.get_rect().size)
-        cont.add('okbutton',val='Ok',selectable=True,pos=(0,0),width=50)
+        cont.add('okbutton',val='Ok',output_method='confirm',selectable=True,pos=(0,0),width=50)
         cont.add('text',val='Cancel',output_method='cancel',selectable=True,pos=(0,1),width=50)
 
 

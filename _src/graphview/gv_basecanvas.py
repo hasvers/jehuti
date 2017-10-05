@@ -252,7 +252,7 @@ class BaseCanvasView(View):
             if not self.bg:
                 self.surface.fill(COLORKEY)
 
-        offset=self.offset
+        offset=arint(self.offset)
         viewrect=self.viewport.move(offset)
         offset=-array((offset[0],offset[1]))
         if self.bg :
@@ -300,7 +300,7 @@ class BaseCanvasView(View):
     def upd_pos(self):
         for i in self.icon:
             s=self.icon[i]
-            s.rect.topleft=self.pos[i]-array(s.rect.size)/2-self.offset
+            s.rect.topleft=arint(self.pos[i]-array(s.rect.size,dtype='float')/2-self.offset )
         self.dirty=1
 
     def upd_layer(self,l=None):
@@ -308,14 +308,14 @@ class BaseCanvasView(View):
             for i in self.data.layers:
                 self.upd_layer(i)
             return
-        viewrect=self.viewport.move(self.offset)
+        viewrect=self.viewport.move(arint(self.offset))
         inf=self.data.get_info(l)
         loffset,zoom=array(inf['offset']),inf['zoom']
         for i in l.items:
             s=self.icon[i]
             locrect=array(l.pos[i],dtype='int') *zoom + loffset
             self.pos[i]=locrect
-            s.rect.topleft=self.pos[i]-array(s.rect.size)/2-self.offset
+            s.rect.topleft=arint(self.pos[i]-array(s.rect.size,dtype='float')/2-self.offset )
             locsize= array(s.rect.size,dtype='int')*zoom
             if pg.Rect(locrect,locsize).colliderect(viewrect):
                 if zoom!=s.zoom:
@@ -360,7 +360,7 @@ class BaseCanvasView(View):
         layer=kwargs.get('layer',self.handler.active_layer)
         linfo=self.handler.data.get_info(layer)
         pos=array(pos)#-linfo['offset']
-        user.setpos(pos-array(self.offset))
+        user.setpos(arint(array(pos,dtype='float')-self.offset))
         hover = None
         try:
             self.mask.get_at(pos)
@@ -404,8 +404,8 @@ class BaseCanvasView(View):
             #print pg.time.get_ticks()-t1
         if event.type==30 and self.motion:
             m=self.motion[0]
-            dist=array(m)-self.offset
-            step=int( ergonomy['canvas_glide_speed']*1./ergonomy['animation_fps'])
+            dist=array(m,dtype='float')-self.offset
+            step=ergonomy['canvas_glide_speed']*1./ergonomy['animation_fps']
             hyp=hypot(*dist)
 
             if hyp < step*1.5:
@@ -414,10 +414,10 @@ class BaseCanvasView(View):
             else :
                 rel=hyp/ergonomy['canvas_typical_dist']
                 if rel>1:
-                    step=rint(step* (rel) )
+                    step=step* (rel)
                 rad,angle=hypot(*dist),atan2(dist[1],dist[0])
                 oldoff=self.offset
-                self.set_offset( (int(step*cos(angle)),int(step*sin(angle)) ))
+                self.set_offset( step*cos(angle),step*sin(angle))
                 if oldoff==self.offset: #blocked by boundaries)
                     self.motion.pop(0)
 
@@ -482,11 +482,11 @@ class BaseCanvasView(View):
 
     def set_offset(self,offset,additive=True):
         if additive:
-            offset=array(offset)
-            ioff =array(self.offset)
+            offset=array(offset,dtype='float')
+            ioff =array(self.offset,dtype='float')
             offset=tuple(ioff+offset)
-        rect=pgrect.Rect(offset,self.viewport.size).clamp(self.rect)
-        if rect.topleft != self.offset :
+        rect=pgrect.Rect(arint(offset),self.viewport.size).clamp(self.rect)
+        if rect.topleft != arint(self.offset) :
             self.offset=rect.topleft
             self.upd_pos()
             return True
@@ -675,7 +675,7 @@ class BaseCanvasHandler(Handler):
 
         if 'move' in evt.type:
             inf= self.data.get_info(self.active_layer)
-            self.view.icon[evt.item].set_pos(array(evt.graph.pos[evt.item])*inf['zoom']+inf['offset'])
+            self.view.icon[evt.item].set_pos(arint(evt.graph.pos[evt.item])*inf['zoom']+inf['offset'])
             self.view.icon_update(evt.item)
             self.view.upd_pos()
             self.view.dirty=True
@@ -826,11 +826,11 @@ class BaseCanvasHandler(Handler):
                 args.append(picon)
             icon=view.icon_types.get(item.type,view.icon_types['dft'])(view,item,*args)
             icon.parent=view
-            offset=array(self.data.get_info(layer,'offset') )
+            offset=self.data.get_info(layer,'offset')
             zoom=self.data.get_info(layer,'zoom')
             handled=0
             if hasattr(layer,'pos') and item in layer.pos:
-                view.pos[item]=layer.pos[item]*zoom+offset
+                view.pos[item]=arint(layer.pos[item]*zoom+offset)
                 handled=1
             for i,j in kwargs.iteritems():
                 if i=='pos':
@@ -839,7 +839,7 @@ class BaseCanvasHandler(Handler):
                     icon.set_state(j)
             icon.rect.center=view.pos[item]
             if item in view.pos and not handled:
-                layer.pos[item]=(array(view.pos[item])-offset)/zoom
+                layer.pos[item]=arint((array(view.pos[item],dtype='float')-offset)/zoom)
             icon.rect.clamp_ip(view.rect)
             icon.create(view.group,layer)
             view.group.change_layer(icon,self.data.layers.index(layer))

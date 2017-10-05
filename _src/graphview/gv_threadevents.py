@@ -234,50 +234,32 @@ class PanEvt(ThreadEvent):
             self.oldpos={l:self.scene.get_info(l,'offset') for l in self.scene.layers}
         return True
 
+    def operate(self,rel,**kwargs):
+        scene=self.scene
+        if self.absolute_mode:
+            trueoff=self.oldpos+array(rel,dtype='float')
+            self.scene.pan=trueoff
+        for l in scene.layers:
+            if self.absolute_mode:
+                offset=trueoff*(1.-scene.get_info(l,'distance'))
+                scene.set_info(l,'offset',array(offset,dtype='float'))
+            else:
+                offset=rel*(1.-scene.get_info(l,'distance'))
+                scene.set_info(l,'offset',self.oldpos[l]+array(offset,dtype='float'),additive=False)
+
     def do(self,fraction,*args,**kwargs):
         if 0<=fraction<1:
-            scene=self.scene
-            rel=fraction*array(self.rel)
-            if self.absolute_mode:
-                trueoff=self.oldpos+array(rel)
-                self.scene.pan=tuple(rint(i) for i in trueoff)
-            for l in scene.layers:
-                if self.absolute_mode:
-                    offset=tuple(rint(i*(1.-scene.get_info(l,'distance'))) for i in trueoff)
-                    scene.set_info(l,'offset',array(offset))
-                else:
-                    offset=tuple(rint(i*(1.-scene.get_info(l,'distance'))) for i in rel)
-                    scene.set_info(l,'offset',self.oldpos[l]+array(offset))
+            rel=fraction*array(self.rel,dtype='float')
+            self.operate(rel,**kwargs)
             return True
         return False
 
     def end(self ,*args,**kwargs):
-        scene=self.scene
-        if self.absolute_mode:
-            trueoff=self.oldpos+array(self.rel)
-            self.scene.pan=tuple(rint(i) for i in trueoff)
-        for l in scene.layers:
-            if self.absolute_mode:
-                offset=tuple(rint(i*(1.-scene.get_info(l,'distance'))) for i in trueoff)
-                scene.set_info(l,'offset',array(offset))
-            else:
-                offset=tuple(rint(i*(1.-scene.get_info(l,'distance'))) for i in self.rel)
-                offset+=array(self.oldpos[l])
-                scene.set_info(l,'offset',offset,additive=False)
+        self.operate(self.rel,**kwargs)
         return True
 
     def undo(self,*args,**kwargs):
-        scene=self.scene
-        if self.absolute_mode:
-            trueoff=self.oldpos
-            self.scene.pan=tuple(rint(i) for i in trueoff)
-        for l in scene.layers:
-            if self.absolute_mode:
-                offset=tuple(rint(i*(1.-scene.get_info(l,'distance'))) for i in trueoff)
-                scene.set_info(l,'offset',array(offset))
-            else:
-                scene.set_info(l,'offset',self.oldpos[l],additive=False)
-            self.scene.pan=tuple(rint(i) for i in trueoff)
+        self.operate(0,**kwargs )
         return True
 
 

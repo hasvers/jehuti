@@ -164,6 +164,10 @@ class Window(FieldContainer):
         if exe:
             while queue :
                 s=queue.pop(0)
+                if s in self.queue:
+                    self.queue.remove(s)
+                if not s in com:
+                    continue
                 comms=com[s][:]
                 if 'exit' in comms:
                     comms.remove('exit')
@@ -185,7 +189,7 @@ class Window(FieldContainer):
                     else :
                         if i[0]:
                             i[0](*i[1])
-            self.queue=[]
+            #self.queue=[]
 
     def add(self,field,**kwargs):
         no_paint=kwargs.pop('no_paint',False) #Do not update graphics

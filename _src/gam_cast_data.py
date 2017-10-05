@@ -188,9 +188,11 @@ class CastData(Data):
         return True
 
     def remove(self,actor):
+        del self.prox[actor.trueID]
         for oth,info in self.infos.iteritems():
             if actor.trueID in info['prox']:
                 del info['prox'][actor.trueID]
+                del self.prox[oth.trueID][actor.trueID]
         return super(CastData, self).remove(actor)
 
     def txt_export(self,keydic=None,txtdic=None,typdic=None,**kwargs):

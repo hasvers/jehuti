@@ -1,7 +1,7 @@
 import pygame as pg
 from pygame import surface as pgsurface, event as pgevent, sprite as pgsprite, rect as pgrect,mixer as pgmixer
 from copy import deepcopy
-from numpy import array, rint as arint,clip as aclip, random as nprandom, ndarray,nditer, uint8 as npuint8, int as npint,maximum as npmaximum,newaxis as npnewaxis
+from numpy import array,minimum,rint as nparint,clip as aclip, random as nprandom, ndarray,nditer, uint8 as npuint8, int as npint,maximum as npmaximum,newaxis as npnewaxis
 from math import *
 import colors as matcolors
 import random as rnd
@@ -24,6 +24,9 @@ pg.font.init()
 #pgmixer.init(44100)
 colorconverter=matcolors.ColorConverter()
 profiler=cProfile.Profile()
+
+def arint(*args,**kwargs):
+    return nparint(*args,**kwargs).astype('int64')
 
 def prolog(fname):
     stats=[[i.code ,i.totaltime,i.inlinetime,i.callcount,i.reccallcount] for i in profiler.getstats()]
@@ -78,6 +81,8 @@ def resource_path(relative,**kwargs):
     genre=kwargs.get('filetype',None)
     if genre and genre+'_path' in database:
         path = database[genre+'_path']
+        if path in relative:
+            path=''
         if genre+'_ext' in database:
             ext=database[genre+'_ext']
             if not relative.endswith(ext):
@@ -299,3 +304,64 @@ def shallow_nested(item,make_new=0,**kwargs):
     if 'meth' in kwargs:
         return kwargs['meth'](item)
     return item
+
+
+
+class Path(str):
+    '''Strings that represent filesystem paths.
+    Overloads __add__:
+     - when paths are added, gives a path
+     - when a string is added, gives a string'''
+    def __add__(self,x):
+        import os
+        if isinstance(x,Path):
+            return Path(os.path.normpath(os.path.join(str(self),x)))
+        return os.path.normpath(os.path.join(str(self),x))
+
+    def norm(self):
+        import os
+        return Path(os.path.normpath(str(self)))
+
+    def osnorm(self):
+        """Deal with different separators between OSes."""
+        import os
+        if os.sep=='/' and "\\" in str(self):
+            return Path(os.path.normpath(str(self).replace('\\','/' )))
+        elif os.sep=='\\' and "/" in str(self):
+            return Path(os.path.normpath(str(self).replace('/','\\' )))
+        else:
+            return self.norm()
+
+    def prev(self):
+        import os
+        lst=self.split()
+        path=os.path.join(lst[:-1])
+        return path.osnorm()
+
+    def split(self):
+        """"""
+        import os
+        lst=[]
+        cur=os.path.split(self.norm())
+        while cur[-1]!='':
+            lst.insert(0,cur[-1])
+            cur=os.path.split(cur[0])
+        return lst
+
+    def mkdir(self,rmdir=False):
+        """Make directories in path that don't exist. If rmdir, first clean up."""
+        import os
+        if rmdir:
+            os.rmdir(str(self))
+        cur=Path('./')
+        for intdir in self.split():
+            cur+=Path(intdir)
+            if not os.path.isdir(cur):
+                os.mkdir(cur)
+
+    def copy(self):
+        return Path(self)
+
+    def strip(self):
+        '''Return string without final / or \\ to suffix/modify it.'''
+        return str(self).strip('\/')

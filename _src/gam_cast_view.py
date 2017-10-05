@@ -53,21 +53,22 @@ class ActorIcon(UI_Icon):
                 portrait=database['default_portrait']
         if not face :
             candidates=None
-            portrait=portrait+'/'
+            portrait=Path(portrait)
+            db=Path(database['portraits'])
 
             try:
-                olistdir(database['portraits']+portrait)
+                olistdir(db+portrait)
             except:
                 try:
-                    candidates = olistdir(database['portraits']+infos['name'].lower()+'/')
+                    candidates = olistdir(db+infos['name'].lower()+'/')
                     portrait=infos['name'].lower()+'/'
                 except:
-                    portrait='unknown/'
+                    portrait=Path('unknown/')
 
             if not candidates:
-                candidates = olistdir(database['portraits']+portrait)
+                candidates = olistdir(db+portrait)
 
-            flist=tuple ( [(unicode(c).split('.')[0],database['portraits']+portrait+str(c)) for c in candidates])
+            flist=tuple ( [(unicode(c).split('.')[0],db+portrait+str(c)) for c in candidates])
             for i,j in flist :
                 self.make_faces(i,j)
             return True
@@ -79,10 +80,10 @@ class ActorIcon(UI_Icon):
 
         images=self.image_sets[face]={}
         img=image_load(source).convert_alpha()
-        rect = array(img.get_rect().size)
+        rect = array(img.get_rect().size,dtype='float')
         height = graphic_chart['portrait_height']
-        rect *= rint(height*1./rect[1])
-        img=images['idle']=pg.transform.smoothscale(img,tuple(int(i) for i in rect))
+        rect *= height*1./rect[1]
+        img=images['idle']=pg.transform.smoothscale(img, arint(rect) )
         hovimg=img.copy()
         gv_effects.glow(hovimg,4,.55)
         self.images['hover']=hovimg

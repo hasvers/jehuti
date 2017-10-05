@@ -596,6 +596,7 @@ class FieldContainer(UI_Widget):
 
     def compute_pos(self,margin=None,active_rect=None):
         '''The core method in arranging the positions of fields in the container.'''
+        #print self,margin,active_rect
         self.dirty=1
         multisp=None
         if not active_rect :
@@ -719,6 +720,8 @@ class FieldContainer(UI_Widget):
             height=exph
 
         #Second run: resize, position and alignment
+        #   (first, let free-sized subcontainers know max size they can occupy)
+        self.active_rect.size=minimum((width,height),self.maxsize)
         for x in range(tabdim[0]) :
             for y in range(tabdim[1]):
                 it = self.table.get(x,{}).get(y,False)
@@ -880,6 +883,14 @@ class FieldContainer(UI_Widget):
     def unbind_command(self,method=None):
         self.parent.rem_command(self,method)
 
+    def get_field_vals(self):
+        dic={}
+        for key,field in self.fieldict.iteritems():
+            if hasattr(field,'val'):
+                dic[key]=field.val
+            elif hasattr(field,'get_field_vals'):
+                dic.update({key+'_'+i:j for i,j in field.get_field_vals().iteritems() }  )
+        return dic
 
 class DropMenu(FieldContainer):
 
@@ -1011,11 +1022,11 @@ class FieldList(FieldContainer):
             self.val=self.valdict[self.selected]
             if not self.active_fields:
                 if isinstance(self.output_method,basestring):
-                    self.parent.set_command(self,self.output_method)
+                    self.parent.set_command(self,self.output_method,queue=True)
                 else :
-                    self.parent.set_command(self,(self.output_method,(self.val,) ))
+                    self.parent.set_command(self,(self.output_method,(self.val,) ),queue=True)
             else :
-                self.parent.set_command(self,self.output_method)
+                self.parent.set_command(self,self.output_method,queue=True)
             self.parent.exe_command(self)
             #self.unselect()
         else :

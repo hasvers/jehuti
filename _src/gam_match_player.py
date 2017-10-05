@@ -391,9 +391,8 @@ class MatchPlayer(MatchHandler,PhaseHandler):
                 #barycenter=newbar
             #else :
                 #test = False
-        barycenter+=newbar
 
-        barycenter=tuple(array(barycenter,dtype='int'))
+        barycenter=tuple(arint(barycenter+newbar))
 
         #print 'renew barycenter', barycenter, radius, self.active_player, debug.caller_name()
         #print evoked, pocket

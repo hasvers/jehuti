@@ -122,7 +122,12 @@ class Data(object):
             iid=item.trueID
         if info_type=='data_index':
             if hasattr(self,item.type+'s' ):
-                return getattr(self,item.type+'s').index(item)
+                lst= getattr(self,item.type+'s')
+                if hasattr(lst,'index'):
+                    return lst.index(item)
+                else:
+                    #e.g. dictionary
+                    return None
 
         if self.transparent and kwargs.get('transparent',True):
             #If transparent, look up info in precursors i.e. more general databases
