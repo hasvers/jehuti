@@ -480,7 +480,7 @@ class Canvas():
             for g in self.current_groups():
                 g.draw(self.surface)
         if full:
-            self.mask=pg.mask.from_surface(self.surface,1)
+            self.mask=pgmask.from_surface(self.surface,1)
 
 
     def add_subgraph(self,subgraph=None,**kwargs):
@@ -928,7 +928,10 @@ class CanvasHandler(UI_Widget):
                     #print [nicon.id for nicon in  pgsprite.spritecollide(user.arrow,canvas.group,False,pgsprite.collide_circle)]
                     #print [nicon.id for nicon in  canvas.group.get_sprites_at(pos)]
                     if event.button ==1 :
-                        handled=self.left_click(hover,event)
+                        if hover and interpret_input(event)=='CTRL+lclick':
+                            handled = self.signal('edit',hover)
+                        else:
+                            handled=self.left_click(hover,event)
                     elif event.button==3 :
                         handled = self.right_click(hover,event)
                     elif event.button>3:
@@ -988,8 +991,8 @@ class CanvasHandler(UI_Widget):
             target=target.item
         except:
             pass
-        if self.canvas.active_graph.contains(target):
-            self.signal('edit',target)
+        #if self.canvas.active_graph.contains(target):
+            #self.signal('edit',target)
         return True
 
     def right_click(self,target,event=None):
@@ -1027,6 +1030,7 @@ class CanvasHandler(UI_Widget):
         if event.key == pg.K_TAB :
             if len(self.canvas.layers) > 1 :
                 self.canvas.set_layer()
+                self.toggle_labels(toggle=False)
                 return True
 
 
@@ -1044,11 +1048,12 @@ class CanvasHandler(UI_Widget):
             if offset.any():
                 self.canvas.motion=[]
                 return self.set_offset(offset)
-        if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():
-            if event.key==pg.K_n and self.canvas.active_graph==self.canvas.graph:
-                self.add_node(None,None,pos=self.mousepos())
-            if event.key==pg.K_l:
-                self.toggle_labels()
+
+        interp=interpret_input(event)
+        if interp=='CTRL+n' and self.canvas.active_graph==self.canvas.graph:
+            self.add_node(None,None,pos=self.mousepos())
+        if interp=='CTRL+l':
+            self.toggle_labels()
         return False
 
     def set_offset(self,offset,additive=True):
@@ -1102,15 +1107,16 @@ class CanvasHandler(UI_Widget):
         elif item.type=='link':
             return '(L'+str(item.ID)+') ' + infos['name'] + ': '+ infos['desc']
 
-    def toggle_labels(self):
+    def toggle_labels(self,show=None,toggle=True):
         '''Show/Hide all labels'''
         icons=self.canvas.icon
         labels=self.canvas.labels
 
-        if self.canvas.helpers['label']:
-            self.canvas.helpers['label']=False
+        if show==None:
+            if toggle ==True:
+                self.canvas.helpers['label']= not self.canvas.helpers['label']
         else:
-            self.canvas.helpers['label']=True
+            self.canvas.helpers['label']=show
 
         for i in icons:
             if i.type in ('node',):
@@ -1118,10 +1124,11 @@ class CanvasHandler(UI_Widget):
                     self.make_label(i)
                 else:
                     label=labels[i]
-                    if self.canvas.helpers['label']:
+                    if not self.canvas.helpers['label']:
                         label.rem_from_group(self.canvas.group)
                     else:
                         label.add_to_group(self.canvas.group)
+        self.canvas.dirty=1
 
     def make_label(self,i):
         labels=self.canvas.labels

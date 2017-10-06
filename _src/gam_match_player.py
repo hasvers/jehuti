@@ -483,11 +483,10 @@ class MatchPlayer(MatchHandler,PhaseHandler):
 # SIGNALS AND EVENTS
 
     def keymap(self,event,**kwargs):
-        if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():
-            if event.key==pg.K_p:
-                return user.screenshot()
-            if  pg.key.get_pressed()[pg.K_LALT] and event.key==pg.K_v and database['edit_mode']:
-                return user.trigger_video()
+
+        handled= user.keymap(event)
+        if handled:
+            return handled
         if event.key == pg.K_TAB :
             if len(self.canvas.layers) > 1 :
                 sub=self.data.actorsubgraphs

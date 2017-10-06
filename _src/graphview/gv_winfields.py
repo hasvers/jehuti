@@ -37,6 +37,8 @@ class WindowField(UI_Item):
                 self.status_tip=j
             if i=='mouseover':
                 self.mouseover=j
+        for i in ('width','height'):
+            setattr(self,i,max(1,getattr(self,i) ))
         self.image=pg.surface.Surface((self.width,self.height))
         self.image.set_colorkey(COLORKEY)
         self.image.fill(COLORKEY)

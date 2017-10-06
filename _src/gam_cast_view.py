@@ -19,10 +19,12 @@ class ActorIcon(UI_Icon):
 
     def event(self,event):
         if event.type == pg.MOUSEBUTTONDOWN :
-            if event.button==1 :
+            if interpret_input(event)=='CTRL+lclick':
+                self.cast.handler.signal('edit',self.actor)
+            elif event.button==1 :
                 if self == user.just_clicked :
                     user.just_clicked=None
-                    self.cast.handler.signal('edit',self.actor)
+                    #self.cast.handler.signal('edit',self.actor)
                 else :
                     pg.time.set_timer(31,ergonomy['double_click_interval'])#just clicked remover
                     user.just_clicked=self

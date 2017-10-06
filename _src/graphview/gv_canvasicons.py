@@ -28,7 +28,10 @@ class CanvasIcon(UI_Icon):
         return False #  self.canvas.handler.event(event)
 
     def make_circle(self,size,color,mod=(1,1,1,1) ):
-        px = pg.PixelArray(pgsurface.Surface(size,Canvasflag))
+        #px = pgPixelArray(pgsurface.Surface(size,Canvasflag))
+        surf=pgsurface.Surface(size,Canvasflag)
+        px = pgsurfarray.pixels3d(surf)
+        alp= pgsurfarray.pixels_alpha(surf)
         radius = min(size[0],size[1])*.5
         center=array(size)*.5
         for x in range(size[0]):
@@ -44,14 +47,14 @@ class CanvasIcon(UI_Icon):
                         pixel[3]=min([mod[3]*255,255])
                     else :
                         pixel=COLORKEY
-
-                    px[x][y]=tuple(pixel)
                 else :
                     if hyp<1:
-                        px[j][x][y]=color
+                        pixel=color
                     else :
-                        px[j][x][y]=COLORKEY
-        return px.make_surface()
+                        pixel=COLORKEY
+                px[x][y]=pixel[:3]
+                alp[x][y]=pixel[3]
+        return surf#px.make_surface()
 
     def make_surface(self,size,mod,*args,**kwargs):
         color=kwargs.get('color',False)
@@ -115,14 +118,19 @@ class Arrow(CanvasIcon):
     def make_surface(self,size,mod,cset,*args,**kwargs):
         length=size[0]
         width=size[1]
-        px = pg.PixelArray(pgsurface.Surface(size,Canvasflag))
+        #px = pgPixelArray(pgsurface.Surface(size,Canvasflag))
+        surf=pgsurface.Surface(size,Canvasflag)
+        px = pgsurfarray.pixels3d(surf)
+        alp= pgsurfarray.pixels_alpha(surf)
         for x in range(length):
             for y in range(width):
                 if abs(0.5- float(y)/width)  < float(width-x)*width/2/length/length:
-                    px[x][y]=tuple([min(mod[i]* 190 ,255)for i in range(4)])
+                    color=tuple([min(mod[i]* 190 ,255)for i in range(4)])
                 else :
-                    px[x][y]=COLORKEY
-        return px.make_surface()
+                    color=COLORKEY
+                px[x][y]=color[:3]
+                alp[x][y]=color[3]
+        return surf#px.make_surface()
 
     def create(self,group=None,parent=None):
         self.parent = parent

@@ -298,16 +298,15 @@ class MatchEditorUI(EditorUI,SceneUI):
 
     def keymap(self,event):
         handled=False
-        if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():
-            if event.key==pg.K_s :
-                #try:
-                    #m=self.game_ui.game
-                    #m.save_to_file(m.data.name)
-                #except:
-                m=self.match
-                m.save_to_file(m.data.name)
-                user.set_status('Saved as '+m.data.name)
-                handled=True
+        if interpret_input(event)=='CTRL+s':
+            #try:
+                #m=self.game_ui.game
+                #m.save_to_file(m.data.name)
+            #except:
+            m=self.match
+            m.save_to_file(m.data.name)
+            user.set_status('Saved as '+m.data.name)
+            handled=True
         if event.key==pg.K_F9:
             self.match.signal('start_match')
         return handled or EditorUI.keymap(self,event)
@@ -483,14 +482,13 @@ class MatchUI(BasicUI,SceneUI):
             self.float_menu(self.statusmenu(),ephemeral=True,oneshot=True)
 
     def keymap(self,event):
-        if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():
-            if event.key==pg.K_d and database['edit_mode'] :
-                user.debug_mode=1-user.debug_mode
-                print 'Debug:', user.debug_mode
-                return True
-            if event.key==pg.K_h:
-                self.demo_help()
-                return 1
+        if interpret_input(event)=='CTRL+d' and database['edit_mode'] :
+            user.debug_mode=1-user.debug_mode
+            print 'Debug:', user.debug_mode
+            return True
+        if interpret_input(event)=='CTRL+h':
+            self.demo_help()
+            return 1
 
         if event.key==pg.K_ESCAPE:
             if not self.window['floatmenu']:

@@ -17,7 +17,7 @@ class User():
         self.arrow=pgsprite.Sprite()
         self.arrow.rect=pgrect.Rect(0,0,4,4)
         self.arrow.radius=2
-        self.arrow.mask=pg.mask.Mask((4,4))
+        self.arrow.mask=pgmask.Mask((4,4))
         self.arrow.mask.fill()
         self.focused_on=None
         self.grabbed=None
@@ -222,6 +222,16 @@ class User():
                     self.state='idle'
         return event
 
+    def keymap(self,event):
+        interp=interpret_input(event)
+        if interp=='CTRL+p':
+            return self.screenshot()
+        if interp=='CTRL+ALT+v' and database['edit_mode']:
+            return self.trigger_video()
+        if interp=='CTRL+d' and database['edit_mode'] :
+            self.debug_mode=1-self.debug_mode
+            print 'Debug:', self.debug_mode
+            return True
 
 user = User()
 
@@ -494,7 +504,7 @@ def '''+i+'''(self,val):
             self.images['blur']=self.image=blimg
         self.image=image
         if self.maskable:
-            self.mask=pg.mask.from_surface(image,1)
+            self.mask=pgmask.from_surface(image,1)
         if kwargs.get('mutate',True):
             self.mutate()
         return self.image
@@ -521,7 +531,7 @@ def '''+i+'''(self,val):
                 self.rect.size=img.get_rect().size
                 self.rect.center=old
             if self.maskable:
-                self.mask=pg.mask.from_surface(self.image,1)
+                self.mask=pgmask.from_surface(self.image,1)
             return True
         if False:
             for c in self.children :
@@ -801,9 +811,9 @@ class UI_Widget(UI_Item):
                 return False
             self.hovering.rm_state('hover')
         self.hovering=item
-        pg.mouse.set_cursor(*pg.cursors.arrow)
+        pg.mouse.set_cursor(*pgcursors.arrow)
         if self.hovering.draggable:
-            pg.mouse.set_cursor(*pg.cursors.diamond)
+            pg.mouse.set_cursor(*pgcursors.diamond)
 
         if item :
             if item.set_state('hover'):
@@ -820,7 +830,7 @@ class UI_Widget(UI_Item):
             elif recursive:
                 self.hovering.rm_state('hover',recursive=True)
             self.hovering=None
-            pg.mouse.set_cursor(*pg.cursors.arrow)
+            pg.mouse.set_cursor(*pgcursors.arrow)
             self.dirty=1
             return True
 

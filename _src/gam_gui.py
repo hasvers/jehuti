@@ -201,12 +201,11 @@ class GameEditorUI(EditorUI):
 
     def keymap(self,event):
         handled=False
-        if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():
-            if event.key==pg.K_s :
-                g=self.game
-                g.save_to_file(g.data.name)
-                user.set_status('Saved as '+g.data.name)
-                handled=True
+        if 'CTRL+s' ==  interpret_input(event) :
+            g=self.game
+            g.save_to_file(g.data.name)
+            user.set_status('Saved as '+g.data.name)
+            handled=True
         return handled or EditorUI.keymap(self,event)
 
     def open_editor(self,item):

@@ -188,7 +188,7 @@ class BaseCanvasView(View):
         self.surface.fill(COLORKEY)
         if handler :
             self.set_handler(handler)
-        self.mask=pg.mask.from_surface(self.surface)
+        self.mask=pgmask.from_surface(self.surface)
 
     def set_handler(self,handler):
         self.handler=handler
@@ -239,7 +239,7 @@ class BaseCanvasView(View):
             #if s.rect.colliderect(self.handler.viewport.rect.move(self.handler.viewport.offset)):
                     surface.blit(s.image,self.pos[s.item]-array(s.rect.size)/2)
                 if not user.grabbed:
-                    self.mask=pg.mask.from_surface(surface)
+                    self.mask=pgmask.from_surface(surface)
             #else:
                 #self.mask=pg.mask.from_surface(self.surface)
                 #self.mask.clear()
@@ -486,7 +486,7 @@ class BaseCanvasView(View):
             ioff =array(self.offset,dtype='float')
             offset=tuple(ioff+offset)
         rect=pgrect.Rect(arint(offset),self.viewport.size).clamp(self.rect)
-        if rect.topleft != arint(self.offset) :
+        if max(npabs( rect.topleft - arint(self.offset)))>1 :
             self.offset=rect.topleft
             self.upd_pos()
             return True
@@ -986,14 +986,16 @@ class BaseCanvasEditor(BaseCanvasHandler):
             if llen>1:
                 self.set_active_layer(self.layers[(self.layers.index(self.active_layer)+1)%llen] )
             handled=True
-        if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():
-            if event.key==pg.K_PAGEUP:
-                llen=len(self.layers)
-                self.layer_up(self.active_layer)
-                handled=True
-            elif event.key==pg.K_PAGEDOWN:
-                self.layer_down(self.active_layer)
-                handled=True
+
+
+        if interpret_input(event)=='CTRL+page up':
+            llen=len(self.layers)
+            self.layer_up(self.active_layer)
+            handled=True
+
+        if interpret_input(event)=='CTRL+page down':
+            self.layer_down(self.active_layer)
+            handled=True
 
         if event.key in (pg.K_UP,pg.K_DOWN,pg.K_LEFT,pg.K_RIGHT):
             if event.key==pg.K_UP:
@@ -1004,7 +1006,7 @@ class BaseCanvasEditor(BaseCanvasHandler):
                 dif=(10,0)
             elif event.key==pg.K_LEFT:
                 dif=(-10,0)
-            if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():
+            if 'CTRL' in interpret_input(event):
                 self.pan(dif)
             else:
                 self.view.set_offset(dif)

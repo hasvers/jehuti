@@ -413,12 +413,11 @@ class PlaceEditorUI(EditorUI):
 
     def keymap(self,event):
         handled=False
-        if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():
-            if event.key==pg.K_s :
-                m=self.scene
-                m.save_to_file(m.data.name)
-                user.set_status('Saved as '+m.data.name)
-                handled=True
+        if interpret_input(event)=='CTRL+s':
+            m=self.scene
+            m.save_to_file(m.data.name)
+            user.set_status('Saved as '+m.data.name)
+            handled=True
         if event.key==pg.K_F9:
             self.scene.signal('start_scene')
         return handled or EditorUI.keymap(self,event)

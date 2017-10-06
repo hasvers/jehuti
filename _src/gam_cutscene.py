@@ -441,12 +441,7 @@ class CutsceneUI(BasicUI,SceneUI):
 
     def keymap(self,event):
         handled=False
-        if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():
-            if event.key==pg.K_p:
-                return user.screenshot()
-
-            if pg.key.get_pressed()[pg.K_LALT] and event.key==pg.K_v and database['edit_mode']:
-                return user.trigger_video()
+        user.keymap(event)
         if event.key==pg.K_F9:
             if self.editor_ui:
                 return self.scene.return_to_editor()

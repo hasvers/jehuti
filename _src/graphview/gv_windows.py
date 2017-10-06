@@ -291,7 +291,7 @@ class Window(FieldContainer):
             surf.blit(box,dest,src)
 
         # Render the upper-left corner
-        surf.set_clip()
+        surf.set_clip(None)
         src.x,src.y,dest.x,dest.y = 0,0,x,y
         surf.blit(box,dest,src)
 
@@ -481,7 +481,7 @@ class RadialWindow(Window):
         self.dirty=1
         self.draw() #draw is the fieldcontainer method
         if self.mask==None:
-            self.mask=pg.mask.from_surface(self.image,20)
+            self.mask=pgmask.from_surface(self.image,20)
 
     def compute_pos(self):
         #For now, treats 2d table as 1d list and all elements equally.

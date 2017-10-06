@@ -19,17 +19,18 @@ def blur(surface, sigma=8,intens=1,mode='np'):
     """This function takes a pygame surface, converts it to a numpy array
     carries out gaussian blur, converts back then returns the pygame surface.
     """
-    np_array = pg.surfarray.array3d(surface)
+    np_array = pgsurfarray.array3d(surface)
     result = ndimage.filters.gaussian_filter(np_array,
                             sigma=(sigma, sigma, 0),
                             order=0,
                             mode='reflect'
                             )
-    pg.surfarray.blit_array(surface,(result*intens).astype('int') )
+    pgsurfarray.blit_array(surface,(result*intens).astype('int') )
     del np_array
+    return surface
 
 def convert_to_greyscale(image,mod=(1,1,1)):
-    array = pg.surfarray.pixels3d(image)
+    array = pgsurfarray.pixels3d(image)
     iarray = array.astype(npint)
     # slicing hint from http://dmr.ath.cx/gfx/python/
     r = iarray[:, :, 0]/2

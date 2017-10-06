@@ -22,7 +22,8 @@ class MatchArrow(Arrow):
     def make_surface(self,size,mod,infosource,*args,**kwargs):
         length=size[0]
         width=size[1]
-        px = pg.PixelArray(pgsurface.Surface(size,Canvasflag))
+        px = pgPixelArray(pgsurface.Surface(size,Canvasflag))
+        #px = pgsurfarray.pixels3d(pgsurface.Surface(size,Canvasflag))
         color_ext=graphic_chart['icon_node_fill_colors']
         logic = self.parent.logic
         t0=logic[0]
@@ -83,7 +84,8 @@ class MatchNodeIcon(NodeIcon):
     def make_icon(self,size,radius,colors,val,unsaturated=False,mod=(1.,1.,1.,1.),blur=0):
         center=array(size)/2
         COLORKEY=(0,0,0,0)
-        px = pg.PixelArray(pgsurface.Surface(size,pg.SRCALPHA))
+        px = pgPixelArray(pgsurface.Surface(size,pg.SRCALPHA))
+        #px = pgsurfarray.pixels3d(pgsurface.Surface(size,pg.SRCALPHA))
         vpow=1.9
         iva=.5**-vpow
         newcols=[]
@@ -366,7 +368,8 @@ class MatchLinkIcon(LinkIcon):
             ymrg=4
         else:
             ymrg=0
-        px = pg.PixelArray(pgsurface.Surface(size,Canvasflag))
+        px = pgPixelArray(pgsurface.Surface(size,Canvasflag))
+        #px = pgsurfarray.pixels3d(pgsurface.Surface(size,Canvasflag))
         color_ext=graphic_chart['icon_node_fill_colors']
         t0=self.logic[0]
         t1= self.logic[1]

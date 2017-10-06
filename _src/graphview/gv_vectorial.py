@@ -12,7 +12,7 @@ class VectorLibrary(ResourceLibrary):
         cr = cairo_create(resource_path(database['img_path']+name) )
         vec=self.load(name)
         size=surf.get_rect().size
-        pixels = pg.surfarray.pixels2d(surf)
+        pixels = pgsurfarray.pixels2d(surf)
 
         # Set up a Cairo surface using the same memory block and the same pixel
         # format (Cairo's RGB24 format means that the pixels are stored as

@@ -1,7 +1,13 @@
+
+from pygame import mask as pgmask, surfarray as pgsurfarray,cursors as pgcursors, PixelArray as pgPixelArray
+import pygame_sdl2
+#pygame_sdl2.import_as_pygame()
 import pygame as pg
 from pygame import surface as pgsurface, event as pgevent, sprite as pgsprite, rect as pgrect,mixer as pgmixer
 from copy import deepcopy
-from numpy import array,minimum,rint as nparint,clip as aclip, random as nprandom, ndarray,nditer, uint8 as npuint8, int as npint,maximum as npmaximum,newaxis as npnewaxis
+from numpy import array,minimum,rint as nparint,clip as aclip
+from numpy import random as nprandom, ndarray,nditer, uint8 as npuint8
+from numpy import int as npint,maximum as npmaximum,newaxis as npnewaxis,abs as npabs
 from math import *
 import colors as matcolors
 import random as rnd
@@ -365,3 +371,24 @@ class Path(str):
     def strip(self):
         '''Return string without final / or \\ to suffix/modify it.'''
         return str(self).strip('\/')
+
+
+def interpret_input(event):
+
+    mods=[]
+    if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RCTRL,pg.K_LCTRL) )).any():
+        mods.append('CTRL')
+    if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RALT,pg.K_LALT) )).any():
+        mods.append('ALT')
+    if array(tuple(pg.key.get_pressed()[i] for i in (pg.K_RSHIFT,pg.K_LSHIFT) )).any():
+        mods.append('SHIFT')
+
+    keys=[]
+    if hasattr(event,'key'):
+        keys.append(pg.key.name(event.key) )
+
+    mouse=[]
+    if hasattr(event,'button'):
+        mouse.append(['','lclick','rclick','mclick','wheelup','wheeldown'][event.button] )
+
+    return '+'.join(mods+keys+mouse)

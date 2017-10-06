@@ -617,7 +617,7 @@ class FogOfWar(pg.sprite.DirtySprite):
 
     def update(self):
 
-        self.mask =pg.mask.from_surface(self.image,1)
+        self.mask =pgmask.from_surface(self.image,1)
 
 
     def event(self,event,*args,**kwargs):
